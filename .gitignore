@@ -1,0 +1,9 @@
+# Project runs and generated artifacts — never commit
+PROJECTS/
+
+# Runtime state
+PHASE_STATE.md
+
+# OS junk
+.DS_Store
+Thumbs.db
