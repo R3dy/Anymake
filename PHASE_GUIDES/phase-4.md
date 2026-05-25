@@ -88,45 +88,98 @@ First real product code. Everything else depends on this being correct.
 - [ ] OAuth redirect URIs are allowlisted
 - [ ] JWT secrets are long random strings, not predictable values
 
-## Step 4.3 — Epic Build Loop
+## Step 4.3 — Epic Build Loop (Agentic)
 
-For each epic in backlog milestone order:
+Step 4.3 is executed by the **BMad Orchestration System** — a three-tier agent loop that builds every story in the approved backlog autonomously, with Royce's visibility into all progress via the agile board.
+
+### How to Start the Orchestration Loop
+
+Invoke the orchestrator (Operant runs it as an Agent with `AGENTS/orchestrator.md` as its instructions):
 
 ```
-1. Review stories + acceptance criteria for this epic
-2. Build: schema → migration → API → frontend (always in this order)
-3. Manual smoke test all acceptance criteria one by one
-4. Verify all error states behave correctly
-5. Write PR description (use format below)
-6. Request Royce review (first 3 PRs) or self-merge (after that)
-7. Merge after approval. Move to next story.
+"Start the Phase 4 build loop for [project name]"
 ```
 
-**PR description format:**
-```markdown
-## What
-[One paragraph: what was built or changed]
+The orchestrator will:
+1. Verify that Steps 4.1 and 4.2 are complete (scaffold + auth)
+2. Initialize `PROJECTS/[name]/BOARD.md` — the live agile board
+3. Begin dispatching worker and validator agents story by story
 
-## Why
-[Which user story this fulfills — reference Epic N.N]
+### How to Follow Along: The Agile Board
 
-## Testing
-- [x] Manual smoke test: [what was tested, how]
-- [x] Error states verified: [which error states were checked]
-- [ ] Automated test added: [if applicable]
+The board at `PROJECTS/[name]/BOARD.md` is your live visibility into the entire build. It updates after every agent action.
 
-## Screenshots
-[Required for every UI change]
+**Board columns:**
+
+| Symbol | Status | What's happening |
+|--------|--------|-----------------|
+| ⬜ | Backlog | Not started, waiting on dependencies |
+| 🟡 | Ready | Next in queue, all dependencies done |
+| 🔵 | In Progress | Worker agent is building this story |
+| 🟠 | In Validation | Validator is checking acceptance criteria |
+| 👁 | Awaiting Review | PR is open — Royce needs to review |
+| ✅ | Done | Merged to main |
+| 🚫 | Blocked | Escalated to Royce — needs a decision |
+
+The board also shows the Run Log (every event timestamped) and the Escalations section (any decision that needs Royce).
+
+### How the Agent System Works
+
+```
+Orchestrator
+  ├── reads the backlog and board
+  ├── selects the next ready story
+  ├── builds a task brief (self-contained context package for the story)
+  ├── spawns Worker agent
+  │     └── Worker: reads brief, builds schema→migration→API→frontend,
+  │                 commits, opens PR, writes result
+  ├── spawns Validator agent
+  │     └── Validator: checks each acceptance criterion against the code,
+  │                    runs security checklist, writes verdict (PASS/FAIL/ESCALATE)
+  └── on PASS: merges PR (or pauses for Royce review), updates board, loops
+      on FAIL: retries once with specific failure notes
+      on ESCALATE: pauses and notifies Royce
 ```
 
-**Security checklist — every epic:**
-- [ ] All non-public endpoints require authentication
-- [ ] User-owned data has authorization checks (users cannot access other users' data)
-- [ ] All user input is validated and sanitized before processing
-- [ ] Database queries use parameterized queries — no string interpolation
-- [ ] File uploads (if any) validated for type, size, and content
-- [ ] No secrets in code or client-side bundle
-- [ ] API responses don't leak internal IDs, stack traces, or sensitive data
+**Agent files:**
+- `AGENTS/orchestrator.md` — orchestrator instructions and loop specification
+- `AGENTS/worker.md` — worker agent instructions (single story, single branch)
+- `AGENTS/validator.md` — validator agent instructions (contract enforcement)
+- `AGENTS/policies.md` — all retry, escalation, and PR review policies
+
+**Royce reviews:**
+- PRs #1, #2, #3 always require Royce approval (see board for notification)
+- All Stripe webhook handler PRs always require Royce approval
+- All other PRs are merged autonomously after CI passes
+
+### When the Orchestrator Pauses and Asks for Royce
+
+The orchestrator stops and notifies Royce in these cases:
+
+| Situation | What the board shows | What to do |
+|----------|---------------------|-----------|
+| PR #1, #2, #3 | `👁 Awaiting Review` | Review the PR, say `"approved"` |
+| Webhook PR | `👁 Awaiting Review` | Review the PR, say `"approved"` |
+| Validation failure (2nd attempt) | `🚫 Blocked` | Read the escalation, say `"changes needed: [notes]"` or `"skip story N.N"` |
+| Security check failure | `🚫 Blocked` | Read the escalation, review the security issue, say `"fix and retry"` |
+| Human-only acceptance criterion | `🚫 Blocked` | Manually verify in staging, say `"resume"` when confirmed |
+| Implementation failure | `🚫 Blocked` | Diagnose with Operant, say `"retry story N.N"` or `"skip story N.N"` |
+
+Full phrase lexicon is in `AGENTS/policies.md`.
+
+### Story Build Contract
+
+Every story the worker builds is governed by a task brief at:
+`PROJECTS/[name]/docs/04-implementation/task-briefs/story-N.N.md`
+
+Every story the validator checks produces a report at:
+`PROJECTS/[name]/docs/04-implementation/validation-reports/story-N.N.md`
+
+These files are the audit trail. They document exactly what was built and why it passed validation.
+
+### Step 4.3 Complete When
+
+All stories in Milestones 3–5 show `✅ Done` on the board. The orchestrator writes a completion summary and updates `PHASE_STATE.md` automatically.
 
 ## Step 4.4 — Monetization Build
 

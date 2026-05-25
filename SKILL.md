@@ -80,14 +80,27 @@ Every session:
 
 ## Available Phases
 
-| Phase | Guide | Templates |
+| Phase | Guide | Key Files |
 |-------|-------|-----------|
 | Phase 0: Foundation | `PHASE_GUIDES/phase-0.md` | `TEMPLATES/project.md` |
 | Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` |
 | Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` |
 | Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` |
-| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `TEMPLATES/commit-message.md` |
+| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, worker, validator, policies |
 | Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` |
+
+## Agent System (Phase 4)
+
+Phase 4, Step 4.3 runs a three-tier agentic build loop. See `AGENTS/` for all agent definitions.
+
+| Agent | File | Role |
+|-------|------|------|
+| Orchestrator | `AGENTS/orchestrator.md` | Reads backlog, manages board, dispatches workers and validators, enforces policies, escalates to Royce |
+| Worker | `AGENTS/worker.md` | Receives one story, builds schema→migration→API→frontend, commits, opens PR, reports result |
+| Validator | `AGENTS/validator.md` | Checks each acceptance criterion against the implementation, runs security checklist, returns PASS/FAIL/ESCALATE |
+| Policies | `AGENTS/policies.md` | Shared retry matrix, PR review rules, escalation phrase lexicon, failure classification guide |
+
+**Visibility:** `PROJECTS/[name]/BOARD.md` — live agile board updated after every agent action. Royce can see every story's status, the run log, and any escalations at a glance.
 
 ---
 
