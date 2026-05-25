@@ -1,111 +1,94 @@
 ---
 name: bmad-builder
-description: Use when Royce wants to build a SaaS product from scratch — planning, designing, and implementing with structured phase gates. Triggers on "start a new project", "continue my build", "plan a product", "build an app", "BMad", "agentic build", "structured build process", or when working on LLM Geek or any new product development. Guides through Foundation → Discovery → Planning → Solutioning → Implementation → Launch with Royce approval at each phase gate.
+description: Use when Royce wants to build a SaaS product — from raw idea to live, revenue-generating product. Triggers on "start a new project", "continue my build", "plan a product", "build an app", "BMad", "agentic build", "structured build process", "I have a product idea", "launch a SaaS", or when working on any new product development. Guides through Foundation → Discovery → Planning → Solutioning → Implementation → Launch with Royce approval at each phase gate. Each session produces a concrete artifact and ends with a clear next action.
 ---
 
 # BMad Builder — Agentic SaaS Build System
 
-**Purpose:** Guide the complete planning and build of any SaaS product from idea to production using structured AI-assisted development.  
-**Method:** BMad (Business-model Artificial intelligence Developer) — phased approach with checkpoint gates  
-**Users:** Royce (product owner) + Operant (AI operator)  
-**Token budget:** 10,000 tokens per session
-
-**Note:** No time estimates. This system is for AI agent execution, not human sprint tracking. Human time estimates are irrelevant when Operant is doing the building.
+**Purpose:** Take any SaaS product idea from conception to live, revenue-generating product.
+**Method:** BMad (Business-model Artificial intelligence Developer) — phased, artifact-driven, decisively executed
+**Roles:** Royce (product owner, decision maker) + Operant (AI operator, executor)
 
 ## Core Philosophy
 
-BMad is not about prompting. It's a structured development system where:
-- **Royce** owns the vision, makes decisions, approves phases
-- **Operant** executes, plans, researches, builds — within approved scope
-- **Checkpoints** gate every phase transition — no skipping ahead
-- **Artifacts** are the source of truth — not memory or conversation
+BMad is a structured development system, not a prompt chain:
 
-The system prevents the two biggest failure modes:
-1. **Building without planning** → scope creep, rewrites, dead ends
-2. **Planning without building** → analysis paralysis, no output
+- **Royce** owns the vision, makes all product and business decisions, approves every phase gate
+- **Operant** executes everything: researches, plans, builds, deploys — within approved scope
+- **Artifacts** are the only source of truth — conversation memory is ephemeral, documents are permanent
+- **Checkpoints** gate every phase transition — no skipping, no shortcuts
+- **Revenue is first-class** — monetization is planned in Phase 0, built in Phase 4, not bolted on post-launch
+
+The system defeats two failure modes:
+1. **Building without planning** → scope creep, rewrites, wasted sessions
+2. **Planning without building** → analysis paralysis, nothing shipped
 
 ## Phase Overview
 
-| Phase | Name | Gate | Output |
-|-------|------|------|--------|
-| 0 | Foundation | Royce start signal | Project defined in `PROJECT.md` |
-| 1 | Discovery | Royce approval | `docs/01-discovery.md` |
-| 2 | Planning | Royce approval | `docs/02-planning/` (PRD, UX, Architecture) |
-| 3 | Solutioning | Royce approval | `docs/03-solutioning/` (Epics, Stories, Backlog) |
-| 4 | Implementation | Royce approval | `src/` (production code) |
-| 5 | Launch | Royce approval | Live product, metrics |
+| Phase | Name | Output | Gate |
+|-------|------|--------|------|
+| 0 | Foundation | `PROJECT.md` — identity, scope, revenue model, success definition | Royce approval |
+| 1 | Discovery | `docs/01-discovery.md` — market, competitors, users, risks | Royce approval |
+| 2 | Planning | PRD + UX + Architecture + Monetization | Royce approval |
+| 3 | Solutioning | Epics, stories, ordered backlog | Royce approval |
+| 4 | Implementation | Production code, CI/CD, security reviewed, staging deployed | Royce approval |
+| 5 | Launch | Live product, metrics dashboard, growth loop | Ongoing |
 
-## Session Format
+## Session Startup Ritual
 
 Every session:
-1. Check `PHASE_STATE.md` — where are we?
-2. Identify current step in current phase
-3. Execute one step (not a phase — one step)
-4. Produce concrete artifact or decision
-5. Report and wait for approval
 
-**Note:** No time estimates. Operant is an AI coding agent — tracking human time is irrelevant.
+```
+1. Check PROJECTS/[name]/PHASE_STATE.md — if it doesn't exist, start Phase 0
+2. Identify current phase + current step
+3. Read PHASE_GUIDES/phase-N.md for the detailed instructions for that step
+4. Execute exactly one step — completely
+5. Produce the concrete artifact or decision for that step
+6. Update PHASE_STATE.md
+7. Report: what was done → what needs Royce's eyes → what's next
+```
+
+**If Royce is vague:** Make a concrete recommendation. Ask one yes/no question. Don't list options.
+
+**If scope creep appears:** Log the idea to `PROJECTS/[name]/PARKING_LOT.md` and continue. Never expand scope without a new phase gate.
 
 ## How to Start
 
-Royce says: **"Start a new project"** or **"Continue [project name]"**
+| Royce says | Operant does |
+|-----------|-------------|
+| "Start a new project" | Creates `PROJECTS/[name]/` workspace, begins Phase 0 |
+| "Continue [project name]" | Reads `PROJECTS/[name]/PHASE_STATE.md`, resumes last step |
+| "What should we work on next?" | Reviews PARKING_LOT.md items or asks for a new idea |
 
-- **New project:** I create `PROJECT.md` in a new workspace, begin Phase 0
-- **Continue:** I read `PHASE_STATE.md` and pick up where we left off
+## Behavioral Rules
 
-## What BMad Is Not
-
-- Not a code generator — it's a structured build methodology
-- Not a consultant replacement — Royce makes business decisions
-- Not a one-shot prompt — it's a multi-session system
-- Not a framework — it's a process with tools
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `SKILL.md` | This file — system overview |
-| `PHASE_GUIDES/` | Detailed guides for each phase (0-5) |
-| `TEMPLATES/` | Document templates for all artifacts |
-| `PROJECTS/` | Project workspaces (one per project) |
-
-## Key Principles
-
-1. **One artifact at a time** — don't produce multiple documents simultaneously
-2. **Decisions over suggestions** — I must make recommendations, not just list options
-3. **Scope is a gate, not a suggestion** — nothing gets built outside approved scope
-4. **Clean exits** — each session ends with a clear "next step" documented
-5. **No ghost commits** — if I push code, it's been reviewed or it's scaffold
+1. **One step per session** — complete it fully before reporting
+2. **One artifact at a time** — finish one document before starting the next
+3. **Recommend, don't list** — "I recommend X because Y" not "here are 5 options"
+4. **Scope is a hard boundary** — nothing gets built outside approved scope
+5. **Clean exits** — every session ends with PHASE_STATE.md updated and next step named
+6. **Revenue is first-class** — monetization is designed in Phase 2, built in Phase 4
 
 ## Anti-Patterns
 
-- Building without a signed-off PRD
-- Adding features mid-phase
-- Skipping UX when the product has user-facing screens
-- Implementing features that aren't in the approved backlog
-- Pushing code without Royce's review on first few PRs
-
-## BMad Method Context
-
-BMad (Business-model Artificial intelligence Developer) is a structured AI-assisted development method. The key insight: **AI agents working without structured process produce messy, unplanned output.** The method imposes phase gates so that:
-
-- Every build decision is intentional
-- Every phase output is reviewed before proceeding
-- The product owner (Royce) maintains control throughout
-
-Reference: context7.com/bmad-code-org/bmad-method — "Structured AI-assisted development for production software"
+- Building before the PRD is approved
+- Adding features mid-phase (log to PARKING_LOT.md instead)
+- Skipping UX for products with user-facing screens
+- Treating monetization as a Phase 5 problem
+- Pushing unreviewed code (first 3 PRs always require Royce review)
+- Producing multiple artifacts in one session
 
 ## Available Phases
 
-| Phase | Guide | Template |
-|-------|-------|----------|
+| Phase | Guide | Templates |
+|-------|-------|-----------|
 | Phase 0: Foundation | `PHASE_GUIDES/phase-0.md` | `TEMPLATES/project.md` |
 | Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` |
-| Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/adr.md` |
+| Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` |
 | Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` |
-| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | — |
-| Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | — |
+| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `TEMPLATES/commit-message.md` |
+| Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` |
 
 ---
 
-*BMad Builder skill suite — v1.0 — For use with Royce + Operant*
+*BMad Builder skill suite — v2.0 — For use with Royce + Operant*

@@ -1,89 +1,200 @@
 # Phase 2 — Planning
 
-**Goal:** Define what we're building before writing any code. Three sub-tracks run in parallel.
+**Goal:** Define what we're building with enough precision that Operant can execute Phase 4 without asking Royce product questions. Four sub-tracks run across sessions but are reviewed together at the gate.
 
 **Duration:** 2-4 sessions
 
-## Sub-Track A: PRD
+## Sub-Tracks
 
-Full product requirements document:
-- Feature list with priorities
-- User stories (updated from discovery)
-- Edge cases and error states
-- Non-functional requirements (performance, scale, security)
+| Track | Output | Skip when |
+|-------|--------|-----------|
+| A: Product Requirements | `prd.md` | Never |
+| B: UX Design | `ux-design.md` | API-only products |
+| C: Architecture | `architecture/ADR-*.md` | Never |
+| D: Monetization | `monetization.md` | Never |
 
-## Sub-Track B: UX Design
+---
 
-For products with user-facing screens:
-- User flow diagrams (how does a user accomplish each major task?)
-- Wireframes or mockups (low-fidelity)
-- Information architecture (how is content organized?)
-- Prototype if useful (Figma, or even HTML click-through)
-
-For API-only products: skip UX track, focus on API design.
-
-## Sub-Track C: Architecture
-
-Technical decisions:
-- Frontend stack (React? Next? Svelte?)
-- Backend stack (Node? Python? Edge functions?)
-- Database (SQLite? Postgres? DynamoDB?)
-- Hosting (Vercel? Railway? Self-hosted?)
-- Authentication approach
-- Third-party services and dependencies
-
-Each decision recorded as an **ADR (Architecture Decision Record)**:
-```markdown
-# ADR-001: Database choice
-
-**Context:** We need a database that requires minimal ops, works with React frontend.
-
-**Options considered:**
-- SQLite (simple, file-based, limited scale)
-- Postgres (robust, requires hosting)
-- Supabase (managed Postgres + auth)
-
-**Decision:** SQLite for MVP, migrate to Postgres when needed.
-
-**Consequences:** Scale limit of ~10K rows. No real-time subscriptions.
-```
-
-## Steps
+## Sub-Track A: Product Requirements (PRD)
 
 ### Step 2.1 — PRD Draft
 
-Write comprehensive PRD covering all features.
+Write a complete product requirements document. Every feature must have acceptance criteria specific enough to test.
 
-### Step 2.2 — UX Wireframes
+**Feature prioritization with RICE:**
 
-Create low-fidelity wireframes for primary user flows.
+For each feature, score on four dimensions (1-10):
+- **Reach:** How many users does this affect?
+- **Impact:** How much does it improve the experience?
+- **Confidence:** How certain are we this is correct?
+- **Effort:** How hard is this to build? (invert — lower effort = higher score)
 
-### Step 2.3 — Architecture Decisions
+RICE score = (Reach × Impact × Confidence) / Effort
 
-Make and document key technical decisions.
+**For each feature document:**
+- Feature name and plain-language description
+- Priority: Must Have / Should Have / Nice to Have
+- User stories: As a [user], I want to [action] so that [outcome]
+- Acceptance criteria — specific and testable
+- Edge cases and error states
+- Non-functional requirements (performance, security, scale)
 
-### Step 2.4 — Integration Review
+**PRD must include:**
+- Prioritized feature list (MVP vs post-MVP clearly separated)
+- All MVP features with complete acceptance criteria
+- Non-MVP features called out explicitly with reason for deferral
+- Open questions — decisions that still need Royce's input
 
-Bring all three sub-tracks together:
-- Does PRD depend on architecture decisions that weren't made?
-- Does UX reveal features missing from PRD?
-- Are there conflicts between sub-tracks?
+---
 
-### Step 2.5 — MVP Scope Lock
+## Sub-Track B: UX Design
 
-Finalize what's in MVP vs future phases. Nothing gets built that isn't in approved MVP scope.
+### Step 2.2 — User Flows and Wireframes
+
+For products with user-facing screens. Skip for API-only products; use API design section instead.
+
+**For each primary user task:**
+Document the complete flow:
+1. Entry point (how does the user arrive at this task?)
+2. Steps to complete the task
+3. Success state (what do they see when it works?)
+4. Error states (what happens when something goes wrong?)
+5. Exit (where do they go next?)
+
+**Information architecture:**
+- Complete page/route list
+- Navigation structure (primary nav, secondary nav, public vs authenticated)
+- Content hierarchy on key pages
+
+**Wireframes:**
+Low-fidelity layouts for all key screens. Can be ASCII art, Markdown tables, or bullet-point descriptions — they just need to be precise enough to build from.
+
+Required wireframes:
+- Landing / marketing page
+- Dashboard or home screen (logged in)
+- Core feature screen(s)
+- Pricing page
+- Settings / account page
+- Empty states (what does the user see before they have data?)
+- Error states for critical failures
+
+**For API-only products:**
+- REST resource design
+- Request/response examples for every endpoint
+- Error response format and status code conventions
+- Pagination and filtering conventions
+
+---
+
+## Sub-Track C: Architecture
+
+### Step 2.3 — Technical Decisions
+
+Make and record every significant technical decision as an ADR. Recommended defaults by product type:
+
+| Product type | Frontend | Backend | Database | Auth | Hosting |
+|-------------|----------|---------|----------|------|---------|
+| SaaS web app | Next.js 14+ | Next.js API routes | Postgres (Supabase) | NextAuth or Supabase Auth | Vercel |
+| API product | — | FastAPI or Hono | Postgres or SQLite | JWT + API keys | Railway or Fly.io |
+| Real-time app | Next.js | Hono + WebSockets | Supabase (real-time) | Supabase Auth | Vercel + Fly.io |
+| Data-heavy app | Next.js | FastAPI | Postgres + Redis cache | NextAuth | Railway |
+| Mobile-first | React Native / Expo | FastAPI | Postgres (Supabase) | Supabase Auth | Expo + Railway |
+
+**Mandatory ADRs for every product:**
+- ADR-001: Frontend framework (or "none" for API-only)
+- ADR-002: Backend framework
+- ADR-003: Database choice
+- ADR-004: Authentication approach
+- ADR-005: Hosting and deployment strategy
+- ADR-006: Payment processing (Stripe unless strong reason otherwise)
+- ADR-007: Transactional email (Resend or SendGrid)
+
+**Optional ADRs — create if applicable:**
+- ADR-008: File storage (if product handles uploads)
+- ADR-009: Search (if product has search functionality)
+- ADR-010: Analytics (PostHog, Plausible, or Mixpanel)
+- ADR-011: Error tracking (Sentry)
+- ADR-012: Background jobs (if async processing is needed)
+- ADR-013: CDN / media delivery (if serving media at scale)
+
+---
+
+## Sub-Track D: Monetization
+
+### Step 2.4 — Monetization Design
+
+Phase 2 implementation of the revenue model chosen in Phase 0. This is not optional — every SaaS product needs a monetization plan before building starts.
+
+**Pricing tier design:**
+
+| Tier | Price | Target user | Key limits | Upgrade trigger |
+|------|-------|------------|------------|----------------|
+| Free | $0 | [who this is for] | [what limits them] | [what forces upgrade] |
+| [Starter] | $[X]/mo | [who pays this] | [their limits] | [next trigger] |
+| [Pro] | $[XX]/mo | [who pays this] | Unlimited [X] | [enterprise need] |
+
+Annual pricing: offer 20% off monthly as default.
+
+**The upgrade trigger (most important decision):**
+- What is the specific action or limit that makes a user want to pay?
+- Is it visible before they hit it? (It should be.)
+- Do most users hit it within their first 30 days? (It should trigger early.)
+
+**Stripe integration requirements:**
+- Checkout flow (Stripe Checkout or Payment Element)
+- Webhook events to handle: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Customer portal for billing management (use Stripe's hosted portal)
+- Grace period handling for failed payments
+
+**Revenue metrics to track (establish now, measure in Phase 5):**
+- MRR, ARR, ARPU, churn rate, free-to-paid conversion rate, LTV
+
+**User flows for monetization:**
+- New user → free tier → [upgrade trigger] → pricing page → Stripe Checkout → paid tier
+- Payment failure → grace period → notification email → downgrade
+- Cancel → Customer Portal → confirm → access retained until period end → free tier
+
+---
+
+## Step 2.5 — Integration Review
+
+Bring all four sub-tracks together. Find and fix conflicts before locking scope.
+
+**Cross-track conflicts to check:**
+- Does the PRD require features that depend on architecture decisions not yet made?
+- Do the wireframes show UI elements not documented in the PRD?
+- Does monetization require user flows not in the UX design?
+- Do the architecture choices create constraints the PRD doesn't account for?
+
+Resolve every conflict. Do not proceed with open cross-track dependencies.
+
+## Step 2.6 — MVP Scope Lock
+
+Write `MVP_SCOPE.md`:
+- The complete, approved feature list for MVP
+- This is the contract between Royce and Operant
+- Nothing gets built that isn't in this document
+- New ideas during Phase 4 go to PARKING_LOT.md, not into scope
 
 ## Output
 
-- `docs/02-planning/prd.md` — full product requirements
-- `docs/02-planning/ux-design.md` — wireframes + user flows
-- `docs/02-planning/architecture/` — ADRs
-- `docs/02-planning/MVP_SCOPE.md` — locked MVP feature list
+- `docs/02-planning/prd.md` — complete product requirements with RICE priorities
+- `docs/02-planning/ux-design.md` — all user flows, wireframes, IA
+- `docs/02-planning/architecture/ADR-*.md` — all architecture decisions
+- `docs/02-planning/monetization.md` — pricing, Stripe integration plan, revenue flows
+- `docs/02-planning/MVP_SCOPE.md` — the locked, approved MVP feature list
 
 ## Gate
 
-Royce reviews all three outputs. When Royce says "planning complete, start solutioning" — we proceed.
+Royce reviews all four outputs together. Key questions:
+- Is the PRD complete and unambiguous enough to build from?
+- Does the UX make the product experience clear?
+- Are the architecture choices justified and internally consistent?
+- Is the monetization plan integrated into the product (not an afterthought)?
+- Is the MVP scope tight enough to ship in Phase 4?
+
+Royce says "planning complete, start solutioning" → proceed to Phase 3.
 
 ## Templates
 
-See `../TEMPLATES/prd.md`, `../TEMPLATES/ux-design.md`, `../TEMPLATES/adr.md`
+See `../TEMPLATES/prd.md`, `../TEMPLATES/ux-design.md`, `../TEMPLATES/adr.md`, `../TEMPLATES/monetization.md`

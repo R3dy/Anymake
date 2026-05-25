@@ -1,6 +1,6 @@
-# PHASE STATE.md — Template
+# PHASE_STATE.md — Template
 
-Copy to your project root. Update after each session.
+Copy to `PROJECTS/[name]/PHASE_STATE.md`. Update after every session.
 
 ---
 
@@ -8,41 +8,63 @@ Copy to your project root. Update after each session.
 
 **Last updated:** [date]
 **Updated by:** Operant
-
-## Current Phase
-
-**[Phase N] — [Name]**  
-*Status: [In Progress | Complete | Blocked]*
-
-## Phase Progress
-
-| Phase | Status | Started | Completed | Approved |
-|-------|--------|---------|-----------|----------|
-| Phase 0: Foundation | [ ] | — | — | [Royce] |
-| Phase 1: Discovery | [ ] | — | — | [Royce] |
-| Phase 2: Planning | [ ] | — | — | [Royce] |
-| Phase 3: Solutioning | [ ] | — | — | [Royce] |
-| Phase 4: Implementation | [ ] | — | — | [Royce] |
-| Phase 5: Launch | [ ] | — | — | [Royce] |
-
-## Current Step
-
-[Which step in current phase we're on]
-
-## Blocker
-
-[If any]
-
-## Next Action
-
-[What I should do next session]
-
-## Session Log
-
-| Date | Session | Work Done | Next Step |
-|------|---------|-----------|-----------|
-| [date] | [n] | [what was accomplished] | [what comes next] |
+**Current phase:** Phase [N] — [Name]
+**Current step:** Step [N.N] — [Step name]
 
 ---
 
-*Update this file after every session*
+## Phase Progress
+
+| Phase | Status | Started | Completed | Approved by |
+|-------|--------|---------|-----------|-------------|
+| Phase 0: Foundation | ⬜ Not started | — | — | — |
+| Phase 1: Discovery | ⬜ Not started | — | — | — |
+| Phase 2: Planning | ⬜ Not started | — | — | — |
+| Phase 3: Solutioning | ⬜ Not started | — | — | — |
+| Phase 4: Implementation | ⬜ Not started | — | — | — |
+| Phase 5: Launch | ⬜ Not started | — | — | — |
+
+Status options: ⬜ Not started | 🔄 In progress | ✅ Complete | 🚫 Blocked
+
+---
+
+## Current Status
+
+**Phase:** [N — Name]
+**Step:** [N.N — Step name]
+**Status:** In progress | Blocked | Waiting for approval
+
+**What was done this session:**
+[One paragraph summary of the work completed]
+
+**Artifact produced:**
+[File path of the artifact created or updated this session]
+
+**Blocker (if any):**
+[Describe the blocker, or "None"]
+
+---
+
+## Next Action
+
+**When Royce returns:**
+[Clear, specific next action — e.g., "Review PROJECT.md and say 'approved' to start Phase 1" or "Run Step 1.2 — Competitive Landscape"]
+
+---
+
+## Session Log
+
+| Date | Session # | Phase/Step | Work Done | Artifact | Next Step |
+|------|-----------|------------|-----------|---------|-----------|
+| [date] | 1 | Phase 0, Step 0.1 | [what was done] | PROJECT.md | Step 0.2 |
+| [date] | 2 | | | | |
+
+---
+
+## Parking Lot
+
+Ideas that came up but are out of scope for current phase or MVP. See `PARKING_LOT.md`.
+
+---
+
+*Update this file at the end of every session. This is the source of truth for where we are.*

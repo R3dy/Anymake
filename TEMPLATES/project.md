@@ -1,6 +1,6 @@
 # PROJECT.md — Template
 
-Copy this to your project workspace. Fill in all sections before Phase 0 gate.
+Copy to `PROJECTS/[name]/PROJECT.md`. Fill in all sections during Phase 0.
 
 ---
 
@@ -12,60 +12,92 @@ One sentence. What it is, who it's for, why it matters.
 
 ## Problem
 
-What problem does this solve? Be specific. Name the pain.
+What specific pain does this solve? Who has it, and how badly does it hurt?
+Name the exact frustration — not "managing data is hard" but "developers lose 3+ hours per week manually syncing..."
 
 ## Solution
 
-How does this product solve the problem? What does it actually do?
+What does this product actually do? Describe the user experience, not the tech stack.
 
 ## Target Audience
 
-Primary user: [description]
-Secondary users: [description]
+**Primary user:** [Specific description — role, context, problem frequency]
 
-Why will they switch from their current solution?
+**Secondary users:** [If any]
 
-## Unique Value
+**Why will they switch from their current approach?**
+What makes this compelling enough to change behavior?
 
-Why this? Why now? Why us?
+## Unique Angle
+
+Why this? Why now? Why from us?
+- Technical edge: [if any]
+- Distribution edge: [if any]
+- Timing: [what's changed that makes this viable now]
 
 ## Scope
 
-### In Scope
-- [Feature A]
-- [Feature B]
+### MVP — In Scope
+- [Feature A — core value]
+- [Feature B — enables core value]
+- [Feature C — monetization]
 
-### Out of Scope
-- [Feature C — can be added post-MVP]
-- [Feature D]
+### Post-MVP (PARKING_LOT)
+- [Feature D — adds value but not required for launch]
+- [Feature E — nice to have, revisit after metrics]
 
-### MVP Scope
-Core user flow: [what is the minimum that makes this useful?]
+### Never Building
+- [Feature F — out of scope for this product entirely]
+
+## Revenue Model
+
+**Primary model:** [Freemium / Subscription / Usage-based / One-time / B2B seats]
+
+**Pricing (draft):**
+| Tier | Price | What's included | Upgrade trigger |
+|------|-------|----------------|----------------|
+| Free | $0 | [what free users get] | [what makes them upgrade] |
+| [Starter] | $[X]/mo | [what they get] | [what makes them upgrade] |
+| [Pro] | $[XX]/mo | [what they get] | — |
+
+**First revenue milestone:** $[X] MRR within [N] days of launch
 
 ## Success Definition
 
 ### User Success Metric
-What does a user accomplish that shows the product works?
+What does a user accomplish that proves the product works?
+Example: "A user completes [core action] within 5 minutes of signing up"
 
 ### Business Metric
-What number tells us this product is growing?
+The number that tells us people want this.
+Example: "100 active users, 10% day-7 retention"
 
-### Go-No-Go Criteria
-What conditions must be met to ship?
+### Revenue Milestone
+First meaningful revenue signal.
+Example: "5 paying subscribers within 30 days of public launch"
+
+### Go/No-Go Criteria
+Technical requirements before we ship.
+- [Core flow completes in under Xs]
+- [Zero manual deployment steps]
+- [Error tracking in place]
+
+## Top Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|-----------|
+| [Risk 1] | H/M/L | H/M/L | [plan] |
+| [Risk 2] | H/M/L | H/M/L | [plan] |
+| [Risk 3] | H/M/L | H/M/L | [plan] |
 
 ## Team
 
 | Role | Name | Responsibility |
 |------|------|----------------|
-| Product Owner | Royce | Decisions, approvals |
-| Developer | Operant | Build, execution |
-| Designer | TBD | UX (if needed) |
-
-## Timeline
-
-Target launch: [when ready]
-MVP features complete: [before launch]
+| Product Owner | Royce | Decisions, phase approvals |
+| Developer | Operant | Build, execute, report |
+| [Specialist] | TBD | [Responsibility — if needed] |
 
 ---
 
-*Fill in all sections before Phase 0 gate*
+*Approved by Royce on [date]. Changes require new gate approval.*
