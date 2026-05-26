@@ -145,8 +145,8 @@ Users can upgrade to paid plans, manage their subscription, and access paid feat
 
 | Question | Owner | Status |
 |---------|-------|--------|
-| [Decision needed] | Royce | Open |
-| [Technical question] | Operant | Open |
+| [Decision needed] | You | Open |
+| [Technical question] | Claude | Open |
 
 ---
 

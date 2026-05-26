@@ -1,6 +1,6 @@
 # Phase 0 — Foundation
 
-**Goal:** Define the product completely before any research or building begins. When Phase 0 is complete, both Royce and Operant know exactly what we're building, why it will make money, and what success looks like.
+**Goal:** Define the product completely before any research or building begins. When Phase 0 is complete, both you and Claude know exactly what we're building, why it will make money, and what success looks like.
 
 **Duration:** One session
 
@@ -17,7 +17,7 @@ Draft the core product definition in `PROJECT.md`:
 - **Target audience:** Specific primary user — not "developers" but "solo founders building their first SaaS"
 - **Unique angle:** Why will users choose this over alternatives? What's the edge?
 
-Operant drafts a complete version based on whatever Royce provides. Do not ask for more input — make a recommendation and ask for corrections.
+Claude drafts a complete version based on whatever you provide. Do not ask for more input — make a recommendation and ask for corrections.
 
 ### Step 0.2 — Scope
 
@@ -74,8 +74,8 @@ Define exactly what "launched successfully" looks like. Be specific enough that 
 
 ### Step 0.5 — Team
 
-- **Product Owner:** Royce — makes all product and business decisions, approves phase gates
-- **Developer:** Operant — builds, plans, executes, reports
+- **Product Owner:** you — makes all product and business decisions, approves phase gates
+- **Developer:** Claude — builds, plans, executes, reports
 - **Specialists needed?** [designer / copywriter / domain expert — or none]
 
 ## Output
@@ -86,13 +86,13 @@ Define exactly what "launched successfully" looks like. Be specific enough that 
 
 ## Gate
 
-Royce reviews `PROJECT.md`. Key questions:
+your reviews `PROJECT.md`. Key questions:
 - Is the elevator pitch accurate?
 - Is the MVP scope tight enough to ship fast?
 - Does the revenue model make sense for this product type?
 - Are the success metrics specific and measurable?
 
-Royce says "looks good, start Discovery" → proceed to Phase 1.
+You say "looks good, start Discovery" → proceed to Phase 1.
 
 ## Templates
 

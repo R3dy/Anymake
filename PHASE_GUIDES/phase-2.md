@@ -1,6 +1,6 @@
 # Phase 2 — Planning
 
-**Goal:** Define what we're building with enough precision that Operant can execute Phase 4 without asking Royce product questions. Four sub-tracks run across sessions but are reviewed together at the gate.
+**Goal:** Define what we're building with enough precision that Claude can execute Phase 4 without asking you product questions. Four sub-tracks run across sessions but are reviewed together at the gate.
 
 **Duration:** 2-4 sessions
 
@@ -43,7 +43,7 @@ RICE score = (Reach × Impact × Confidence) / Effort
 - Prioritized feature list (MVP vs post-MVP clearly separated)
 - All MVP features with complete acceptance criteria
 - Non-MVP features called out explicitly with reason for deferral
-- Open questions — decisions that still need Royce's input
+- Open questions — decisions that still need your input
 
 ---
 
@@ -94,7 +94,7 @@ Build a complete visual prototype before writing a single line of production cod
 
 **Purpose:** Validate that the product looks and feels like a real, funded SaaS product before committing to the full build. Catch visual direction and UX problems cheaply, before they're baked into production code.
 
-**Quality bar:** If Royce wouldn't be comfortable showing this to a potential customer or investor, it doesn't pass. It must look like it could be posted on ProductHunt today and get genuine upvotes.
+**Quality bar:** If you wouldn't be comfortable showing this to a potential customer or investor, it doesn't pass. It must look like it could be posted on ProductHunt today and get genuine upvotes.
 
 **Stack for the prototype:**
 - Next.js (App Router) + TypeScript
@@ -128,11 +128,11 @@ Build a complete visual prototype before writing a single line of production cod
 **Prototype output:**
 - Running locally: `npm run dev` works, no errors in console
 - Saved to: `PROJECTS/[name]/prototype/` (separate from production codebase)
-- Royce can view it at `localhost:3000`
+- You can view it at `localhost:3000`
 
-**Royce review (gate):**
+**Your review (gate):**
 
-Royce runs the prototype locally and answers two questions:
+Run the prototype locally and answer two questions:
 1. Does this look like a real product I'd be proud to show a customer? (Yes / No + notes)
 2. Does the core feature screen make the value proposition immediately obvious? (Yes / No + notes)
 
@@ -228,7 +228,7 @@ Resolve every conflict. Do not proceed with open cross-track dependencies.
 
 Write `MVP_SCOPE.md`:
 - The complete, approved feature list for MVP
-- This is the contract between Royce and Operant
+- This is the contract between you and Claude
 - Nothing gets built that isn't in this document
 - New ideas during Phase 4 go to PARKING_LOT.md, not into scope
 
@@ -243,7 +243,7 @@ Write `MVP_SCOPE.md`:
 
 ## Gate
 
-Royce reviews all outputs together. Key questions:
+your reviews all outputs together. Key questions:
 - Is the PRD complete and unambiguous enough to build from?
 - Does the prototype look like a real, funded product? (Yes/No — not "pretty good")
 - Does the UX make the product experience clear?
@@ -253,7 +253,7 @@ Royce reviews all outputs together. Key questions:
 
 **The prototype is a hard gate.** If it doesn't look production-quality, revise before proceeding.
 
-Royce says "planning complete, start solutioning" → proceed to Phase 3.
+You say "planning complete, start solutioning" → proceed to Phase 3.
 
 ## Templates
 

@@ -19,7 +19,7 @@ a project-scoped install.
 Restart OpenCode. The plugin installs automatically and the BMad Builder skill becomes
 active in every session — no manual loading required.
 
-Verify by asking: `"Start a new project"` — Operant should respond in BMad Builder mode.
+Verify by asking: `"Start a new project"` — Claude should respond in BMad Builder mode.
 
 ## If you are an AI agent following these instructions
 

@@ -1,8 +1,8 @@
 /**
  * BMad Builder plugin for OpenCode.ai
  *
- * Auto-injects the BMad Builder skill at session start so Royce doesn't
- * need to manually load it each time. Also exposes the plugin root path
+ * Auto-injects the BMad Builder skill at session start — no manual loading
+ * required each session. Also exposes the plugin root path
  * so the AI can read supporting files (PHASE_GUIDES, AGENTS, TEMPLATES).
  */
 

@@ -7,7 +7,7 @@ Copy to `PROJECTS/[name]/PHASE_STATE.md`. Update after every session.
 # [Project Name] — Phase State
 
 **Last updated:** [date]
-**Updated by:** Operant
+**Updated by:** Claude
 **Current phase:** Phase [N] — [Name]
 **Current step:** Step [N.N] — [Step name]
 
@@ -47,7 +47,7 @@ Status options: ⬜ Not started | 🔄 In progress | ✅ Complete | 🚫 Blocked
 
 ## Next Action
 
-**When Royce returns:**
+**When you return:**
 [Clear, specific next action — e.g., "Review PROJECT.md and say 'approved' to start Phase 1" or "Run Step 1.2 — Competitive Landscape"]
 
 ---

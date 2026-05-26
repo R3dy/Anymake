@@ -8,8 +8,8 @@ Shared reference for all agents in the Phase 4 orchestration system. When orches
 
 | Condition | Review requirement |
 |-----------|-------------------|
-| PR #1, #2, or #3 overall in Phase 4 | Royce review required — always |
-| Story title or technical tasks contain "webhook" | Royce review required — always, regardless of PR count |
+| PR #1, #2, or #3 overall in Phase 4 | your review required — always |
+| Story title or technical tasks contain "webhook" | your review required — always, regardless of PR count |
 | PR #4+ and no webhook keyword | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 
@@ -87,29 +87,29 @@ Story ordering within a milestone follows the dependency graph. Stories with no 
 ## Special Override Rules
 
 **Webhook handler override:**
-Any story whose title or technical task list contains the word "webhook" requires Royce review of the PR regardless of the current PR count. The orchestrator checks for this keyword when evaluating the PR review rule after each validation PASS.
+Any story whose title or technical task list contains the word "webhook" requires your review of the PR regardless of the current PR count. The orchestrator checks for this keyword when evaluating the PR review rule after each validation PASS.
 
 **Security failure override:**
-Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to Royce.
+Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
 
 **Human-only criterion override:**
-Any acceptance criterion that requires visual inspection, browser testing, or UX judgment produces a verdict of ESCALATE. The validator must list the specific human-only criteria in the escalation reason. The orchestrator pauses and Royce manually verifies before the orchestrator continues.
+Any acceptance criterion that requires visual inspection, browser testing, or UX judgment produces a verdict of ESCALATE. The validator must list the specific human-only criteria in the escalation reason. The orchestrator pauses and you manually verify before the orchestrator continues.
 
 ---
 
 ## Escalation Phrase Lexicon
 
-These are the exact phrases Royce uses to unblock the orchestrator. The orchestrator only acts on these phrases — it does not infer intent from context.
+These are the exact phrases you use to unblock the orchestrator. The orchestrator only acts on these phrases — it does not infer intent from context.
 
 | Phrase | Orchestrator action |
 |--------|-------------------|
 | `"approved"` | Merge the PR currently awaiting review, mark story Done, continue loop |
 | `"changes needed: [notes]"` | Write notes to RETRY CONTEXT, re-dispatch worker with amendment |
-| `"skip story N.N"` | Mark story N.N as Done with note "manually skipped by Royce", continue loop |
+| `"skip story N.N"` | Mark story N.N as Done with note "manually skipped by you", continue loop |
 | `"retry story N.N"` | Re-dispatch worker from scratch (fresh task brief, no RETRY CONTEXT) |
 | `"blocked — stop"` | Mark all in-progress stories as Blocked, halt orchestration, update PHASE_STATE.md |
-| `"resume"` | After Royce resolves a human-only validation escalation — mark story Done, continue |
-| `"fix and retry"` | After Royce provides a fix for an escalated failure — re-dispatch worker |
+| `"resume"` | After you resolve a human-only validation escalation — mark story Done, continue |
+| `"fix and retry"` | After you provide a fix for an escalated failure — re-dispatch worker |
 
 ---
 
@@ -121,9 +121,9 @@ These are the exact phrases Royce uses to unblock the orchestrator. The orchestr
 | `🟡` | Ready | Not started — all dependencies satisfied |
 | `🔵` | In Progress | Worker agent active |
 | `🟠` | In Validation | Validator agent active |
-| `👁` | Awaiting Review | PR open, waiting for Royce to approve |
+| `👁` | Awaiting Review | PR open, waiting for you to approve |
 | `✅` | Done | Merged to main |
-| `🚫` | Blocked | Escalated — awaiting Royce decision |
+| `🚫` | Blocked | Escalated — awaiting you decision |
 
 ---
 

@@ -126,13 +126,13 @@ Update `PROJECT.md` if discovery changed the understanding of the target user, s
 
 ## Gate
 
-Royce reviews `docs/01-discovery.md`. Key questions:
+your reviews `docs/01-discovery.md`. Key questions:
 - Does the competitive positioning hold up?
 - Are we targeting the right user?
 - Are the key assumptions reasonable?
 - Does the market opportunity justify building this?
 
-Royce says "discovery complete, start planning" → proceed to Phase 2.
+You say "discovery complete, start planning" → proceed to Phase 2.
 
 ## Templates
 

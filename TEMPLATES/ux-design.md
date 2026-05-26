@@ -639,4 +639,4 @@ Mobile: Cards stack vertically, most popular shown first.
 
 ---
 
-*UX Design locked at Phase 2 gate. Changes during Phase 4 require Royce approval.*
+*UX Design locked at Phase 2 gate. Changes during Phase 4 require your approval.*

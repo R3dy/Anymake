@@ -161,13 +161,13 @@ Produce the final ordered backlog in milestone format. This is what Phase 4 exec
 
 ## Gate
 
-Royce reviews epics and backlog. Key questions:
+your reviews epics and backlog. Key questions:
 - Are the epics in the right build order?
 - Is the backlog complete? Any obvious missing tasks?
 - Are acceptance criteria specific enough to verify?
 - Is Monetization in Milestone 4 or earlier?
 
-Royce says "solutioning complete, start building" → proceed to Phase 4.
+You say "solutioning complete, start building" → proceed to Phase 4.
 
 ## Templates
 

@@ -49,7 +49,7 @@ Edge cases:
 - [ ] Mobile/responsive verified (if UI)
 - [ ] No browser console errors or warnings
 - [ ] Error states tested and working
-- [ ] Code reviewed (Royce for first 3 PRs)
+- [ ] Code reviewed (you for first 3 PRs)
 - [ ] PR description written with screenshots
 
 ---

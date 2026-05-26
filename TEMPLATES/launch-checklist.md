@@ -7,8 +7,8 @@ Complete every item before declaring "ready for public launch." Customize items 
 # [Project Name] — Launch Checklist
 
 **Target launch date:** [date]
-**Checklist owner:** Operant
-**Final sign-off:** Royce
+**Checklist owner:** Claude
+**Final sign-off:** you
 
 ---
 
@@ -160,10 +160,10 @@ Complete every item before declaring "ready for public launch." Customize items 
 
 | Check | Status | Date | Sign-off |
 |-------|--------|------|---------|
-| Technical readiness | ⬜ | — | Operant |
-| Product readiness | ⬜ | — | Royce |
-| Launch assets ready | ⬜ | — | Royce |
-| Launch date confirmed | ⬜ | — | Royce |
+| Technical readiness | ⬜ | — | Claude |
+| Product readiness | ⬜ | — | You |
+| Launch assets ready | ⬜ | — | You |
+| Launch date confirmed | ⬜ | — | You |
 
 **Launch cleared:** [date]
 

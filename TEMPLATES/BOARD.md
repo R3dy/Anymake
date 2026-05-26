@@ -15,9 +15,9 @@
 | 🟡 | Ready | Not started — all dependencies satisfied, next in queue |
 | 🔵 | In Progress | Worker agent actively building |
 | 🟠 | In Validation | Validator agent checking against acceptance criteria |
-| 👁 | Awaiting Review | PR open — waiting for Royce to approve and merge |
+| 👁 | Awaiting Review | PR open — waiting for you to approve and merge |
 | ✅ | Done | Merged to main |
-| 🚫 | Blocked | Escalated to Royce — awaiting decision |
+| 🚫 | Blocked | Escalated to you — awaiting decision |
 
 ---
 
@@ -96,7 +96,7 @@
 - [Attempt 1 — what happened]
 - [Attempt 2 — what happened, if applicable]
 
-**Decision needed:** [Specific question for Royce — one yes/no or choose-one]
+**Decision needed:** [Specific question for you — one yes/no or choose-one]
 
 **Relevant files:**
 - Task brief: `docs/04-implementation/task-briefs/story-N.N.md`
