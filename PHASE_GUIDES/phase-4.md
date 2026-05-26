@@ -12,6 +12,7 @@
 4. **Test at boundaries** — integration tests on critical paths, not full unit coverage
 5. **Code review per PR** — Royce reviews first 3 PRs; after that Operant merges unless Royce asks to review
 6. **Commit clean** — one logical change per commit, conventional commit messages
+7. **Prototype is the visual contract** — the approved prototype from Phase 2 (Step 2.2b) defines the visual quality bar. Every frontend story must match or exceed it. Generic ≠ acceptable.
 
 ## Step 4.1 — Project Scaffold
 

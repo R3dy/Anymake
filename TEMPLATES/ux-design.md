@@ -12,6 +12,167 @@ Copy to `docs/02-planning/ux-design.md` for your project.
 
 ---
 
+## Design DNA
+
+**This section comes first. Lock it before choosing components or writing wireframes. Design DNA is what separates a product that looks like a tutorial from one that looks like a funded SaaS company.**
+
+### Visual Direction
+
+Pick one archetype and commit. Every subsequent decision flows from this.
+
+| Archetype | Aesthetic | Reference products |
+|-----------|-----------|-------------------|
+| `minimal-clean` | White space, thin borders, subtle shadows. Confidence through restraint. | Linear, Vercel, Raycast, Railway |
+| `bold-expressive` | Strong colors, high contrast, confident typography. Power user energy. | Stripe, Lemon Squeezy, Clerk |
+| `dark-dramatic` | Dark backgrounds, glowing accents, depth and layering. Premium feel. | Planetscale, Supabase, Resend |
+| `warm-approachable` | Rounded corners, friendly palette, generous padding. Welcoming. | Loom, Notion, Superhuman |
+
+**This product's visual direction:** `[archetype]`
+
+**Reference products:** [Name 2-3 real products with this aesthetic — e.g., "Linear, Vercel, Railway"]
+
+**One-sentence product personality:** [e.g., "Precise and fast, like a professional tool that respects your time"]
+
+---
+
+### Brand Color Palette
+
+Do not use the default Tailwind blue. Choose a brand color that matches the product's personality.
+
+| Token | Hex | Role |
+|-------|-----|------|
+| `brand-50` | `#[hex]` | Background tint, badges, subtle fills |
+| `brand-100` | `#[hex]` | Hover background on ghost elements |
+| `brand-500` | `#[hex]` | **Primary accent** — buttons, active states, links |
+| `brand-600` | `#[hex]` | Hover state on primary elements |
+| `brand-700` | `#[hex]` | Pressed/active state |
+| `neutral-950` | `#[hex]` | Primary text (near-black) |
+| `neutral-700` | `#[hex]` | Secondary text |
+| `neutral-400` | `#[hex]` | Placeholder, disabled, captions |
+| `neutral-200` | `#[hex]` | Borders, dividers |
+| `neutral-100` | `#[hex]` | Subtle backgrounds, hover fills |
+| `neutral-50` | `#[hex]` | Page background |
+
+**Accent gradient:** `linear-gradient(135deg, [brand-500] 0%, [complementary color] 100%)` — used sparingly on hero sections and key CTAs.
+
+---
+
+### Typography
+
+Pick fonts that reinforce the visual direction. Never default to system-ui for headings.
+
+| Role | Font family | Weight | Where |
+|------|------------|--------|-------|
+| Display / Hero | [e.g., "Cal Sans" \| "Bricolage Grotesque" \| "Plus Jakarta Sans"] | 700-800 | H1, hero headlines |
+| Heading | [e.g., "Inter" \| "DM Sans" \| "Geist"] | 600 | H2-H4, section titles |
+| Body | [e.g., "Inter" \| "DM Sans"] | 400 | Paragraphs, UI text |
+| Mono | [e.g., "Geist Mono" \| "JetBrains Mono"] | 400 | Code, IDs, technical values |
+
+**Font source:** [Google Fonts CDN | Fontsource npm package | Next.js font optimization]
+
+**Type scale:**
+| Level | Size | Weight | Line height | Letter spacing |
+|-------|------|--------|-------------|----------------|
+| Hero | 56-72px | 700 | 1.1 | -0.02em |
+| H1 | 36-48px | 700 | 1.2 | -0.02em |
+| H2 | 24-30px | 600 | 1.3 | -0.01em |
+| H3 | 18-20px | 600 | 1.4 | 0 |
+| Body | 16px | 400 | 1.6 | 0 |
+| Small | 14px | 400 | 1.5 | 0 |
+| Caption | 12px | 500 | 1.4 | 0.02em |
+
+---
+
+### Surface and Depth System
+
+Defines how layers feel. Inconsistency here is what makes products look cheap.
+
+**Depth style:** [`flat` | `subtle` | `layered` | `glassmorphism`]
+
+| Surface level | CSS | Use |
+|--------------|-----|-----|
+| Page background | `bg-neutral-50` or `bg-white` | Base layer |
+| Card / Panel | `bg-white shadow-sm border border-neutral-200/80` | Primary content surfaces |
+| Elevated card | `bg-white shadow-md` | Dropdowns, popovers, hover cards |
+| Modal | `bg-white shadow-xl ring-1 ring-neutral-900/5` | Dialogs |
+| Tooltip | `bg-neutral-900 text-white` | Tooltips |
+
+**Border radius system:** Pick one default and use it everywhere.
+- `rounded-lg` (8px) — professional, modern (recommended for most products)
+- `rounded-xl` (12px) — friendly, approachable
+- `rounded-2xl` (16px) — very rounded, consumer-app feel
+- `rounded-md` (6px) — tighter, more utilitarian
+
+**Spacing philosophy:** Generous. Use more padding than you think you need. Cramped = low quality.
+
+---
+
+### Hero Section Treatment
+
+The first thing users see. This is where "generic tutorial" vs. "real product" is decided.
+
+**Treatment:** [`mesh-gradient` | `radial-glow` | `geometric-pattern` | `image-backed` | `minimal-clean`]
+
+| Treatment | Implementation | Best for |
+|-----------|---------------|---------|
+| `mesh-gradient` | CSS conic/radial layered gradients at low opacity | Bold, expressive products |
+| `radial-glow` | `radial-gradient(ellipse at top, [brand-50] 0%, transparent 70%)` | Most SaaS products |
+| `geometric-pattern` | SVG dot grid or line grid + brand color overlay | Technical/developer tools |
+| `minimal-clean` | White or near-white, strong typography does the work | Premium minimal products |
+
+**This product's hero treatment:** `[treatment]`
+
+---
+
+### Motion Design
+
+Define the animation personality before any code is written.
+
+**Animation level:** [`none` | `subtle` | `standard` | `expressive`]
+
+| Level | Description | Best for |
+|-------|-------------|---------|
+| `none` | No transitions beyond browser defaults | Data-heavy tools, accessibility-first |
+| `subtle` | 150ms ease-out fades and scales on interaction only | Professional tools, dashboards |
+| `standard` | 200ms transitions, entrance animations on key elements | Most SaaS products |
+| `expressive` | 300-500ms, spring physics, staggered lists, page transitions | Consumer apps, marketing-heavy |
+
+**Animation library:** [Framer Motion | CSS transitions only | auto-animate]
+
+**Standard timing:**
+| Element | Duration | Easing |
+|---------|----------|--------|
+| Hover state | 100ms | ease |
+| Component enter | 200ms | ease-out |
+| Modal open | 150ms | ease-out |
+| Page transition | 300ms | ease-in-out |
+| Stagger children | 50ms delay between items | ease-out |
+
+**Required transitions for all products:**
+- All buttons: `transition-all duration-150` — color, shadow, transform on hover
+- All cards (if clickable): `hover:shadow-md hover:-translate-y-0.5 transition-all duration-150`
+- All inputs: `transition-colors duration-100` — border and ring color
+- Modals: fade + scale from 95% → 100% on open
+
+---
+
+### Content Quality Standard
+
+**This is non-negotiable.** Every demo, empty state, and placeholder must be realistic.
+
+| ❌ Never | ✅ Always |
+|----------|----------|
+| "Lorem ipsum dolor sit amet" | Real product copy written for this product |
+| "User 1", "Test Item", "Example" | Realistic names: "Sarah Chen", "Q4 Revenue Report" |
+| `$0.00`, `0 items`, all zeros | Realistic numbers: `$2,847.50`, `143 items`, `87%` |
+| "Loading..." text in skeletons | Shape-only skeleton with shimmer animation |
+| Generic placeholder images | Branded gradient or product-relevant illustration |
+| "Click here to get started" | Action-specific copy: "Create your first project" |
+
+**Rule:** If someone screenshots this prototype and posts it on Twitter saying it's a real product, people should believe them.
+
+---
+
 ## Design System
 
 **Component library:** [shadcn/ui | Radix UI | MUI | Headless UI | Chakra | custom]

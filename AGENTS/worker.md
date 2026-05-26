@@ -171,6 +171,50 @@ These are absolute. No exceptions.
 
 ---
 
+## Frontend Excellence Checklist
+
+**Apply this checklist to every story that touches the frontend.** This is what separates a product that looks like a tutorial from one that looks like a funded SaaS company.
+
+Before writing your RESULT for any frontend story, verify:
+
+**Visual identity:**
+- [ ] Brand color from `ux-design.md` Design DNA is used — not just on primary buttons but in accents, active nav states, focus rings, and badges
+- [ ] Typography follows the spec: correct font families, weights, and sizes loaded and applied
+- [ ] The hero or header area has the visual treatment from Design DNA (gradient, pattern, or deliberate white space — never the default white)
+- [ ] Page has clear visual hierarchy — the eye knows where to look first without thinking
+
+**Content quality:**
+- [ ] Zero lorem ipsum anywhere on screen
+- [ ] Zero generic placeholders: no "User 1", "Test Item", "Example Title", "Item Name"
+- [ ] All demo data (names, numbers, dates, descriptions) is realistic and varied
+- [ ] Stat cards / dashboards show realistic, non-round numbers (e.g., `$2,847` not `$0` or `$1,000`)
+- [ ] Empty states have: a descriptive icon or illustration, a helpful message, and a specific CTA
+- [ ] All user-facing copy reads like a real product — specific, benefit-focused, not tutorial-speak
+
+**Interaction quality:**
+- [ ] Every interactive element has a hover state: cursor change + visual feedback (color, shadow, or transform)
+- [ ] All buttons have `transition-all duration-150` — no abrupt color changes
+- [ ] Clickable cards have `hover:shadow-md hover:-translate-y-0.5 transition-all duration-150`
+- [ ] All inputs have `transition-colors duration-100` — border/ring color change on focus
+- [ ] Focus rings are visible and use the brand color (never remove `outline` without replacing it)
+- [ ] All modals/sheets animate open and close (150ms ease-out, scale from 95% + fade)
+
+**Responsive quality:**
+- [ ] Mobile layout (375px) is intentional — not a broken desktop layout
+- [ ] Navigation collapses correctly on mobile per the ux-design spec
+- [ ] Cards and grids reflow correctly at tablet and mobile breakpoints
+- [ ] Touch targets are at least 44px tall on mobile
+
+**Performance quality:**
+- [ ] No console errors or warnings in the browser
+- [ ] No N+1 React renders on list components (use proper keys, memoize if needed)
+- [ ] Images use `next/image` or equivalent with proper sizing
+- [ ] Loading states exist for every async operation — skeleton screens for layout, spinners for actions
+
+**Checklist failure rule:** If any item above is unchecked, fix it before writing your RESULT. Do not submit frontend stories with generic content, missing hover states, or broken mobile layouts. These are validation failures.
+
+---
+
 ## Security Requirements Checklist
 
 Check every item before writing your result. Any unchecked item is a validation failure.

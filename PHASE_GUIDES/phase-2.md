@@ -86,6 +86,62 @@ Required wireframes:
 
 ---
 
+### Step 2.2b — Prototype Sprint
+
+**This step is required for all products with user-facing screens.** Skip for API-only products.
+
+Build a complete visual prototype before writing a single line of production code. The prototype is a frontend-only app — no backend, no auth, no database. All data is hardcoded or held in local React state.
+
+**Purpose:** Validate that the product looks and feels like a real, funded SaaS product before committing to the full build. Catch visual direction and UX problems cheaply, before they're baked into production code.
+
+**Quality bar:** If Royce wouldn't be comfortable showing this to a potential customer or investor, it doesn't pass. It must look like it could be posted on ProductHunt today and get genuine upvotes.
+
+**Stack for the prototype:**
+- Next.js (App Router) + TypeScript
+- Tailwind CSS with the brand color palette from `ux-design.md` Design DNA section
+- shadcn/ui components (customized to match the visual direction — not default)
+- Framer Motion for entrance animations and transitions
+- Lucide icons
+
+**Required screens (minimum):**
+
+| Screen | Must demonstrate |
+|--------|-----------------|
+| Landing page | Brand, hero section treatment, feature highlights, pricing CTA |
+| Dashboard / main view | Realistic data, stat cards, primary data list/table |
+| Core feature screen | The most important thing the product does |
+| Empty state | What a new user sees — must have clear CTA and encouraging copy |
+
+**Required content quality:**
+- Zero lorem ipsum. All copy is real product copy.
+- All data (names, numbers, dates) is realistic and varied — not "User 1" and "$0.00"
+- All interactive elements respond to hover — cursor, color, shadow
+- Brand color applied throughout, not just on primary buttons
+- Hero section has the visual treatment defined in Design DNA
+
+**Required interactions:**
+- Navigation links highlight the current page
+- At least one modal or sheet interaction (open/close with animation)
+- At least one form with client-side validation
+- Hover states on all buttons, cards, and links
+
+**Prototype output:**
+- Running locally: `npm run dev` works, no errors in console
+- Saved to: `PROJECTS/[name]/prototype/` (separate from production codebase)
+- Royce can view it at `localhost:3000`
+
+**Royce review (gate):**
+
+Royce runs the prototype locally and answers two questions:
+1. Does this look like a real product I'd be proud to show a customer? (Yes / No + notes)
+2. Does the core feature screen make the value proposition immediately obvious? (Yes / No + notes)
+
+Both must be Yes before proceeding. If No on either: revise the prototype, do not proceed to 2.3.
+
+The approved prototype becomes the **visual contract** for Phase 4. Worker agents build the production version to match this prototype's look, feel, and content quality.
+
+---
+
 ## Sub-Track C: Architecture
 
 ### Step 2.3 — Technical Decisions
@@ -179,19 +235,23 @@ Write `MVP_SCOPE.md`:
 ## Output
 
 - `docs/02-planning/prd.md` — complete product requirements with RICE priorities
-- `docs/02-planning/ux-design.md` — all user flows, wireframes, IA
+- `docs/02-planning/ux-design.md` — Design DNA + all user flows, wireframes, IA
 - `docs/02-planning/architecture/ADR-*.md` — all architecture decisions
 - `docs/02-planning/monetization.md` — pricing, Stripe integration plan, revenue flows
 - `docs/02-planning/MVP_SCOPE.md` — the locked, approved MVP feature list
+- `PROJECTS/[name]/prototype/` — the approved visual prototype (the visual contract for Phase 4)
 
 ## Gate
 
-Royce reviews all four outputs together. Key questions:
+Royce reviews all outputs together. Key questions:
 - Is the PRD complete and unambiguous enough to build from?
+- Does the prototype look like a real, funded product? (Yes/No — not "pretty good")
 - Does the UX make the product experience clear?
 - Are the architecture choices justified and internally consistent?
 - Is the monetization plan integrated into the product (not an afterthought)?
 - Is the MVP scope tight enough to ship in Phase 4?
+
+**The prototype is a hard gate.** If it doesn't look production-quality, revise before proceeding.
 
 Royce says "planning complete, start solutioning" → proceed to Phase 3.
 

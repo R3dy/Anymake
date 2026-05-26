@@ -18,10 +18,13 @@ BMad is a structured development system, not a prompt chain:
 - **Artifacts** are the only source of truth — conversation memory is ephemeral, documents are permanent
 - **Checkpoints** gate every phase transition — no skipping, no shortcuts
 - **Revenue is first-class** — monetization is planned in Phase 0, built in Phase 4, not bolted on post-launch
+- **Visual quality is first-class** — every user-facing product must look and feel like it was built by a funded SaaS company, not a tutorial. Generic = unacceptable.
 
 The system defeats two failure modes:
 1. **Building without planning** → scope creep, rewrites, wasted sessions
 2. **Planning without building** → analysis paralysis, nothing shipped
+
+**The visual quality bar:** Before any production code is written, Phase 2 produces a Prototype Sprint — a polished, realistic visual prototype. If Royce wouldn't be proud to show it to a potential customer, it doesn't pass the gate.
 
 ## Phase Overview
 
