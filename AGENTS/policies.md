@@ -134,5 +134,6 @@ Before any autonomous merge, the orchestrator confirms:
 - No lint failures
 - No type check failures
 - No test failures
+- Test suite is non-empty (a PR that passes CI with 0 tests has a broken CI configuration — escalate)
 
 If CI status cannot be determined (e.g., no CI configured), treat as a missing prerequisite and escalate before the first autonomous merge.

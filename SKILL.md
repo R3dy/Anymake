@@ -80,6 +80,8 @@ Every session:
 - Treating monetization as a Phase 5 problem
 - Pushing unreviewed code (first 3 PRs always require your review)
 - Producing multiple artifacts in one session
+- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + worker + validator into one context. The Agent tool must be used to spawn sub-agents — doing it all yourself defeats the three-tier architecture.
+- **"No test suite" as a result:** Every story with runtime-verifiable acceptance criteria must have automated tests. "Works on my machine" is not a validation strategy.
 
 ## Available Phases
 

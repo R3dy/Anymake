@@ -53,7 +53,7 @@ Build in this exact order. Each task gets its own commit.
 - [ ] Component: [frontend component(s) to build]
 - [ ] Page: [route/page to build — or "existing page update"]
 - [ ] Integration: [third-party service connection — or "none"]
-- [ ] Test: [what to test — integration test, e2e, or "none"]
+- [ ] Test: [one automated test per runtime-verifiable acceptance criterion — specify file path, test name, and what each assertion proves. "none" is never acceptable for stories with runtime-verifiable criteria]
 
 ---
 
@@ -170,6 +170,7 @@ Screenshots are required in the PR description for any story that produces UI ch
 **commits:**
 - [SHA] [conventional commit message]
 - [SHA] [conventional commit message]
-**test_output:** passed ([N] tests) | failed ([N] tests) | no test suite
+**test_output:** passed ([N] tests) | failed ([N] tests, failure output below)
+*(— "no test suite" is never acceptable — minimum 1 test per runtime-verifiable criterion)*
 **lint_output:** clean | [N] warnings fixed
 **notes:** *(optional — anything the orchestrator should know)*

@@ -26,10 +26,17 @@ Build the complete foundation before writing a single feature line.
 - [ ] Configure TypeScript (if using TS)
 - [ ] Set up branch protection: require PR + CI passing before merge
 
+**Test framework:**
+- [ ] Integration test runner configured (`vitest` or `jest`) — `npm test` runs all tests
+- [ ] E2E test runner configured (`playwright`) — `npm run test:e2e` runs all e2e tests
+- [ ] Tests directory established: `tests/` with `tests/integration/` and `tests/e2e/`
+- [ ] Both runners return exit code 1 on failure (CI must catch test failures)
+- [ ] Verify: `npm test` runs and exits cleanly (even with 0 tests initially — no syntax errors)
+
 **CI/CD (GitHub Actions):**
 - [ ] Lint check runs on every PR
 - [ ] Type check runs on every PR (if TypeScript)
-- [ ] Test suite runs on every PR
+- [ ] Test suite (`npm test`) runs on every PR — **PR cannot merge if test suite is missing or fails**
 - [ ] Staging deploy triggers on merge to main
 - [ ] Production deploy triggers on release tag (or manual approval)
 

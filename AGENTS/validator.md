@@ -45,26 +45,25 @@ Evidence format: `[file path]:[line number] — [verbatim code excerpt proving p
 
 ### Runtime-Verifiable
 
-Requires running the app or test suite.
+Requires running the test suite. The worker was required to write automated tests for every runtime-verifiable criterion.
 
 ```bash
-# Run test suite first
+# Run the full test suite
 npm test        # or: pytest, cargo test, etc.
 ```
 
-Look for test names and assertions that correspond to acceptance criteria. If a test exists for the criterion, its pass/fail is your evidence.
+**Primary evidence is always test output.** Find the test name and assertion that corresponds to each criterion. If a test passes for the criterion, it passes. If it fails, it fails.
 
-If no test exists for a specific criterion, use targeted verification:
-```bash
-# For API checks — spin up dev server and use curl
-curl -X POST http://localhost:3000/api/[endpoint] \
-  -H "Content-Type: application/json" \
-  -d '{"key":"value"}'
+**If no test exists for a runtime-verifiable criterion:** This is a **FAIL** — not an environment skip, not a Human-Only escalation. The worker skipped a mandatory build step. Record:
+```
+Criterion: "[verbatim criterion text]"
+Result: FAIL
+Evidence: No automated test found covering this criterion. Worker must write tests for all runtime-verifiable criteria.
 ```
 
-Evidence format: `Test: "[test name]" — PASSED/FAILED` or `curl response: [status] [relevant body excerpt]`
+**If the test suite cannot run** (build failure, missing dependencies — not missing test files): mark as `SKIP (environment)` and set verdict to `ESCALATE`.
 
-If you cannot run the test suite (build failure, environment issue), mark the criterion as `SKIP (environment)` and note the issue. Set verdict to `ESCALATE`.
+Evidence format: `Test: "[test name]" — PASSED/FAILED — [file:line of the assertion]`
 
 ### Human-Only
 
@@ -119,17 +118,21 @@ Work through this in order. Stop at the first matching rule.
 
 2. Any criterion = Human-Only (SKIP)?
    → verdict = ESCALATE
-   (Human-only criteria require your to manually verify)
+   (Human-only criteria require you to manually verify)
 
-3. Any criterion = SKIP (environment — couldn't run tests)?
+3. Any criterion = SKIP (environment — test suite couldn't run due to infrastructure, not missing tests)?
    → verdict = ESCALATE
    (Can't verify without a working environment)
 
-4. Any criterion = FAIL?
+4. Any runtime-verifiable criterion with no automated test coverage?
+   → verdict = FAIL
+   (Missing tests are a worker failure, not an environment issue — never ESCALATE for missing tests)
+
+5. Any criterion = FAIL?
    → verdict = FAIL
    (Specific, fixable failures go back to the worker)
 
-5. All criteria = PASS or N/A?
+6. All criteria = PASS or N/A?
    → verdict = PASS
 ```
 

@@ -32,8 +32,10 @@ Always build in this order. Never skip ahead. Each layer depends on the one befo
 4. Component — reusable frontend components (if applicable)
 5. Page      — full routes/pages (if applicable)
 6. Integration — third-party service connections (if applicable)
-7. Test      — integration or e2e tests (if applicable)
+7. Test      — automated tests for every runtime-verifiable acceptance criterion (mandatory — never optional)
 ```
+
+**On the test step:** You must write at least one automated test per runtime-verifiable acceptance criterion. "Runtime-verifiable" means any criterion that requires running the app to check — API behavior, database writes, auth guards, business logic. These cannot be verified by reading code alone. The validator will FAIL your story if runtime criteria have no test coverage.
 
 Each layer gets its own commit before the next layer starts.
 
@@ -86,12 +88,15 @@ Before writing your result, manually check each acceptance criterion:
 
 Check every item on the security requirements list in your task brief.
 
-If the test suite exists, run it:
+Run the test suite. You must have written tests in step 7 above — if you haven't, go back and write them now.
+
 ```bash
 npm test        # or: pytest, cargo test, etc.
 ```
 
-Record the output — pass or fail and any relevant lines.
+Record the output — pass count, fail count, and any failure lines.
+
+**A story with no tests is not complete.** If you are about to write `result: success` and your test count is 0, stop — you have skipped a mandatory build step. Write tests, run them, then write your result.
 
 ### 5. Open the PR
 
@@ -126,7 +131,8 @@ Append the RESULT section to the task brief file (do not delete existing content
 **commits:**
   - [SHA] feat(scope): subject
   - [SHA] feat(scope): subject
-**test_output:** passed ([N] tests) | failed ([N] tests) | no test suite
+**test_output:** passed ([N] tests) | failed ([N] tests, see failure output below)
+*(minimum 1 test per runtime-verifiable acceptance criterion — "no test suite" is never an acceptable result)*
 **lint_output:** clean | [N] warnings fixed
 **notes:** [Any observations for the orchestrator — optional]
 ```
@@ -167,6 +173,7 @@ These are absolute. No exceptions.
 - **Never implement functionality not described in the acceptance criteria** — no bonus features
 - **Never commit secrets** — no API keys, connection strings, or tokens in code
 - **Never commit code that fails the linter** — fix lint errors before committing
+- **Never write `result: success` with zero tests** — if the story has runtime-verifiable acceptance criteria (any criterion requiring the app to run), you must write automated tests for them. Zero tests = incomplete story.
 - **Stop and write a failed result** rather than making a guess about ambiguous product requirements
 
 ---
