@@ -1,9 +1,9 @@
 /**
  * BMad Builder plugin for OpenCode.ai
  *
- * Auto-injects the BMad Builder skill at session start — no manual loading
- * required each session. Also exposes the plugin root path
- * so the AI can read supporting files (PHASE_GUIDES, AGENTS, TEMPLATES).
+ * Registers the skills/ directory with OpenCode so the bmad-builder skill
+ * is natively discovered. Also auto-injects the skill at session start so
+ * the AI has full context without a manual /skill load.
  */
 
 import path from 'path';
@@ -14,6 +14,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Two levels up from .opencode/plugins/ → repo root
 const PLUGIN_ROOT = path.resolve(__dirname, '../..');
+
+const SKILLS_DIR = path.join(PLUGIN_ROOT, 'skills');
 
 const extractAndStripFrontmatter = (content) => {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
@@ -40,7 +42,7 @@ export const BmadBuilderPlugin = async ({ client, directory }) => {
   const getBootstrapContent = () => {
     if (_bootstrapCache !== undefined) return _bootstrapCache;
 
-    const skillPath = path.join(PLUGIN_ROOT, 'SKILL.md');
+    const skillPath = path.join(SKILLS_DIR, 'bmad-builder', 'SKILL.md');
     if (!fs.existsSync(skillPath)) {
       _bootstrapCache = null;
       return null;
@@ -74,6 +76,13 @@ or \`TEMPLATES/prd.md\`, read them from their full path:
   };
 
   return {
+    config: async (config) => {
+      config.skills = config.skills || {};
+      config.skills.paths = config.skills.paths || [];
+      if (!config.skills.paths.includes(SKILLS_DIR)) {
+        config.skills.paths.push(SKILLS_DIR);
+      }
+    },
     'experimental.chat.messages.transform': async (_input, output) => {
       const bootstrap = getBootstrapContent();
       if (!bootstrap || !output.messages.length) return;
