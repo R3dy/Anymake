@@ -64,7 +64,7 @@ Return one of three, using the same lexicon as the Validator and Product Owner P
 
 ## How to run a pass
 
-1. Scope it (one PR, or the whole product) and load the right checklist tier.
+1. Scope it (one PR, or the whole product) and load the right checklist tier from its canonical source above.
 2. Read the code for each item — don't assume; trace inputs to sinks
    (delegate broad searches to a sub-agent to keep context focused).
 3. Run available automated checks: dependency/vulnerability scan, secret scan,
