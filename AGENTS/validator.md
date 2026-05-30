@@ -114,7 +114,7 @@ Work through this in order. Stop at the first matching rule.
 ```
 1. Any security check = FAIL?
    → verdict = ESCALATE
-   (Security failures never go back to the worker — always escalate to you)
+   (Security failures never go back to the worker — always escalate to the user)
 
 2. Any criterion = Human-Only (SKIP)?
    → verdict = ESCALATE

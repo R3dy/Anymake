@@ -87,7 +87,7 @@ Fill this section only when verdict is ESCALATE.
 **Specific reason:**
 [Exact description of why this cannot be resolved autonomously]
 
-**What you needs to do:**
+**What you need to do:**
 [Specific action — "Review PR #N for the security vulnerability at src/api/data/route.ts:28" or "Open the staging URL and verify the upgrade prompt appears after creating the 4th project"]
 
 **Files to review:**

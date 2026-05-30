@@ -86,7 +86,7 @@ Define exactly what "launched successfully" looks like. Be specific enough that 
 
 ## Gate
 
-your reviews `PROJECT.md`. Key questions:
+You review `PROJECT.md`. Key questions:
 - Is the elevator pitch accurate?
 - Is the MVP scope tight enough to ship fast?
 - Does the revenue model make sense for this product type?

@@ -16,6 +16,38 @@ Active projects live in `PROJECTS/[name]/` (gitignored). The system reads from t
 
 ---
 
+## Why This System Exists — Design Rationale
+
+Every rule, file, and role in this repository exists to serve a single mission and defeat two specific failure modes. If you ever need to decide how an undocumented edge case should behave, decide in favor of the rationale below.
+
+### The mission
+
+Take a raw product idea all the way to a live, revenue-generating SaaS — without the human having to micromanage execution, and without the AI quietly drifting away from the human's intent. The human owns the **vision**; the AI owns the **execution**. The entire system is the contract that keeps those two roles in their lanes.
+
+### The two failure modes it defeats
+
+| Failure mode | What it looks like | How this system prevents it |
+|--------------|--------------------|-----------------------------|
+| **Building without planning** | The AI starts coding immediately; three sessions later there are half-features, ballooning scope, and rewrites. | Phase gates force the expensive-to-reverse decisions (audience, revenue model, architecture) to happen *first*, while they are still just words in a document and cheap to change. |
+| **Planning without building** | Endless research and documents; nothing ever ships. | Phase 4's autonomous build loop and the "one artifact per session, always name the next action" discipline keep forward motion toward a shipped product. |
+
+### Why the major design decisions are the way they are
+
+- **Phases exist because decision order is expensive to get wrong.** Choosing a revenue model after the app is built means redesigning UX and architecture. The phases sequence decisions so the irreversible ones come first.
+- **Gates exist to keep the human in command of the vision.** The AI is trusted to do the work; it is never trusted to declare the work *done*. Only a human (or, in autonomous mode, the strict Product Owner Proxy standing in for one) clears a gate.
+- **Artifacts are truth because AI memory is fragile.** Conversation context gets truncated, summarized, and forgotten between sessions. Durable documents (especially `PHASE_STATE.md`, the bookmark) let any fresh session resume exactly where the last one stopped. This is why agents must read documents rather than rely on conversation history.
+- **"One step / one artifact per session" and `PARKING_LOT.md` exist to fight scope creep** — the most common way AI-assisted projects die. The parking lot gives mid-phase ideas a respectful home so they are neither lost nor allowed to derail current work.
+- **Revenue and visual quality are first-class, not afterthoughts.** Monetization is designed in Phase 2 and built by Milestone 4 because retrofitting payments is a redesign. The Phase 2 prototype must look like a funded SaaS product *before* any production code, because it is far cheaper to fix visual direction in a throwaway prototype than in a built backend.
+- **The Phase 4 three-tier agent system exists to make autonomous building trustworthy.** A single AI building an entire backlog accumulates context, cuts corners, and grades its own homework. Splitting the work across an Orchestrator (coordinates, never codes), a Worker (builds exactly one story), and a Validator (checks against acceptance criteria, never edits code) means the thing that builds is never the thing that approves. Collapsing these roles into one context destroys that guarantee — which is why it is the system's primary anti-pattern.
+- **Escalation over assumption exists because guessing at product intent is the costliest error.** Workers and Validators execute; they never invent product or design decisions. When something is ambiguous, they stop and escalate.
+- **The security override is absolute because some risks cannot be delegated.** Security failures in Phase 4 always wake the real human, in every mode, with no exception — even autonomous mode cannot bypass this.
+
+### One-sentence summary
+
+This repository is a discipline imposed on AI-assisted product building — a set of rituals, durable documents, and role separations whose every element keeps a human in command of the *vision* while the AI runs the *execution*, without sliding into either "build without thinking" or "think without building."
+
+---
+
 ## Skill Activation (OpenCode)
 
 When loaded via the OpenCode plugin, the contents of `SKILL.md` are injected as the active skill. Claude operates as the BMad Builder assistant for the entire session.

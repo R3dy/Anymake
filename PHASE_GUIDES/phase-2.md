@@ -256,7 +256,7 @@ Write `MVP_SCOPE.md`:
 
 ## Gate
 
-your reviews all outputs together. Key questions:
+You review all outputs together. Key questions:
 - Is the PRD complete and unambiguous enough to build from?
 - Does the prototype look like a real, funded product? (Yes/No — not "pretty good")
 - Does the UX make the product experience clear?

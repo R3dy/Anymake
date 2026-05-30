@@ -10,7 +10,7 @@
 2. **One milestone at a time** — complete Milestone 1 before starting Milestone 2
 3. **Security built in** — security checks happen during build, not after
 4. **Test at boundaries** — integration tests on critical paths, not full unit coverage
-5. **Code review per PR** — your reviews first 3 PRs; after that Claude merges unless you asks to review
+5. **Code review per PR** — you review the first 3 PRs; after that Claude merges unless you ask to review
 6. **Commit clean** — one logical change per commit, conventional commit messages
 7. **Prototype is the visual contract** — the approved prototype from Phase 2 (Step 2.2b) defines the visual quality bar. Every frontend story must match or exceed it. Generic ≠ acceptable.
 
@@ -125,7 +125,7 @@ The board at `PROJECTS/[name]/BOARD.md` is your live visibility into the entire 
 | 🟡 | Ready | Next in queue, all dependencies done |
 | 🔵 | In Progress | Worker agent is building this story |
 | 🟠 | In Validation | Validator is checking acceptance criteria |
-| 👁 | Awaiting Review | PR is open — you needs to review |
+| 👁 | Awaiting Review | PR is open — you need to review |
 | ✅ | Done | Merged to main |
 | 🚫 | Blocked | Escalated to you — needs a decision |
 
@@ -155,7 +155,7 @@ Orchestrator
 - `AGENTS/validator.md` — validator agent instructions (contract enforcement)
 - `AGENTS/policies.md` — all retry, escalation, and PR review policies
 
-**your reviews:**
+**You review:**
 - PRs #1, #2, #3 always require your approval (see board for notification)
 - All Stripe webhook handler PRs always require your approval
 - All other PRs are merged autonomously after CI passes
@@ -262,7 +262,7 @@ After all epics are complete, before requesting launch approval.
 
 ## Step 4.6 — Staging Review
 
-your reviews the complete product on staging before launch approval:
+You review the complete product on staging before launch approval:
 - Complete user flow works end-to-end
 - Monetization flow works with test-mode Stripe
 - Product looks and feels ready to ship
@@ -290,7 +290,7 @@ Agent({
 
 ## Gate
 
-You use the staging environment and approves. You say "launch it" → proceed to Phase 5.
+You use the staging environment and approve. You say "launch it" → proceed to Phase 5.
 
 **Autonomous mode:** Gate is handled by the Product Owner Proxy at Step 4.6 above. In autonomous mode, the proxy's `PHRASE: launch it` serves as the gate approval.
 

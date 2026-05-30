@@ -13,7 +13,7 @@ description: Use when the user wants to build a SaaS product — from raw idea t
 
 BMad is a structured development system, not a prompt chain:
 
-- **you** owns the vision, makes all product and business decisions, approves every phase gate
+- **you** own the vision, make all product and business decisions, and approve every phase gate
 - **Claude** executes everything: researches, plans, builds, deploys — within approved scope
 - **Artifacts** are the only source of truth — conversation memory is ephemeral, documents are permanent
 - **Checkpoints** gate every phase transition — no skipping, no shortcuts
@@ -54,7 +54,7 @@ Every session:
    (In autonomous mode: log to PHASE_STATE.md; only surface to user on escalation or completion)
 ```
 
-**If you is vague:** Make a concrete recommendation. Ask one yes/no question. Don't list options.
+**If you're vague:** Make a concrete recommendation. Ask one yes/no question. Don't list options.
 
 **If scope creep appears:** Log the idea to `PROJECTS/[name]/PARKING_LOT.md` and continue. Never expand scope without a new phase gate.
 

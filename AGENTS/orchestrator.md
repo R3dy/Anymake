@@ -139,11 +139,11 @@ When amending for retry, add this section to the task brief:
 ### Step 6 — PR Review and Merge
 
 Determine review requirement using `AGENTS/policies.md` PR review rules:
-- PR #1, #2, or #3 overall → your review required
-- Story title or technical tasks contain the word "webhook" → your review required regardless of PR count
+- PR #1, #2, or #3 overall → your review is required
+- Story title or technical tasks contain the word "webhook" → your review is required regardless of PR count
 - All other PRs → merge autonomously after CI passes
 
-**If your review required:**
+**If your review is required:**
 
 First, check `PROJECTS/[name]/PHASE_STATE.md` for `autonomous_mode: true`.
 
@@ -192,7 +192,7 @@ Update BOARD.md **after every state transition** — not batched, not deferred.
 - **Story table rows**: update status symbol, PR number, retry count, timestamp in place
 - **Active Story section**: always reflects the currently active story with full details
 - **Run Log**: one line per event — dispatch, result received, verdict, merge, pause, escalate
-- **Escalations section**: populate when escalating, mark as resolved when you unblocks
+- **Escalations section**: populate when escalating, mark as resolved when you unblock
 
 The board is your only window into the process. It must be accurate at all times.
 
@@ -242,7 +242,7 @@ Read the proxy's returned phrase and act on it:
 **Escalation message must include:**
 - What happened (plain language, one paragraph)
 - What was tried (retries, approaches)
-- The specific decision you needs to make
+- The specific decision you need to make
 - Exact resume phrase from `AGENTS/policies.md` phrase lexicon
 - File links: task brief, validation report (if applicable), PR link
 

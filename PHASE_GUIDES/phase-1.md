@@ -126,7 +126,7 @@ Update `PROJECT.md` if discovery changed the understanding of the target user, s
 
 ## Gate
 
-your reviews `docs/01-discovery.md`. Key questions:
+You review `docs/01-discovery.md`. Key questions:
 - Does the competitive positioning hold up?
 - Are we targeting the right user?
 - Are the key assumptions reasonable?
