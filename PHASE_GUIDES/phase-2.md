@@ -88,6 +88,8 @@ Required wireframes:
 
 ### Step 2.2b — Prototype Sprint
 
+> **Delegate to the `anymake-design-system` skill** for this step — it owns the design system, the Prototype Sprint, and the prototype-gate audit. Invoke it via the `Skill` tool, then return here for the gate.
+
 **This step is required for all products with user-facing screens.** Skip for API-only products.
 
 Build a complete visual prototype before writing a single line of production code. The prototype is a frontend-only app — no backend, no auth, no database. All data is hardcoded or held in local React state.
