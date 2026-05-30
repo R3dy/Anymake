@@ -38,7 +38,7 @@ The chosen type is recorded in `PROJECTS/[name]/PHASE_STATE.md` as `project_type
 - Asked at creation: if no type is given, the system asks one question — *"What kind of project is this?"* — lists the options above, and recommends `saas` if the idea clearly describes a commercial product.
 - Default: `saas` if the user explicitly declines to choose.
 
-**Session startup ritual gains one step** (see `SKILL.md`):
+**Session startup ritual gains one step** (see `skills/anymake/SKILL.md`):
 1. Read `PHASE_STATE.md` → note `project_type` and `autonomous_mode`
 2. **Read `PROJECT_TYPES/<project_type>/manifest.md` and `guide.md`** — these govern this session
 3. Proceed with the phase/step using the type's guide, not the generic SaaS assumptions

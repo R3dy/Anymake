@@ -47,7 +47,7 @@ Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Pr
 
 ## Key files
 
-- [SKILL.md](SKILL.md) — Top-level skill definition (loaded by OpenCode plugin)
+- [skills/anymake/SKILL.md](skills/anymake/SKILL.md) — Skill definition (loaded by OpenCode plugin)
 - [AGENTS.md](AGENTS.md) — Full agent guide: hierarchy, rules, file conventions, anti-patterns
 - [.opencode/INSTALL.md](.opencode/INSTALL.md) — Detailed installation and troubleshooting
 - [PHASE_GUIDES/phase-0.md](PHASE_GUIDES/phase-0.md) — Foundation phase guide

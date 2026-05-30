@@ -171,7 +171,7 @@ TEMPLATES/
 ├── metrics-dashboard.md    # Phase 5: Metrics dashboard template
 └── commit-message.md       # Conventional commit guidelines
 
-SKILL.md                    # Main skill definition (loaded by OpenCode plugin)
+skills/anymake/SKILL.md     # Main skill definition (loaded by OpenCode plugin)
 package.json                # npm metadata
 ```
 

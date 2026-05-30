@@ -78,7 +78,7 @@ Each profile is two files:
 
 ## Skill Activation (OpenCode)
 
-When loaded via the OpenCode plugin, the contents of `SKILL.md` are injected as the active skill. Claude operates as the Anymake assistant for the entire session.
+When loaded via the OpenCode plugin, the contents of `skills/anymake/SKILL.md` are injected as the active skill. Claude operates as the Anymake assistant for the entire session.
 
 **Trigger phrases:** "Start a new project", "Continue [project name]", "I have a product idea", "Build an app", "Anymake", or any mention of building a SaaS product.
 
@@ -298,7 +298,7 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 
 | File | Purpose |
 |------|---------|
-| `SKILL.md` | Top-level skill definition loaded by OpenCode |
+| `skills/anymake/SKILL.md` | Skill definition loaded by OpenCode |
 | `AGENTS/orchestrator.md` | Full Orchestrator instructions (includes autonomous mode handling) |
 | `AGENTS/worker.md` | Full Worker instructions |
 | `AGENTS/validator.md` | Full Validator instructions |
