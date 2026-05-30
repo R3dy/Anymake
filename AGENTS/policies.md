@@ -1,4 +1,4 @@
-# BMad Agent Policies
+# Anymake Agent Policies
 
 Shared reference for all agents in the Phase 4 orchestration system. When orchestrator.md, worker.md, or validator.md reference a policy, the authoritative version is here.
 
@@ -8,8 +8,8 @@ Shared reference for all agents in the Phase 4 orchestration system. When orches
 
 | Condition | Review requirement |
 |-----------|-------------------|
-| PR #1, #2, or #3 overall in Phase 4 | your review required — always |
-| Story title or technical tasks contain "webhook" | your review required — always, regardless of PR count |
+| PR #1, #2, or #3 overall in Phase 4 | your review is required — always |
+| Story title or technical tasks contain "webhook" | your review is required — always, regardless of PR count |
 | PR #4+ and no webhook keyword | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 

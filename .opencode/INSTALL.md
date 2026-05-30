@@ -1,4 +1,4 @@
-# Installing BMad Builder for OpenCode
+# Installing Anymake for OpenCode
 
 ## Prerequisites
 
@@ -6,20 +6,20 @@
 
 ## Installation
 
-Add bmad-builder to the `plugin` array in your `opencode.json`. This file lives at
+Add anymake to the `plugin` array in your `opencode.json`. This file lives at
 `~/.config/opencode/opencode.json` for a global install, or in your project root for
 a project-scoped install.
 
 ```json
 {
-  "plugin": ["bmad-builder@git+https://github.com/R3dy/BMAD-builder.git"]
+  "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git"]
 }
 ```
 
-Restart OpenCode. The plugin installs automatically and the BMad Builder skill becomes
+Restart OpenCode. The plugin installs automatically and the Anymake skill becomes
 active in every session — no manual loading required.
 
-Verify by asking: `"Start a new project"` — Claude should respond in BMad Builder mode.
+Verify by asking: `"Start a new project"` — Claude should respond in Anymake mode.
 
 ## If you are an AI agent following these instructions
 
@@ -32,23 +32,23 @@ Verify by asking: `"Start a new project"` — Claude should respond in BMad Buil
    If not, create it. The result should look like:
    ```json
    {
-     "plugin": ["bmad-builder@git+https://github.com/R3dy/BMAD-builder.git"]
+     "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git"]
    }
    ```
 
-3. Tell the user: "BMad Builder is installed. Restart OpenCode, then say 'Start a new
+3. Tell the user: "Anymake is installed. Restart OpenCode, then say 'Start a new
    project' to begin."
 
 ## Usage
 
-BMad Builder loads automatically at the start of every session. Trigger it with:
+Anymake loads automatically at the start of every session. Trigger it with:
 
 | Say this | What happens |
 |----------|-------------|
 | `"Start a new project"` | Creates a new project workspace, begins Phase 0 Foundation |
 | `"Continue [project name]"` | Reads PHASE_STATE.md, resumes the last step |
-| `"I have a product idea: [description]"` | Triggers BMad Builder, starts Phase 0 |
-| `"Build an app"` | Triggers BMad Builder |
+| `"I have a product idea: [description]"` | Triggers Anymake, starts Phase 0 |
+| `"Build an app"` | Triggers Anymake |
 
 ## Updating
 
@@ -59,7 +59,7 @@ To pin a specific version:
 
 ```json
 {
-  "plugin": ["bmad-builder@git+https://github.com/R3dy/BMAD-builder.git#v1.0.0"]
+  "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git#v1.0.0"]
 }
 ```
 
@@ -67,24 +67,24 @@ To pin a specific version:
 
 **Plugin not loading:**
 ```bash
-opencode run --print-logs "hello" 2>&1 | grep -i bmad
+opencode run --print-logs "hello" 2>&1 | grep -i anymake
 ```
 
-**BMad Builder not responding to triggers:**
-Ask: `"What skills do you have?"` — BMad Builder should appear in the list.
+**Anymake not responding to triggers:**
+Ask: `"What skills do you have?"` — Anymake should appear in the list.
 
 **Windows install issues:**
 Some Windows builds have issues with git-backed plugin specs. Install via npm instead:
 ```powershell
-npm install bmad-builder@git+https://github.com/R3dy/BMAD-builder.git --prefix "$HOME\.config\opencode"
+npm install anymake@git+https://github.com/R3dy/Anymake.git --prefix "$HOME\.config\opencode"
 ```
 Then point opencode.json at the local path:
 ```json
 {
-  "plugin": ["~/.config/opencode/node_modules/bmad-builder"]
+  "plugin": ["~/.config/opencode/node_modules/anymake"]
 }
 ```
 
 ## Getting Help
 
-Report issues: https://github.com/R3dy/BMAD-builder/issues
+Report issues: https://github.com/R3dy/Anymake/issues

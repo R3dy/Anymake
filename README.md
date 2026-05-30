@@ -1,10 +1,12 @@
-# BMad Builder — Agentic SaaS Build System
+# Anymake — Agentic Build System
 
-> Take any product idea from raw concept to live, revenue-generating SaaS — guided by a structured, phase-gated methodology with a built-in multi-agent implementation engine.
+> Take any software idea — SaaS, CLI tool, library, API service, internal tool, static site, or hobby project — from raw concept to a finished, shipped result, guided by a structured, phase-gated methodology that adapts to what you're building, with a built-in multi-agent implementation engine.
 
 ## What It Is
 
-**BMad Builder** is an AI skill for [OpenCode.ai](https://opencode.ai) that acts as your co-founder and CTO rolled into one. It takes a product idea through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, gating every transition on your approval, and auto-building your product in Phase 4 with a three-tier agent system (Orchestrator → Worker → Validator).
+**Anymake** is an AI skill for [OpenCode.ai](https://opencode.ai) that acts as your co-founder and CTO rolled into one. It takes an idea through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, gating every transition on your approval, and auto-building your product in Phase 4 with a three-tier agent system (Orchestrator → Worker → Validator).
+
+Anymake adapts to **what** you're building: a chosen project type (SaaS, CLI, library, API, internal tool, static site, hobby) reshapes which phases run, which questions get asked, the build order, and the quality gates. See [`PROJECT_TYPES/`](PROJECT_TYPES/).
 
 The system defeats two failure modes:
 - **Building without planning** → scope creep, rewrites, wasted sessions
@@ -34,18 +36,18 @@ The system defeats two failure modes:
 
 ## Installation
 
-Add BMad Builder to the `plugin` array in your `opencode.json`:
+Add Anymake to the `plugin` array in your `opencode.json`:
 
 **Global install** (`~/.config/opencode/opencode.json`):
 ```json
 {
-  "plugin": ["bmad-builder@git+https://github.com/R3dy/BMAD-builder.git"]
+  "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git"]
 }
 ```
 
 Restart OpenCode. The plugin loads automatically — no manual activation needed.
 
-**Verify** by asking: `"Start a new project"` — Claude should respond in BMad Builder mode.
+**Verify** by asking: `"Start a new project"` — Claude should respond in Anymake mode.
 
 For Windows troubleshooting or pinning a specific version, see [`.opencode/INSTALL.md`](.opencode/INSTALL.md).
 
@@ -55,8 +57,8 @@ For Windows troubleshooting or pinning a specific version, see [`.opencode/INSTA
 |----------|-------------|
 | `"Start a new project"` | Creates a new project workspace, begins Phase 0 |
 | `"Continue [project name]"` | Reads `PHASE_STATE.md`, resumes the last step |
-| `"I have a product idea: [description]"` | Triggers BMad, starts Phase 0 |
-| `"Build an app"` | Triggers BMad Builder |
+| `"I have a product idea: [description]"` | Triggers Anymake, starts Phase 0 |
+| `"Build an app"` | Triggers Anymake |
 | `"Start a new project --yolo"` | **Autonomous mode** — runs all phases without stopping at gates |
 | `"Continue [project name] --yolo"` | **Autonomous mode** — resumes and continues without gate pauses |
 
@@ -79,7 +81,7 @@ The proxy is defined in `AGENTS/product-owner-proxy.md` and runs as a fresh sub-
 
 ## Project Workspace Layout
 
-When you start a project, BMad Builder creates and populates this structure:
+When you start a project, Anymake creates and populates this structure:
 
 ```
 PROJECTS/[name]/
@@ -136,7 +138,7 @@ Validator (per PR)
 ```
 .opencode/
 ├── INSTALL.md              # Detailed installation instructions
-└── plugins/bmad-builder.js # OpenCode plugin bootstrap
+└── plugins/anymake.js # OpenCode plugin bootstrap
 
 AGENTS/
 ├── orchestrator.md         # Orchestrator agent instructions
@@ -183,10 +185,14 @@ package.json                # npm metadata
 
 **Escalation over assumption.** Workers and validators execute only. If they hit something ambiguous, they escalate — they never make product or design decisions autonomously.
 
+## Acknowledgements
+
+Anymake began as an exploration of the [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) (Breakthrough Method for Agile AI-Driven Development) and owes that project a debt for the original spark — agentic, agile, phase-driven building. It has since grown into its own system with a distinct architecture (the 0–5 phase gates, the project-type engine, the Orchestrator → Worker → Validator loop, and the autonomous Product Owner Proxy). Credit to BMAD-METHOD as the inspiration; Anymake is an independent project.
+
 ## License
 
 MIT — see [package.json](package.json).
 
 ## Issues & Contributions
 
-Report issues at [github.com/R3dy/BMAD-builder/issues](https://github.com/R3dy/BMAD-builder/issues).
+Report issues at [github.com/R3dy/Anymake/issues](https://github.com/R3dy/Anymake/issues).

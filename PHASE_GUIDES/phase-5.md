@@ -161,7 +161,7 @@ When the bug and polish cycle is complete, return to PARKING_LOT.md. Start a new
 - Phase 4: Build it
 - Phase 5: Ship it
 
-BMad is a cycle. The product never stops improving.
+Anymake is a cycle. The product never stops improving.
 
 ## Output
 

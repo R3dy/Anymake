@@ -1,6 +1,6 @@
 # Task Brief — [Story N.N: Story Name]
 
-**Created by:** BMad Orchestrator
+**Created by:** Anymake Orchestrator
 **Created at:** [ISO datetime]
 **Project:** [Project name]
 **Project root:** [absolute path]
@@ -134,7 +134,7 @@ Story-specific security notes:
 **PR title:** `Story N.N: [Story Name]`
 **Base branch:** `main`
 **PR description:** Use `TEMPLATES/commit-message.md` format
-**Review requirement:** [your review required (PR #1/2/3 or webhook) | Autonomous merge after CI passes]
+**Review requirement:** [your review is required (PR #1/2/3 or webhook) | Autonomous merge after CI passes]
 
 Screenshots are required in the PR description for any story that produces UI changes.
 

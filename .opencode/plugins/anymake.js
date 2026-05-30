@@ -1,7 +1,7 @@
 /**
- * BMad Builder plugin for OpenCode.ai
+ * Anymake plugin for OpenCode.ai
  *
- * Registers the skills/ directory with OpenCode so the bmad-builder skill
+ * Registers the skills/ directory with OpenCode so the anymake skill
  * is natively discovered. Also auto-injects the skill at session start so
  * the AI has full context without a manual /skill load.
  */
@@ -37,12 +37,12 @@ const extractAndStripFrontmatter = (content) => {
 // Cache bootstrap content after first read — no repeated FS work per turn
 let _bootstrapCache = undefined;
 
-export const BmadBuilderPlugin = async ({ client, directory }) => {
+export const AnymakePlugin = async ({ client, directory }) => {
 
   const getBootstrapContent = () => {
     if (_bootstrapCache !== undefined) return _bootstrapCache;
 
-    const skillPath = path.join(SKILLS_DIR, 'bmad-builder', 'SKILL.md');
+    const skillPath = path.join(SKILLS_DIR, 'anymake', 'SKILL.md');
     if (!fs.existsSync(skillPath)) {
       _bootstrapCache = null;
       return null;
@@ -52,7 +52,7 @@ export const BmadBuilderPlugin = async ({ client, directory }) => {
     const { content } = extractAndStripFrontmatter(fullContent);
 
     _bootstrapCache = `<EXTREMELY_IMPORTANT>
-You have the BMad Builder skill loaded. Follow it for any product-building work.
+You have the Anymake skill loaded. Follow it for any product-building work.
 
 ${content}
 

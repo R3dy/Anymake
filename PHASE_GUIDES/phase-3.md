@@ -161,7 +161,7 @@ Produce the final ordered backlog in milestone format. This is what Phase 4 exec
 
 ## Gate
 
-your reviews epics and backlog. Key questions:
+You review epics and backlog. Key questions:
 - Are the epics in the right build order?
 - Is the backlog complete? Any obvious missing tasks?
 - Are acceptance criteria specific enough to verify?

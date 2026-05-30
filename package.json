@@ -1,13 +1,13 @@
 {
-  "name": "bmad-builder",
+  "name": "anymake",
   "version": "1.0.0",
   "type": "module",
-  "main": ".opencode/plugins/bmad-builder.js",
-  "description": "BMad Builder — Agentic SaaS build system. Takes any product idea from raw concept to live, revenue-generating product.",
-  "keywords": ["opencode", "plugin", "skill", "saas", "bmad", "builder"],
+  "main": ".opencode/plugins/anymake.js",
+  "description": "Anymake — Agentic build system. Takes any software idea (SaaS, CLI, library, API, internal tool, static site, or hobby project) from raw concept to a finished, shipped result.",
+  "keywords": ["opencode", "plugin", "skill", "saas", "cli", "library", "anymake", "builder", "agentic"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/R3dy/BMAD-builder.git"
+    "url": "https://github.com/R3dy/Anymake.git"
   },
   "license": "MIT"
 }

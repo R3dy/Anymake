@@ -1,14 +1,14 @@
-# BMad Builder
+# Anymake
 
-> Agentic SaaS build system. Takes any product idea from raw concept to live, revenue-generating product through a six-phase, artifact-driven methodology with a built-in multi-agent implementation engine.
+> Agentic build system. Takes any software idea — SaaS, CLI, library, API, internal tool, static site, or hobby project — from raw concept to a finished, shipped result through a six-phase, artifact-driven methodology that adapts to what you're building, with a built-in multi-agent implementation engine.
 
-## What BMad Builder is
+## What Anymake is
 
-BMad Builder is an AI skill for [OpenCode.ai](https://opencode.ai) that guides product development through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, requiring user approval at every phase gate, and autonomously building the product in Phase 4 with a three-tier agent system.
+Anymake is an AI skill for [OpenCode.ai](https://opencode.ai) that guides product development through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, requiring user approval at every phase gate, and autonomously building the product in Phase 4 with a three-tier agent system.
 
 **Install:**
 ```json
-{ "plugin": ["bmad-builder@git+https://github.com/R3dy/BMAD-builder.git"] }
+{ "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git"] }
 ```
 Add to `~/.config/opencode/opencode.json`, then restart OpenCode.
 

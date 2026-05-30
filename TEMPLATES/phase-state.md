@@ -10,6 +10,7 @@ Copy to `PROJECTS/[name]/PHASE_STATE.md`. Update after every session.
 **Updated by:** Claude
 **Current phase:** Phase [N] — [Name]
 **Current step:** Step [N.N] — [Step name]
+**project_type:** saas
 **autonomous_mode:** false
 
 ---
