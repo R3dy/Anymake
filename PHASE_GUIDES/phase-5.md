@@ -39,6 +39,8 @@ Complete every item in `TEMPLATES/launch-checklist.md` before going public. Key 
 
 ## Step 5.2 — Production Deployment
 
+> **Delegate to the `anymake-deploy` skill** for this step — it owns production provisioning, DNS/TLS, secrets, migrations, smoke tests, and wiring monitoring + error tracking. Confirm the Step 5.1 checklist and the `anymake-security-review` gate passed first. Invoke it via the `Skill` tool.
+
 - [ ] Final code on main branch (all PRs merged)
 - [ ] Deploy to production (release tag or manual approval)
 - [ ] Smoke test production URL — not staging, the real production URL
@@ -123,6 +125,8 @@ If Day 7 retention is below 20%, fix retention before spending on acquisition.
 - % of signups with no referral source (organic/word-of-mouth)
 
 ## Step 5.6 — Iteration
+
+> **This loop is owned by the `anymake-iterate` skill** ("Phase 6"). Invoke it via the `Skill` tool to triage the parking lot, turn metrics into the next increment, and feed new stories back through `anymake-build-loop`.
 
 After 2-4 weeks of launch data, start the iteration cycle.
 

@@ -100,6 +100,8 @@ First real product code. Everything else depends on this being correct.
 
 Step 4.3 is executed by the **Anymake Orchestration System** — a three-tier agent loop that builds every story in the approved backlog autonomously, with your visibility into all progress via the agile board.
 
+> **Delegate to the `anymake-build-loop` skill** to run this step — it owns the Orchestrator → Worker → Validator engine over the backlog. Invoke it via the `Skill` tool. The detail below is its source spec.
+
 ### How to Start the Orchestration Loop
 
 Invoke the orchestrator (Claude runs it as an Agent with `AGENTS/orchestrator.md` as its instructions):
@@ -231,6 +233,8 @@ Monetization is a milestone, not an afterthought. Build it the same rigor as any
 
 ## Step 4.5 — Integration and Security Review
 
+> **Delegate the security portion to the `anymake-security-review` skill** — it owns the full security pass (the checklist below is its source) and returns PASS / FAIL / ESCALATE. A PASS is required before the Step 4.6 staging review.
+
 After all epics are complete, before requesting launch approval.
 
 **End-to-end smoke test:**
@@ -261,6 +265,8 @@ After all epics are complete, before requesting launch approval.
 - [ ] Error tracking (Sentry or equivalent) is capturing errors
 
 ## Step 4.6 — Staging Review
+
+> **Use the `anymake-deploy` skill** to stand up / refresh the staging environment (provisioning, env/secrets, migrations, smoke tests) before this review. Invoke it via the `Skill` tool.
 
 You review the complete product on staging before launch approval:
 - Complete user flow works end-to-end

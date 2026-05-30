@@ -133,6 +133,23 @@ Validator (per PR)
 
 **Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action. You can see every story's status, the full run log, and any escalations at a glance.
 
+## The Skill Suite
+
+Anymake is a plugin that ships a **hub** skill plus focused **companion** skills.
+The hub owns the phased methodology and routes to companions at the right step;
+each companion is also useful on its own. See `skills/README.md` for the full map.
+
+| Skill | What it owns | Invoked at |
+|-------|--------------|------------|
+| `anymake` | Methodology, state machine, gates, routing (auto-loaded) | Always |
+| `anymake-build-loop` | Three-tier Orchestrator → Worker → Validator build engine | Phase 4.3 |
+| `anymake-design-system` | Design system + Prototype Sprint + prototype gate | Phase 2.2b |
+| `anymake-security-review` | Per-PR + full + pre-launch security checklists | Phase 4.5, pre-launch |
+| `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
+| `anymake-brownfield` | Reverse-engineer Phase 0–3 artifacts from existing code | In place of Phase 0 |
+| `anymake-iterate` | Post-launch loop: triage, metrics→epics, releases | Phase 5.6 onward |
+| `anymake-new-type` | Scaffold a new project-type profile | Extending the system |
+
 ## Repository Layout
 
 ```
@@ -145,6 +162,17 @@ AGENTS/
 ├── worker.md               # Worker agent instructions
 ├── validator.md            # Validator agent instructions
 └── policies.md             # Retry matrix, escalation rules, failure classification
+
+skills/                     # The skill suite (registered with OpenCode)
+├── README.md               # Suite map: hub + companions
+├── anymake/SKILL.md        # Hub skill — methodology + router (auto-loaded)
+├── anymake-build-loop/     # Phase 4.3 three-tier build engine
+├── anymake-brownfield/     # Onboard an existing codebase
+├── anymake-design-system/  # Phase 2.2b design system + prototype
+├── anymake-security-review/ # Security checklists + gate (4.5, pre-launch)
+├── anymake-deploy/         # Staging + production deployment
+├── anymake-iterate/        # Post-launch loop ("Phase 6")
+└── anymake-new-type/       # Author a new project type
 
 PHASE_GUIDES/
 ├── phase-0.md              # Foundation step-by-step guide

@@ -69,6 +69,7 @@ Every session:
    (For project_type: saas, the guide points to PHASE_GUIDES/phase-N.md)
 5. Execute exactly one step — completely
    (In autonomous mode: continue through multiple steps and phases without stopping at gates)
+   (If the current step has a companion skill — see "Companion Skills" — invoke it via the `Skill` tool to do that step's work, then continue)
 6. Produce the concrete artifact or decision for that step
 7. Update PHASE_STATE.md
 8. Report: what was done → what needs your eyes → what's next
@@ -85,8 +86,9 @@ Every session:
 |-----------|-------------|
 | "Start a new project" | Asks which project type (or accepts `--type=<id>`), creates `PROJECTS/[name]/` workspace, records `project_type`, begins Phase 0 |
 | "Start a new project --type=cli" | Same, with the type pre-selected (no question asked) |
-| "Continue [project name]" | Reads `PROJECTS/[name]/PHASE_STATE.md`, loads the project's type guide, resumes last step |
-| "What should we work on next?" | Reviews PARKING_LOT.md items or asks for a new idea |
+| "Adopt Anymake in this repo" / "I already have code" | Invokes the `anymake-brownfield` skill to reverse-engineer the Phase 0–3 artifacts from the existing codebase, then resumes the normal flow |
+| "Continue [project name]" | Reads `PROJECTS/[name]/PHASE_STATE.md`, loads the project's type guide, resumes last step (if already launched, invokes `anymake-iterate`) |
+| "What should we work on next?" | Reviews PARKING_LOT.md items or asks for a new idea (post-launch, invokes `anymake-iterate`) |
 
 **Choosing a type:** if the user doesn't specify one, ask a single question listing the available types and recommend the best fit (`saas` if the idea clearly describes a commercial product). Record the answer as `project_type` in PHASE_STATE.md. It is set once and governs the whole build.
 
@@ -129,14 +131,14 @@ Every session:
 
 ## Available Phases
 
-| Phase | Guide | Key Files |
-|-------|-------|-----------|
-| Phase 0: Foundation | `PHASE_GUIDES/phase-0.md` | `TEMPLATES/project.md` |
-| Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` |
-| Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` |
-| Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` |
-| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, worker, validator, policies |
-| Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` |
+| Phase | Guide | Key Files | Companion skill |
+|-------|-------|-----------|-----------------|
+| Phase 0: Foundation | `PHASE_GUIDES/phase-0.md` | `TEMPLATES/project.md` | `anymake-brownfield` (existing-code path) |
+| Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` | — |
+| Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` | `anymake-design-system` (Step 2.2b) |
+| Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` | — |
+| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, worker, validator, policies | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging) |
+| Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` | `anymake-deploy` (5.2), `anymake-iterate` (5.6) |
 
 ## Agent System (Phase 4)
 
@@ -151,6 +153,31 @@ Phase 4, Step 4.3 runs a three-tier agentic build loop. See `AGENTS/` for all ag
 
 **Visibility:** `PROJECTS/[name]/BOARD.md` — live agile board updated after every agent action. You can see every story's status, the run log, and any escalations at a glance.
 
+## Companion Skills
+
+Anymake is a **skill suite**: this hub owns the methodology and the state machine,
+and delegates self-contained capabilities to companion skills. They are
+discovered natively (the plugin registers the `skills/` directory) and invoked
+via the `Skill` tool — either by the hub at the step noted below, or directly
+when the user's request matches the companion's own triggers. Each companion
+reads the same `PROJECT_TYPES/<id>/manifest.md`, `PHASE_STATE.md`, and templates,
+so state and conventions never fork. See `skills/README.md` for the full map.
+
+| Companion skill | Owns | Hub invokes it at… |
+|-----------------|------|--------------------|
+| `anymake-build-loop` | The three-tier agentic build engine (Orchestrator → Worker → Validator) over a backlog | **Phase 4, Step 4.3** |
+| `anymake-design-system` | The visual-quality bar: design system + Prototype Sprint + prototype-gate audit | **Phase 2, Step 2.2b** (UX-active types) |
+| `anymake-security-review` | The per-PR checklist, the full security pass, and the pre-launch security gate | **Phase 4, Step 4.5** (and inside the Validator; pre-launch) |
+| `anymake-deploy` | Deployment & infrastructure — staging, production, env/secrets, monitoring, rollback | **Phase 4** staging and **Phase 5, Step 5.2** (production) |
+| `anymake-brownfield` | Onboarding an existing codebase — reverse-engineers Phase 0–3 artifacts | **Instead of Phase 0** when the user points at existing code |
+| `anymake-iterate` | The post-launch loop ("Phase 6") — triage, metrics→epics, release planning | **Phase 5, Step 5.6** onward, or on "Continue" when already launched |
+| `anymake-new-type` | Authoring a new project type (`manifest.md` + `guide.md`) | When **extending the type system** |
+
+**How to delegate:** at a delegating step, invoke the named companion via the
+`Skill` tool, let it complete its one job (it reads/updates the same project
+state), then continue the phase. The hub never re-implements what a companion
+owns; companions never re-run the phase machine.
+
 ---
 
-*Anymake skill suite — v2.0*
+*Anymake skill suite — v3.0*

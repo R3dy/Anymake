@@ -41,6 +41,20 @@ Three-tier autonomous build loop in `AGENTS/`:
 - **Validator** — Checks every acceptance criterion, runs security checklist, returns PASS / FAIL / ESCALATE
 - **Policies** — Shared retry matrix (max 2 environment retries, max 1 implementation retry), PR review rules (PRs 1–3 always require user review; webhooks/payments always require user review), escalation phrase lexicon, failure classification guide
 
+## Skill suite
+
+Anymake is a plugin that ships a **hub** skill (`anymake`) plus focused **companion** skills the hub delegates to at the right phase/step (each also usable standalone):
+
+- **anymake-build-loop** — the three-tier Orchestrator → Worker → Validator build engine (Phase 4.3)
+- **anymake-design-system** — design system + Prototype Sprint + prototype-gate audit (Phase 2.2b)
+- **anymake-security-review** — per-PR, full, and pre-launch security checklists (Phase 4.5, pre-launch)
+- **anymake-deploy** — staging + production deployment, env/secrets, monitoring, rollback (Phase 4 staging, Phase 5.2)
+- **anymake-brownfield** — reverse-engineer Phase 0–3 artifacts from an existing codebase (in place of Phase 0)
+- **anymake-iterate** — post-launch loop: triage, metrics→epics, releases (Phase 5.6 onward)
+- **anymake-new-type** — scaffold a new project-type profile
+
+See `skills/README.md` for the full map.
+
 ## Autonomous mode (yolo)
 
 Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Proxy** sub-agent (`AGENTS/product-owner-proxy.md`) at each phase gate instead of waiting for human approval. The proxy applies strict per-gate criteria and returns APPROVED, specific required changes, or ESCALATE TO USER. Security failures always escalate to the real user regardless of mode. Autonomous mode is recorded in `PHASE_STATE.md` as `autonomous_mode: true`.
