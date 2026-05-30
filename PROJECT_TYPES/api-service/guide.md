@@ -1,7 +1,6 @@
-# API Service Guide
+# API / Backend Service — Build Guide
 
-> **project_type: api-service**
-> Ship reliable, well-specified endpoints. The API contract *is* the product — consumers build on it, so it must be stable, documented, and predictable. A public API is also an attack surface, so security is heightened throughout.
+> **`project_type: api-service`** — ship reliable, well-specified endpoints. The API contract *is* the product — consumers build on it, so it must be stable, documented, and predictable. A public API is also an attack surface, so security is heightened throughout.
 
 This guide is a self-contained walkthrough of every active phase for a headless API / backend service: no GUI, no end-user screens. Where the SaaS type runs a frontend track, this type substitutes contract-first design and review. The phases below match the manifest's Phase Map exactly: Phase 0 (full), Phase 1 (lite/full), Phase 2 (full), Phase 3 (full), Phase 4 (full), Phase 5 (full).
 
