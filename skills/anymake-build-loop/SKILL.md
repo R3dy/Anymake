@@ -51,9 +51,9 @@ this is the cardinal anti-pattern.
 4. **Per PR:** spawn a Validator sub-agent; it returns PASS / FAIL / ESCALATE
    using `TEMPLATES/validation-report.md`.
 5. **Apply policies** (`AGENTS/policies.md`): retry matrix (max 2 environment
-   retries, max 1 implementation retry, then escalate); PR review rules
-   (PRs #1–3 and any webhook/payment PR always require human review; others merge
-   on Validator PASS); escalation lexicon.
+   re-dispatches; a validation FAIL retries once, then escalate; implementation
+   failures escalate immediately); PR review rules (PRs #1–3 and any webhook PR
+   always require human review; others merge on Validator PASS); escalation lexicon.
 6. **Update `BOARD.md` after every agent action.** It is the single visibility surface.
 7. **Loop** until the backlog is empty or an `ESCALATE TO USER` blocks progress.
 
@@ -69,7 +69,7 @@ this is the cardinal anti-pattern.
 
 Every story is `Done` on the board, every merged PR passed validation, and the
 run log + any escalations are recorded in `BOARD.md`. Hand back to the hub for
-Phase 4 Step 4.4 (security review) and 4.5 (staging deploy).
+Phase 4 Step 4.5 (security review) and 4.6 (staging review).
 
 ## Anti-patterns
 

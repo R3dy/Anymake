@@ -51,7 +51,7 @@ The word "deploy" means different things per type:
 4. **Migrate** production data store (backup first; have a tested rollback path).
 5. **Deploy**, then **smoke-test** the live critical path.
 6. **Wire observability:** uptime/health monitoring and error tracking must be
-   live before declaring launch — this feeds `anymake-iterate` and the Phase 5.2
+   live before declaring launch — this feeds `anymake-iterate` and the Phase 5.5
    metrics dashboard.
 7. **Record** the release (version/tag, changelog) and update `PHASE_STATE.md`.
 

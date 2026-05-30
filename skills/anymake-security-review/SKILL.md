@@ -23,33 +23,23 @@ This is defensive review of code being shipped. Not for offensive tooling.
 - Before production in `anymake-deploy`.
 - Directly — "security review this", "audit before I ship".
 
-## The checklist
+## The checklists
 
-**Core (every PR — the Validator's checklist):**
+There is no separate copy of the checklist here — that would drift. Each tier
+has one canonical source; this skill applies it.
 
-- [ ] Input validation on all user-supplied data (server-side, not just client)
-- [ ] Authorization checks — a user can only access their own resources
-- [ ] No secrets in code or logs
-- [ ] Parameterized queries — no string-concatenated SQL
-- [ ] Output encoding wherever user data is rendered
-- [ ] Error messages don't leak internals (stack traces, queries, infra)
+| Tier | Canonical source | Use |
+|------|------------------|-----|
+| **Core (per-PR)** | the **Security checklist** in `AGENTS/validator.md` | Apply to one story's diff — the exact items the Validator runs |
+| **Full pass (Phase 4.5)** | the **Security review** checklist in `PHASE_GUIDES/phase-4.md` Step 4.5 | Apply to the whole built product before the Step 4.6 staging review |
+| **Pre-launch** | the security items in `TEMPLATES/launch-checklist.md` (Step 5.1) | Final confirmation before the Step 5.2 production deploy |
 
-**Full pass (Phase 4.4 — superset, the whole product):**
-
-- [ ] All inputs validated server-side
-- [ ] Authentication required on every non-public endpoint
-- [ ] Authorization enforced (no IDOR — users can't reach others' data)
-- [ ] Secrets in environment/secret store, never committed
-- [ ] SQL injection prevented (parameterized queries / ORM)
-- [ ] XSS prevented (output encoding, CSP headers)
-- [ ] CSRF protection on state-changing requests
-- [ ] Rate limiting on public endpoints
-- [ ] Dependencies scanned for known vulnerabilities
-- [ ] HTTPS enforced, secure cookies, security headers set
-
-Read `PROJECT_TYPES/<id>/manifest.md` → **Gate Criteria Deltas** for type-specific
-additions or skips (e.g. an `api-service` weights authn/authz and rate limiting
-heavily; a `static-site` focuses on headers, dependencies, and no leaked secrets).
+Load the right tier's source and apply every item — don't paraphrase it here.
+Also read `PROJECT_TYPES/<id>/manifest.md` → **Gate Criteria Deltas** for
+type-specific additions or skips (e.g. an `api-service` weights authn/authz and
+rate limiting heavily; a `static-site` focuses on headers, dependencies, and no
+leaked secrets). When the manifest says a check is **skipped**, don't fail the
+gate for it; when it says **replaced**, apply the replacement.
 
 ## Verdict
 
