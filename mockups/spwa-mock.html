@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anymake Mission Control — Mockup</title>
+<style>
+  :root {
+    --bg:        #0e1117;
+    --panel:     #161b22;
+    --panel-2:   #1c232d;
+    --border:    #2a323d;
+    --border-2:  #39424f;
+    --text:      #e6edf3;
+    --text-dim:  #8b949e;
+    --text-mute: #6e7681;
+    --accent:    #6ea8fe;
+    --accent-2:  #a371f7;
+    --green:     #3fb950;
+    --yellow:    #d29922;
+    --blue:      #58a6ff;
+    --orange:    #db8b48;
+    --eye:       #bc8cff;
+    --red:       #f85149;
+    --radius:    10px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* ---------- Header ---------- */
+  header.topbar {
+    display:flex; align-items:center; gap:16px;
+    padding: 0 20px; height: 56px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top:0; z-index: 10;
+  }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.2px; }
+  .brand .logo {
+    width:26px; height:26px; border-radius:7px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display:grid; place-items:center; color:#0b0d12; font-weight:800; font-size:15px;
+  }
+  .brand .proj { color: var(--text-dim); font-weight:500; }
+  .brand .proj b { color: var(--text); font-weight:600; }
+  .topbar .spacer { flex:1; }
+  .pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); border:1px solid var(--border);
+    font-size: 12.5px; color: var(--text-dim);
+  }
+  .pill .dot { width:7px; height:7px; border-radius:50%; background: var(--blue); box-shadow:0 0 0 3px rgba(88,166,255,.15);}
+  .pill b { color: var(--text); font-weight:600; }
+  .pill.type { text-transform: uppercase; letter-spacing:.6px; font-size:11px; }
+
+  /* ---------- Layout ---------- */
+  .app { display:grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 56px); }
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 18px 14px;
+    overflow:auto;
+  }
+  main { padding: 22px 26px 60px; overflow:auto; max-width: 1100px; }
+
+  /* ---------- Sidebar docs ---------- */
+  .side-h { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--text-mute); margin: 4px 6px 10px; font-weight:700;}
+  .doc { display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:7px; cursor:pointer; color:var(--text-dim); }
+  .doc:hover { background: var(--panel-2); color: var(--text); }
+  .doc.active { background: rgba(110,168,254,.12); color: var(--text); }
+  .doc .name { flex:1; font-size:13.5px; }
+  .doc .st { font-size:14px; width:16px; text-align:center; }
+  .doc.group { margin-top:6px; font-weight:600; color: var(--text); }
+  .doc.child { margin-left:18px; font-size:13px; }
+  .doc.child .name { color: var(--text-dim); }
+  .legend-mini { margin-top:18px; padding:10px 8px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text-mute); }
+  .legend-mini span { display:block; margin:3px 0; }
+
+  /* ---------- Phase rail ---------- */
+  .section-title { font-size:12px; text-transform:uppercase; letter-spacing:.9px; color:var(--text-mute); font-weight:700; margin:0 0 14px; }
+  .rail { display:flex; align-items:flex-start; gap:0; margin-bottom:30px; }
+  .node { flex:1; text-align:center; position:relative; }
+  .node .circle {
+    width:34px; height:34px; border-radius:50%; margin:0 auto 8px;
+    display:grid; place-items:center; font-weight:700; font-size:13px;
+    border:2px solid var(--border-2); background:var(--panel); color:var(--text-mute);
+    position:relative; z-index:2;
+  }
+  .node.done .circle   { background:var(--green); border-color:var(--green); color:#0b0d12; }
+  .node.active .circle { background:var(--blue);  border-color:var(--blue);  color:#0b0d12; box-shadow:0 0 0 5px rgba(88,166,255,.18); }
+  .node.todo .circle   { background:var(--panel); }
+  /* connector line */
+  .node:not(:last-child)::after {
+    content:""; position:absolute; top:17px; left:50%; width:100%; height:2px;
+    background: var(--border-2); z-index:1;
+  }
+  .node.done:not(:last-child)::after { background: var(--green); }
+  .node .label { font-size:12.5px; color:var(--text-dim); }
+  .node.active .label { color:var(--text); font-weight:600; }
+  .node .step { font-size:11px; color:var(--text-mute); margin-top:2px; }
+
+  /* ---------- Cards ---------- */
+  .grid2 { display:grid; grid-template-columns: 1.4fr 1fr; gap:18px; margin-bottom:26px; }
+  .card { background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:18px; }
+  .card.accent { border-color: rgba(88,166,255,.4); background: linear-gradient(180deg, rgba(88,166,255,.06), transparent 60%), var(--panel); }
+  .card h3 { margin:0 0 4px; font-size:15px; }
+  .card .sub { color:var(--text-mute); font-size:12px; margin-bottom:14px; }
+  .kv { margin:10px 0; }
+  .kv .k { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-mute); }
+  .kv .v { color:var(--text); }
+  .next {
+    margin-top:14px; padding:12px 14px; border-radius:8px;
+    background: rgba(63,185,80,.08); border:1px solid rgba(63,185,80,.3);
+  }
+  .next .k { color: var(--green); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .next code { font-family:var(--mono); background:var(--panel-2); padding:1px 6px; border-radius:5px; color:var(--text); border:1px solid var(--border); }
+
+  .needs .row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--border); }
+  .needs .row:last-child { border-bottom:0; }
+  .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .badge.gate { background:rgba(210,153,34,.15); color:var(--yellow); }
+  .badge.esc  { background:rgba(248,81,73,.15); color:var(--red); }
+  .badge.park { background:rgba(163,113,247,.15); color:var(--eye); }
+  .needs .row .txt { flex:1; }
+  .needs .row .txt small { color:var(--text-mute); }
+
+  /* ---------- Board ---------- */
+  .board-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .board-head .meta { color:var(--text-mute); font-size:12px; }
+  .progress-wrap { flex:1; }
+  .pbar { height:8px; border-radius:999px; background:var(--panel-2); overflow:hidden; border:1px solid var(--border); }
+  .pbar > i { display:block; height:100%; background: linear-gradient(90deg,var(--green),#56d364); }
+  .kanban { display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; }
+  .col { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px; min-height:120px; }
+  .col h4 { margin:2px 4px 10px; font-size:12px; display:flex; align-items:center; gap:6px; color:var(--text-dim); }
+  .col h4 .cnt { margin-left:auto; background:var(--panel-2); border:1px solid var(--border); border-radius:999px; padding:0 7px; font-size:11px; color:var(--text-mute); }
+  .story {
+    background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:9px 10px; margin-bottom:8px; cursor:pointer;
+  }
+  .story:hover { border-color: var(--border-2); }
+  .story .id { font-family:var(--mono); font-size:11px; color:var(--text-mute); }
+  .story .t { font-size:12.5px; margin-top:2px; line-height:1.35; }
+  .story .meta { margin-top:6px; display:flex; gap:8px; align-items:center; font-size:10.5px; color:var(--text-mute); }
+  .tag { font-size:10px; padding:1px 6px; border-radius:5px; background:var(--bg); border:1px solid var(--border); }
+  .lstripe { width:3px; align-self:stretch; border-radius:3px; }
+  .story { display:flex; gap:9px; }
+  .story .body { flex:1; }
+  .s-backlog { background:var(--text-mute); }
+  .s-ready   { background:var(--yellow); }
+  .s-prog    { background:var(--blue); }
+  .s-review  { background:var(--eye); }
+  .s-done    { background:var(--green); }
+
+  /* ---------- Milestones / footer strips ---------- */
+  .ms-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:20px; }
+  .ms { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+  .ms .top { display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:8px; }
+  .ms .top b { font-weight:600; }
+  .ms .cnt { color:var(--text-mute); }
+  .ms .bar { height:6px; border-radius:999px; background:var(--panel-2); overflow:hidden; }
+  .ms .bar > i { display:block; height:100%; background:var(--green); }
+
+  .runlog { margin-top:22px; }
+  .runlog table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .runlog td { padding:7px 10px; border-bottom:1px solid var(--border); color:var(--text-dim); }
+  .runlog td.time { color:var(--text-mute); font-family:var(--mono); white-space:nowrap; width:80px; }
+  .runlog tr:last-child td { border-bottom:0; }
+
+  .note { margin:30px 0 0; padding:12px 16px; border-radius:8px; background:var(--panel-2); border:1px dashed var(--border-2); color:var(--text-mute); font-size:12.5px;}
+  .note b { color:var(--text-dim); }
+  hr.sep { border:0; border-top:1px solid var(--border); margin:30px 0; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">A</span>
+    Anymake
+    <span class="proj">· <b>Inkwell</b></span>
+  </div>
+  <div class="spacer"></div>
+  <span class="pill type">saas</span>
+  <span class="pill"><span class="dot"></span>Phase 4 · <b>Step 4.3</b></span>
+  <span class="pill">Run <b>run-003</b></span>
+  <span class="pill">Updated <b>2m ago</b></span>
+</header>
+
+<div class="app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside>
+    <div class="side-h">Documents</div>
+
+    <div class="doc"><span class="st">✅</span><span class="name">PROJECT.md</span></div>
+    <div class="doc"><span class="st">✅</span><span class="name">01-discovery.md</span></div>
+
+    <div class="doc group"><span class="st">✅</span><span class="name">02-planning</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">prd.md</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">ux-design.md</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">architecture/ (5 ADRs)</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">monetization.md</span></div>
+
+    <div class="doc group"><span class="st">✅</span><span class="name">03-solutioning</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">epics.md</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">backlog.md</span></div>
+    <div class="doc child"><span class="st">✅</span><span class="name">dependency-graph.md</span></div>
+
+    <div class="doc active group"><span class="st">🔄</span><span class="name">BOARD.md</span></div>
+    <div class="doc"><span class="st">🔄</span><span class="name">environment.md</span></div>
+    <div class="doc"><span class="st">📥</span><span class="name">PARKING_LOT.md (3)</span></div>
+    <div class="doc"><span class="st">○</span><span class="name">launch-checklist.md</span></div>
+
+    <div class="legend-mini">
+      <span>✅ Approved &nbsp; 🔄 In progress</span>
+      <span>○ Pending &nbsp; 📥 Has items</span>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main>
+
+    <!-- PHASE RAIL -->
+    <div class="section-title">Where you are</div>
+    <div class="rail">
+      <div class="node done">   <div class="circle">✓</div><div class="label">Foundation</div><div class="step">Phase 0</div></div>
+      <div class="node done">   <div class="circle">✓</div><div class="label">Discovery</div><div class="step">Phase 1</div></div>
+      <div class="node done">   <div class="circle">✓</div><div class="label">Planning</div><div class="step">Phase 2</div></div>
+      <div class="node done">   <div class="circle">✓</div><div class="label">Solutioning</div><div class="step">Phase 3</div></div>
+      <div class="node active"> <div class="circle">4</div><div class="label">Implementation</div><div class="step">Step 4.3 · build loop</div></div>
+      <div class="node todo">   <div class="circle">5</div><div class="label">Launch</div><div class="step">Phase 5</div></div>
+    </div>
+
+    <!-- ACTIVE + NEEDS YOU -->
+    <div class="grid2">
+      <div class="card accent">
+        <h3>Current status</h3>
+        <div class="sub">Phase 4 — Implementation · Step 4.3 — Epic Build Loop · In progress</div>
+
+        <div class="kv"><div class="k">What was done this session</div>
+          <div class="v">Orchestrator merged stories 3.1–3.3 (Editor core). Worker is now building story 4.1 (Stripe checkout). Validator passed 5 of 6 acceptance criteria on PR #14.</div>
+        </div>
+        <div class="kv"><div class="k">Artifact produced</div>
+          <div class="v"><code style="font-family:var(--mono);font-size:12px">docs/04-implementation/task-briefs/story-4.1.md</code></div>
+        </div>
+
+        <div class="next">
+          <div class="k">Next action — needs you</div>
+          <div class="v">PR&nbsp;#14 touches payment flow → requires your review. Open the PR, then say <code>approved</code> or <code>changes needed: …</code></div>
+        </div>
+      </div>
+
+      <div class="card needs">
+        <h3>Needs you</h3>
+        <div class="sub">4 items blocking forward motion</div>
+        <div class="row"><span class="badge gate">GATE</span><div class="txt">PR #14 — payment flow review<br><small>Policy: payment PRs always require you</small></div></div>
+        <div class="row"><span class="badge esc">ESCALATION</span><div class="txt">Story 4.3 — Stripe webhook secret missing<br><small>Worker blocked · awaiting env var</small></div></div>
+        <div class="row"><span class="badge park">PARKING</span><div class="txt">3 ideas captured this phase<br><small>“team workspaces”, “AI tone presets”, “export to PDF”</small></div></div>
+        <div class="row"><span class="badge gate">UPCOMING</span><div class="txt">Phase 4 → 5 gate<br><small>Opens when board hits 100% + security pass</small></div></div>
+      </div>
+    </div>
+
+    <!-- BOARD -->
+    <div class="board-head">
+      <div class="section-title" style="margin:0">Task board · <span style="color:var(--text-dim);text-transform:none;letter-spacing:0;font-weight:400">from BOARD.md</span></div>
+      <div class="progress-wrap" style="max-width:340px;margin-left:16px">
+        <div class="pbar"><i style="width:62%"></i></div>
+      </div>
+      <div class="meta">13 / 21 stories complete · 62%</div>
+    </div>
+
+    <div class="kanban">
+      <div class="col">
+        <h4>⬜ Backlog <span class="cnt">4</span></h4>
+        <div class="story"><span class="lstripe s-backlog"></span><div class="body"><span class="id">5.1</span><div class="t">Document history & versions</div><div class="meta"><span class="tag">M5</span></div></div></div>
+        <div class="story"><span class="lstripe s-backlog"></span><div class="body"><span class="id">6.1</span><div class="t">Error states</div><div class="meta"><span class="tag">M6</span></div></div></div>
+        <div class="story"><span class="lstripe s-backlog"></span><div class="body"><span class="id">6.2</span><div class="t">Empty states</div><div class="meta"><span class="tag">M6</span></div></div></div>
+        <div class="story"><span class="lstripe s-backlog"></span><div class="body"><span class="id">6.3</span><div class="t">Mobile pass</div><div class="meta"><span class="tag">M6</span></div></div></div>
+      </div>
+      <div class="col">
+        <h4>🟡 Ready <span class="cnt">2</span></h4>
+        <div class="story"><span class="lstripe s-ready"></span><div class="body"><span class="id">4.2</span><div class="t">Pricing page + plan selector</div><div class="meta"><span class="tag">M4</span><span>deps ✓</span></div></div></div>
+        <div class="story"><span class="lstripe s-ready"></span><div class="body"><span class="id">4.4</span><div class="t">Billing portal link</div><div class="meta"><span class="tag">M4</span><span>deps ✓</span></div></div></div>
+      </div>
+      <div class="col">
+        <h4>🔵 In progress <span class="cnt">1</span></h4>
+        <div class="story"><span class="lstripe s-prog"></span><div class="body"><span class="id">4.1</span><div class="t">Stripe checkout session</div><div class="meta"><span class="tag">M4</span><span>worker · 8m</span></div></div></div>
+      </div>
+      <div class="col">
+        <h4>👁 Review <span class="cnt">1</span></h4>
+        <div class="story"><span class="lstripe s-review"></span><div class="body"><span class="id">4.1</span><div class="t">PR #14 — checkout</div><div class="meta"><span class="tag">payment</span><span>5/6 AC</span></div></div></div>
+      </div>
+      <div class="col">
+        <h4>✅ Done <span class="cnt">13</span></h4>
+        <div class="story"><span class="lstripe s-done"></span><div class="body"><span class="id">3.3</span><div class="t">Autosave & conflict merge</div><div class="meta"><span class="tag">M3</span><span>PR #13</span></div></div></div>
+        <div class="story"><span class="lstripe s-done"></span><div class="body"><span class="id">3.2</span><div class="t">Rich text editor</div><div class="meta"><span class="tag">M3</span><span>PR #11</span></div></div></div>
+        <div class="story" style="opacity:.7"><span class="lstripe s-done"></span><div class="body"><span class="id">3.1</span><div class="t">Document model + schema</div><div class="meta"><span class="tag">M3</span><span>PR #9</span></div></div></div>
+        <div style="text-align:center;color:var(--text-mute);font-size:11px;margin-top:4px">+ 10 more</div>
+      </div>
+    </div>
+
+    <!-- MILESTONES -->
+    <div class="ms-grid">
+      <div class="ms"><div class="top"><b>M1–2 · Scaffold + Auth</b><span class="cnt">6/6</span></div><div class="bar"><i style="width:100%"></i></div></div>
+      <div class="ms"><div class="top"><b>M3 · Editor core</b><span class="cnt">3/3</span></div><div class="bar"><i style="width:100%"></i></div></div>
+      <div class="ms"><div class="top"><b>M4 · Monetization</b><span class="cnt">1/4</span></div><div class="bar"><i style="width:25%"></i></div></div>
+    </div>
+
+    <!-- RUN LOG -->
+    <div class="runlog card" style="padding:6px 8px">
+      <table>
+        <tr><td class="time">14:02</td><td>Worker opened PR #14 for story 4.1 — flagged <b>payment flow</b>, routed to human review</td></tr>
+        <tr><td class="time">13:51</td><td>Validator PASS on story 3.3 → Orchestrator merged PR #13</td></tr>
+        <tr><td class="time">13:40</td><td>Story 4.3 escalated — <b>STRIPE_WEBHOOK_SECRET</b> not set in environment.md</td></tr>
+        <tr><td class="time">13:22</td><td>Worker started story 4.1 (Schema → Migration → API → Frontend)</td></tr>
+      </table>
+    </div>
+
+    <div class="note">
+      <b>Mockup note —</b> every value above is read directly from the project’s Markdown:
+      the phase rail from <b>PHASE_STATE.md</b>’s progress table, the “Current status” / “Next action”
+      cards from its status blocks, the board + milestones + run log from <b>BOARD.md</b>, the sidebar
+      from the <b>docs/</b> tree, and “Needs you” from <b>BOARD.md → Escalations</b> + <b>PARKING_LOT.md</b>.
+      The app never writes state — it only visualizes the files the agents already maintain.
+    </div>
+
+  </main>
+</div>
+</body>
+</html>
