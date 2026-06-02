@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anymake Mission Control — Interactive Mockup</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c232d; --panel-3:#21283180;
+    --border:#2a323d; --border-2:#39424f;
+    --text:#e6edf3; --dim:#8b949e; --mute:#6e7681;
+    --accent:#6ea8fe; --accent-2:#a371f7;
+    --green:#3fb950; --yellow:#d29922; --blue:#58a6ff; --orange:#db8b48;
+    --eye:#bc8cff; --red:#f85149; --teal:#39c5cf;
+    --add:#1f3b2c; --add-txt:#56d364; --del:#3b1f23; --del-txt:#f85149;
+    --radius:10px;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ---------- TOP NAV ---------- */
+  header.top{display:flex;align-items:center;gap:6px;height:54px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;margin-right:18px}
+  .brand .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#0b0d12;font-weight:800}
+  .brand .proj{color:var(--dim);font-weight:500;font-size:13px}
+  .brand .proj b{color:var(--text);font-weight:600}
+  nav.tabs{display:flex;gap:2px}
+  nav.tabs button{background:none;border:0;color:var(--dim);font:inherit;font-size:13.5px;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px}
+  nav.tabs button:hover{background:var(--panel-2);color:var(--text)}
+  nav.tabs button.on{background:var(--panel-2);color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+  nav.tabs button .ic{font-size:14px;opacity:.9}
+  .top .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);font-size:12px;color:var(--dim)}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.15);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .pill b{color:var(--text);font-weight:600}
+  .pill.type{text-transform:uppercase;letter-spacing:.6px;font-size:10.5px}
+  .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f0883e,#db61a2);display:grid;place-items:center;font-size:12px;font-weight:700;color:#0b0d12;margin-left:6px}
+
+  /* ---------- LAYOUT ---------- */
+  .shell{display:grid;grid-template-columns:248px 1fr;height:calc(100vh - 54px)}
+  aside{background:var(--panel);border-right:1px solid var(--border);overflow:auto;padding:14px 12px}
+  main{overflow:auto;padding:22px 26px 70px}
+  .wrap{max-width:1080px}
+
+  .lh{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);font-weight:700;margin:6px 8px 8px}
+  .lnav a, .lnav .li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--dim);font-size:13.5px}
+  .lnav a:hover,.lnav .li:hover{background:var(--panel-2);color:var(--text)}
+  .lnav a.on,.lnav .li.on{background:rgba(110,168,254,.13);color:var(--text)}
+  .lnav .num{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--panel-2);color:var(--mute);border:1px solid var(--border)}
+  .lnav a.done .num{background:var(--green);color:#0b0d12;border-color:var(--green)}
+  .lnav a.active .num{background:var(--blue);color:#0b0d12;border-color:var(--blue)}
+  .lnav .grow{flex:1}
+  .lnav .mini{font-size:11px;color:var(--mute)}
+
+  /* ---------- GENERIC ---------- */
+  h1.page{font-size:20px;margin:0 0 2px}
+  .crumb{color:var(--mute);font-size:12.5px;margin-bottom:20px}
+  .sec{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--mute);font-weight:700;margin:26px 0 12px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .muted{color:var(--mute)} .dimt{color:var(--dim)}
+  code{font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--border);padding:1px 6px;border-radius:5px;color:var(--text)}
+  .badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .b-green{background:rgba(63,185,80,.15);color:var(--green)}
+  .b-yellow{background:rgba(210,153,34,.15);color:var(--yellow)}
+  .b-blue{background:rgba(88,166,255,.15);color:var(--blue)}
+  .b-red{background:rgba(248,81,73,.15);color:var(--red)}
+  .b-eye{background:rgba(188,140,255,.15);color:var(--eye)}
+  .b-mute{background:var(--panel-2);color:var(--mute)}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+  .kpi .n{font-size:26px;font-weight:700;line-height:1}
+  .kpi .l{color:var(--mute);font-size:12px;margin-top:6px}
+  .kpi .t{font-size:11px;margin-top:8px;color:var(--green)}
+
+  /* phase rail */
+  .rail{display:flex;margin:6px 0 4px}
+  .node{flex:1;text-align:center;position:relative}
+  .node .c{width:30px;height:30px;border-radius:50%;margin:0 auto 7px;display:grid;place-items:center;font-weight:700;font-size:12px;border:2px solid var(--border-2);background:var(--panel);color:var(--mute);position:relative;z-index:2}
+  .node.done .c{background:var(--green);border-color:var(--green);color:#0b0d12}
+  .node.active .c{background:var(--blue);border-color:var(--blue);color:#0b0d12;box-shadow:0 0 0 5px rgba(88,166,255,.18)}
+  .node:not(:last-child)::after{content:"";position:absolute;top:15px;left:50%;width:100%;height:2px;background:var(--border-2);z-index:1}
+  .node.done:not(:last-child)::after{background:var(--green)}
+  .node .lab{font-size:12px;color:var(--dim)} .node.active .lab{color:var(--text);font-weight:600}
+
+  .grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+  .next{margin-top:12px;padding:11px 13px;border-radius:8px;background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3)}
+  .next .k{color:var(--green);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .feed .row{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border)}
+  .feed .row:last-child{border:0}
+  .feed .t{font-family:var(--mono);font-size:11px;color:var(--mute);white-space:nowrap;width:46px}
+  .ico{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:12px;flex-shrink:0}
+
+  /* tables */
+  table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+  table.tbl th{text-align:left;color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;border-bottom:1px solid var(--border)}
+  table.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--dim)}
+  table.tbl tr:last-child td{border:0}
+  table.tbl tr:hover td{background:var(--panel-2)}
+
+  /* doc cards */
+  .docgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .doccard{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:15px;display:flex;gap:12px}
+  .doccard .ic2{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:16px;background:var(--panel-2);flex-shrink:0}
+  .doccard h4{margin:0 0 2px;font-size:14px}
+  .doccard p{margin:0;color:var(--mute);font-size:12px}
+  .doccard .foot{margin-top:9px;display:flex;align-items:center;gap:8px}
+
+  .gate{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:10px;border:1px solid rgba(210,153,34,.35);background:rgba(210,153,34,.07);margin-top:14px}
+
+  /* ---------- SOURCE ---------- */
+  .src-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .selbtn{display:inline-flex;align-items:center;gap:7px;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:6px 11px;font-size:13px;cursor:pointer}
+  .commitlist .ci{display:flex;gap:12px;padding:11px 8px;border-bottom:1px solid var(--border);cursor:pointer}
+  .commitlist .ci:hover{background:var(--panel-2)}
+  .commitlist .ci.on{background:rgba(110,168,254,.1)}
+  .commitlist .msg{flex:1}
+  .commitlist .msg .m1{font-size:13.5px}
+  .commitlist .msg .m2{font-size:12px;color:var(--mute);margin-top:2px}
+  .commitlist .sha{font-family:var(--mono);font-size:11.5px;color:var(--accent)}
+  .avti{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;color:#0b0d12}
+  .diffbox{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:8px}
+  .difffile{background:var(--panel-2);border-bottom:1px solid var(--border);padding:8px 12px;font-family:var(--mono);font-size:12px;display:flex;align-items:center;gap:8px}
+  .difffile .stat{margin-left:auto;font-size:11px}
+  .diffline{font-family:var(--mono);font-size:12px;padding:1px 12px;white-space:pre;display:flex}
+  .diffline .ln{width:34px;color:var(--mute);user-select:none;text-align:right;padding-right:12px;flex-shrink:0}
+  .dl-add{background:rgba(63,185,80,.12)} .dl-add .tx{color:var(--add-txt)}
+  .dl-del{background:rgba(248,81,73,.12)} .dl-del .tx{color:var(--red)}
+  .dl-ctx .tx{color:var(--dim)}
+  .dl-hunk{background:var(--panel-3);color:var(--accent)}
+  .filetree .f{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;font-size:13px;color:var(--dim);cursor:pointer}
+  .filetree .f:hover{background:var(--panel-2);color:var(--text)}
+  .chip{font-size:10px;font-family:var(--mono);padding:0 5px;border-radius:4px}
+  .chip.a{background:var(--add);color:var(--add-txt)} .chip.m{background:rgba(210,153,34,.2);color:var(--yellow)} .chip.d{background:var(--del);color:var(--red)}
+
+  /* ---------- AGENTS ---------- */
+  .agcard{background:var(--panel-2);border:1px solid var(--border);border-radius:9px;padding:10px 11px;margin-bottom:8px;cursor:pointer;display:flex;gap:10px;align-items:center}
+  .agcard:hover{border-color:var(--border-2)}
+  .agcard.on{border-color:var(--accent);background:rgba(110,168,254,.1)}
+  .agcard .av{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+  .agcard .nm{font-size:13px;font-weight:600}
+  .agcard .role{font-size:11px;color:var(--mute)}
+  .agcard .live{margin-left:auto;font-size:10px;display:flex;align-items:center;gap:5px;color:var(--green)}
+  .agcard .live .d{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.4s infinite}
+  .agcard.idle .live{color:var(--mute)} .agcard.idle .live .d{background:var(--mute);animation:none}
+  .agtabs{display:flex;gap:4px;margin-bottom:10px}
+  .agtabs button{background:var(--panel-2);border:1px solid var(--border);color:var(--dim);font:inherit;font-size:12px;padding:5px 11px;border-radius:7px;cursor:pointer}
+  .agtabs button.on{background:rgba(110,168,254,.13);color:var(--text);border-color:var(--accent)}
+  .term{background:#0a0d12;border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:12px;line-height:1.6;padding:14px 16px;height:calc(100vh - 260px);overflow:auto}
+  .term .l{white-space:pre-wrap}
+  .term .ts{color:var(--mute)}
+  .term .ok{color:var(--green)} .term .warn{color:var(--yellow)} .term .err{color:var(--red)}
+  .term .inf{color:var(--blue)} .term .dimx{color:var(--mute)} .term .hl{color:var(--eye)}
+  .agent-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .agent-head .av{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font-size:18px}
+  .agent-head h3{margin:0;font-size:16px}
+  .agent-head .sub{font-size:12px;color:var(--mute)}
+  .statline{display:flex;gap:18px;margin-left:auto;font-size:12px;color:var(--dim)}
+  .statline b{color:var(--text)}
+
+  .hide{display:none}
+  .note{margin:34px 0 0;padding:12px 16px;border-radius:8px;background:var(--panel-2);border:1px dashed var(--border-2);color:var(--mute);font-size:12.5px}
+  .note b{color:var(--dim)}
+</style>
+</head>
+<body>
+
+<!-- ===================== TOP NAV ===================== -->
+<header class="top">
+  <div class="brand"><span class="logo">A</span>Anymake<span class="proj">· <b>Inkwell</b></span></div>
+  <nav class="tabs">
+    <button data-view="dash" class="on"><span class="ic">▦</span>Dashboard</button>
+    <button data-view="phases"><span class="ic">◷</span>Phases</button>
+    <button data-view="source"><span class="ic">⎇</span>Source</button>
+    <button data-view="agents"><span class="ic">◉</span>Agents</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="pill type">saas</span>
+  <span class="pill"><span class="dot"></span>Phase 4 · <b>Step 4.3</b></span>
+  <span class="pill">run-003</span>
+  <div class="avatar">RD</div>
+</header>
+
+<div class="shell">
+
+  <!-- ===================== LEFT NAV (swaps per view) ===================== -->
+  <aside>
+    <!-- DASH lnav -->
+    <div id="ln-dash" class="lnav">
+      <div class="lh">Overview</div>
+      <div class="li on">▦ Session summary</div>
+      <div class="li">◎ Needs you <span class="grow"></span><span class="badge b-yellow">4</span></div>
+      <div class="li">≣ Activity feed</div>
+      <div class="li">◷ Phase progress</div>
+      <div class="lh" style="margin-top:18px">Quick jump</div>
+      <div class="li">◉ Active agents <span class="grow"></span><span class="badge b-green">3</span></div>
+      <div class="li">⎇ Open PRs <span class="grow"></span><span class="badge b-eye">2</span></div>
+      <div class="li">📥 Parking lot <span class="grow"></span><span class="badge b-mute">3</span></div>
+    </div>
+
+    <!-- PHASES lnav -->
+    <div id="ln-phases" class="lnav hide">
+      <div class="lh">Phases</div>
+      <a class="done" data-phase="0"><span class="num">✓</span><span class="grow">Foundation</span></a>
+      <a class="done" data-phase="1"><span class="num">✓</span><span class="grow">Discovery</span></a>
+      <a class="done" data-phase="2"><span class="num">✓</span><span class="grow">Planning</span></a>
+      <a class="done" data-phase="3"><span class="num">✓</span><span class="grow">Solutioning</span></a>
+      <a class="active on" data-phase="4"><span class="num">4</span><span class="grow">Implementation</span><span class="mini">4.3</span></a>
+      <a data-phase="5"><span class="num">5</span><span class="grow">Launch</span></a>
+    </div>
+
+    <!-- SOURCE lnav -->
+    <div id="ln-source" class="lnav hide">
+      <div class="lh">Repository</div>
+      <div class="li on">≣ Commits <span class="grow"></span><span class="badge b-mute">142</span></div>
+      <div class="li">⎇ Branches <span class="grow"></span><span class="badge b-mute">6</span></div>
+      <div class="li">⇄ Pull requests <span class="grow"></span><span class="badge b-eye">2</span></div>
+      <div class="lh" style="margin-top:18px">Changed files · PR #14</div>
+      <div class="filetree">
+        <div class="f"><span class="chip m">M</span> api/checkout.ts</div>
+        <div class="f"><span class="chip a">A</span> api/stripe/session.ts</div>
+        <div class="f"><span class="chip a">A</span> db/migrations/0007_orders.sql</div>
+        <div class="f"><span class="chip m">M</span> web/PricingPlans.tsx</div>
+        <div class="f"><span class="chip a">A</span> tests/checkout.spec.ts</div>
+      </div>
+    </div>
+
+    <!-- AGENTS lnav -->
+    <div id="ln-agents" class="lnav hide">
+      <div class="agtabs">
+        <button class="on">All</button><button>Orch</button><button>Workers</button><button>Valid.</button>
+      </div>
+      <div class="lh">Orchestrator</div>
+      <div class="agcard" data-agent="orch">
+        <span class="av" style="background:rgba(110,168,254,.18)">🧭</span>
+        <div><div class="nm">Orchestrator</div><div class="role">run-003 · managing 21 stories</div></div>
+        <span class="live"><span class="d"></span>live</span>
+      </div>
+      <div class="lh" style="margin-top:14px">Workers</div>
+      <div class="agcard on" data-agent="w41">
+        <span class="av" style="background:rgba(63,185,80,.18)">⚙️</span>
+        <div><div class="nm">Worker · 4.1</div><div class="role">Stripe checkout session</div></div>
+        <span class="live"><span class="d"></span>live</span>
+      </div>
+      <div class="agcard idle" data-agent="w42">
+        <span class="av" style="background:rgba(63,185,80,.12)">⚙️</span>
+        <div><div class="nm">Worker · 4.2</div><div class="role">queued — pricing page</div></div>
+        <span class="live"><span class="d"></span>idle</span>
+      </div>
+      <div class="lh" style="margin-top:14px">Validators</div>
+      <div class="agcard" data-agent="v41">
+        <span class="av" style="background:rgba(188,140,255,.18)">🔍</span>
+        <div><div class="nm">Validator · PR #14</div><div class="role">5/6 AC · payment flow</div></div>
+        <span class="live"><span class="d"></span>live</span>
+      </div>
+      <div class="agcard idle" data-agent="v33">
+        <span class="av" style="background:rgba(188,140,255,.12)">🔍</span>
+        <div><div class="nm">Validator · PR #13</div><div class="role">PASS — merged</div></div>
+        <span class="live"><span class="d"></span>done</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN VIEWS ===================== -->
+  <main>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section id="v-dash" class="wrap">
+      <h1 class="page">Session dashboard</h1>
+      <div class="crumb">Inkwell · saas · started 9 days ago · 14 sessions · 142 commits</div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="n" style="color:var(--blue)">4<span style="font-size:15px;color:var(--mute)">/5</span></div><div class="l">Current phase — Implementation</div><div class="t">Step 4.3 · build loop running</div></div>
+        <div class="kpi"><div class="n">13<span style="font-size:15px;color:var(--mute)">/21</span></div><div class="l">Stories complete</div><div class="t">62% · M4 in progress</div></div>
+        <div class="kpi"><div class="n" style="color:var(--green)">3</div><div class="l">Agents active</div><div class="t">1 worker · 1 validator · orch</div></div>
+        <div class="kpi"><div class="n" style="color:var(--eye)">2</div><div class="l">Open PRs</div><div class="t" style="color:var(--yellow)">1 needs your review</div></div>
+      </div>
+
+      <div class="sec">Phase progress</div>
+      <div class="card">
+        <div class="rail">
+          <div class="node done"><div class="c">✓</div><div class="lab">Foundation</div></div>
+          <div class="node done"><div class="c">✓</div><div class="lab">Discovery</div></div>
+          <div class="node done"><div class="c">✓</div><div class="lab">Planning</div></div>
+          <div class="node done"><div class="c">✓</div><div class="lab">Solutioning</div></div>
+          <div class="node active"><div class="c">4</div><div class="lab">Implementation</div></div>
+          <div class="node"><div class="c">5</div><div class="lab">Launch</div></div>
+        </div>
+      </div>
+
+      <div class="sec">Now</div>
+      <div class="grid2">
+        <div class="card">
+          <h4 style="margin:0 0 8px">Current status</h4>
+          <div class="dimt" style="font-size:13px">Orchestrator merged stories 3.1–3.3 (Editor core). Worker 4.1 is building the Stripe checkout session; Validator passed 5 of 6 acceptance criteria on PR #14.</div>
+          <div class="next">
+            <div class="k">Next action — needs you</div>
+            <div style="margin-top:4px">PR #14 touches a payment flow → requires your review. Say <code>approved</code> or <code>changes needed: …</code></div>
+          </div>
+        </div>
+        <div class="card feed">
+          <h4 style="margin:0 0 4px">Activity feed</h4>
+          <div class="row"><div class="t">14:02</div><span class="ico" style="background:rgba(188,140,255,.15)">⇄</span><div>Worker opened <b>PR #14</b> — flagged payment, routed to you</div></div>
+          <div class="row"><div class="t">13:51</div><span class="ico" style="background:rgba(63,185,80,.15)">✓</span><div>Validator PASS 3.3 → merged <b>PR #13</b></div></div>
+          <div class="row"><div class="t">13:40</div><span class="ico" style="background:rgba(248,81,73,.15)">!</span><div>Story 4.3 escalated — webhook secret missing</div></div>
+          <div class="row"><div class="t">13:22</div><span class="ico" style="background:rgba(88,166,255,.15)">⚙</span><div>Worker started <b>story 4.1</b></div></div>
+        </div>
+      </div>
+
+      <div class="sec">Needs you · 4</div>
+      <div class="card" style="padding:4px 0">
+        <table class="tbl">
+          <tr><td style="width:120px"><span class="badge b-yellow">GATE</span></td><td>PR #14 — payment flow review</td><td class="muted">policy: payment PRs always require you</td><td><a href="#">Open →</a></td></tr>
+          <tr><td><span class="badge b-red">ESCALATION</span></td><td>Story 4.3 — STRIPE_WEBHOOK_SECRET missing</td><td class="muted">worker blocked · awaiting env var</td><td><a href="#">Resolve →</a></td></tr>
+          <tr><td><span class="badge b-eye">PARKING</span></td><td>3 ideas captured this phase</td><td class="muted">team workspaces · tone presets · PDF export</td><td><a href="#">Review →</a></td></tr>
+          <tr><td><span class="badge b-mute">UPCOMING</span></td><td>Phase 4 → 5 gate</td><td class="muted">opens at 100% board + security pass</td><td class="muted">locked</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ PHASES ============ -->
+    <section id="v-phases" class="wrap hide">
+      <div id="phase-body"></div>
+    </section>
+
+    <!-- ============ SOURCE ============ -->
+    <section id="v-source" class="wrap hide">
+      <h1 class="page">Source</h1>
+      <div class="crumb">R3dy/inkwell · branch <code>feat/story-4.1-checkout</code> · base <code>main</code></div>
+
+      <div class="src-head">
+        <span class="selbtn">⎇ feat/story-4.1-checkout ▾</span>
+        <span class="selbtn">⇄ PR #14 ▾</span>
+        <span class="muted" style="font-size:12.5px;margin-left:auto">142 commits · +1,204 −318 · 5 files in this PR</span>
+      </div>
+
+      <div class="sec" style="margin-top:6px">Recent commits</div>
+      <div class="card commitlist" style="padding:4px 8px">
+        <div class="ci on">
+          <span class="avti" style="background:#3fb95033;color:#56d364">⚙</span>
+          <div class="msg"><div class="m1">feat(api): add Stripe checkout session endpoint</div><div class="m2">Worker 4.1 · layer 3/4 (API) · 24 min ago</div></div>
+          <span class="sha">a3f1c9d</span>
+        </div>
+        <div class="ci">
+          <span class="avti" style="background:#3fb95033;color:#56d364">⚙</span>
+          <div class="msg"><div class="m1">feat(db): orders table + migration 0007</div><div class="m2">Worker 4.1 · layer 2/4 (Migration) · 31 min ago</div></div>
+          <span class="sha">7be0a12</span>
+        </div>
+        <div class="ci">
+          <span class="avti" style="background:#3fb95033;color:#56d364">⚙</span>
+          <div class="msg"><div class="m1">feat(db): order + line-item schema</div><div class="m2">Worker 4.1 · layer 1/4 (Schema) · 38 min ago</div></div>
+          <span class="sha">c10dd4e</span>
+        </div>
+        <div class="ci">
+          <span class="avti" style="background:#bc8cff33;color:#bc8cff">✓</span>
+          <div class="msg"><div class="m1">Merge PR #13: autosave & conflict merge (story 3.3)</div><div class="m2">Orchestrator · validator PASS · 1h ago</div></div>
+          <span class="sha">5512aa0</span>
+        </div>
+      </div>
+
+      <div class="sec">Diff · <code>api/stripe/session.ts</code></div>
+      <div class="diffbox">
+        <div class="difffile">📄 api/stripe/session.ts<span class="stat"><span style="color:var(--add-txt)">+42</span> <span style="color:var(--red)">−0</span></span></div>
+        <div class="diffline dl-hunk"><span class="ln"></span><span class="tx">@@ -0,0 +1,42 @@ new file</span></div>
+        <div class="diffline dl-add"><span class="ln">1</span><span class="tx">+import Stripe from "stripe";</span></div>
+        <div class="diffline dl-add"><span class="ln">2</span><span class="tx">+import { db } from "../../db/client";</span></div>
+        <div class="diffline dl-add"><span class="ln">3</span><span class="tx">+</span></div>
+        <div class="diffline dl-add"><span class="ln">4</span><span class="tx">+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);</span></div>
+        <div class="diffline dl-add"><span class="ln">5</span><span class="tx">+</span></div>
+        <div class="diffline dl-add"><span class="ln">6</span><span class="tx">+export async function createCheckoutSession(userId: string, priceId: string) {</span></div>
+        <div class="diffline dl-add"><span class="ln">7</span><span class="tx">+  const order = await db.order.create({ data: { userId, status: "pending" } });</span></div>
+        <div class="diffline dl-add"><span class="ln">8</span><span class="tx">+  return stripe.checkout.sessions.create({</span></div>
+        <div class="diffline dl-add"><span class="ln">9</span><span class="tx">+    mode: "subscription",</span></div>
+        <div class="diffline dl-add"><span class="ln">10</span><span class="tx">+    line_items: [{ price: priceId, quantity: 1 }],</span></div>
+        <div class="diffline dl-add"><span class="ln">11</span><span class="tx">+    client_reference_id: order.id,</span></div>
+        <div class="diffline dl-add"><span class="ln">12</span><span class="tx">+    success_url: `${process.env.APP_URL}/billing/success`,</span></div>
+        <div class="diffline dl-add"><span class="ln">13</span><span class="tx">+  });</span></div>
+        <div class="diffline dl-add"><span class="ln">14</span><span class="tx">+}</span></div>
+      </div>
+      <div class="diffbox">
+        <div class="difffile">📄 web/PricingPlans.tsx<span class="stat"><span style="color:var(--add-txt)">+9</span> <span style="color:var(--red)">−3</span></span></div>
+        <div class="diffline dl-hunk"><span class="ln"></span><span class="tx">@@ -18,7 +18,13 @@ export function PricingPlans() {</span></div>
+        <div class="diffline dl-ctx"><span class="ln">18</span><span class="tx"> &nbsp;const plans = usePlans();</span></div>
+        <div class="diffline dl-del"><span class="ln">19</span><span class="tx">-  const onSelect = () => alert("todo");</span></div>
+        <div class="diffline dl-add"><span class="ln">19</span><span class="tx">+  const onSelect = async (priceId: string) => {</span></div>
+        <div class="diffline dl-add"><span class="ln">20</span><span class="tx">+    const { url } = await api.checkout(priceId);</span></div>
+        <div class="diffline dl-add"><span class="ln">21</span><span class="tx">+    window.location.href = url;</span></div>
+        <div class="diffline dl-add"><span class="ln">22</span><span class="tx">+  };</span></div>
+        <div class="diffline dl-ctx"><span class="ln">23</span><span class="tx"> &nbsp;return (</span></div>
+      </div>
+    </section>
+
+    <!-- ============ AGENTS ============ -->
+    <section id="v-agents" class="wrap hide" style="max-width:none">
+      <div class="agent-head">
+        <span class="av" id="ag-av" style="background:rgba(63,185,80,.18)">⚙️</span>
+        <div><h3 id="ag-name">Worker · Story 4.1</h3><div class="sub" id="ag-sub">Stripe checkout session · branch feat/story-4.1-checkout</div></div>
+        <div class="statline">
+          <div>Status <b style="color:var(--green)">building</b></div>
+          <div>Layer <b>3/4 · API</b></div>
+          <div>Elapsed <b>8m 41s</b></div>
+          <div>Tokens <b>48.2k</b></div>
+        </div>
+      </div>
+      <div class="agtabs">
+        <button class="on">Live output</button><button>Task brief</button><button>Commits (3)</button><button>Tool calls</button>
+      </div>
+      <div class="term" id="term"></div>
+    </section>
+
+    <div class="note">
+      <b>Interactive mockup —</b> click <b>Dashboard / Phases / Source / Agents</b> in the top nav; the left
+      nav and content swap per section. In Phases, click a phase in the left nav. In Agents, click an agent card.
+      All data is illustrative (sample project “Inkwell”). The real app reads it from
+      <b>PHASE_STATE.md</b>, <b>BOARD.md</b>, the <b>docs/</b> tree, git history, and live agent logs.
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ---------- top-nav view switching ---------- */
+const views = ['dash','phases','source','agents'];
+function showView(v){
+  views.forEach(x=>{
+    document.getElementById('v-'+x).classList.toggle('hide', x!==v);
+    document.getElementById('ln-'+x).classList.toggle('hide', x!==v);
+  });
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
+  if(v==='agents') startTerm('w41');
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+
+/* ---------- PHASES content ---------- */
+const PHASES = {
+ 0:{name:"Foundation",step:"complete",gate:"✅ Approved by you · 9 days ago",
+    intro:"Vision, scope, revenue model and success metrics — the one-pager everything else is measured against.",
+    docs:[["📌","PROJECT.md","Elevator pitch, in/out scope, revenue model, success metrics","done"]],
+    table:null},
+ 1:{name:"Discovery",step:"complete",gate:"✅ Approved by you · 8 days ago",
+    intro:"Market, competitors, target users and risks — the evidence base for planning.",
+    docs:[["🔭","01-discovery.md","Market sizing, 5 competitors, 3 user personas, risk register","done"]],
+    table:null},
+ 2:{name:"Planning",step:"complete",gate:"✅ Approved by you · 5 days ago",
+    intro:"The plan of record: product requirements, UX/design system, architecture decisions, and how it makes money.",
+    docs:[
+      ["📋","prd.md","Product requirements — 24 functional, 9 non-functional","done"],
+      ["🎨","ux-design.md","Design system + prototype (passed the prototype gate)","done"],
+      ["🏛️","architecture/ (5 ADRs)","Stack, data model, auth, payments, hosting","done"],
+      ["💳","monetization.md","3 tiers · $9/$29/$99 · Milestone 4","done"]],
+    table:["ADR","Decision","Status",[
+      ["ADR-001","Next.js + Postgres + Prisma","Accepted"],
+      ["ADR-002","Clerk for auth","Accepted"],
+      ["ADR-003","Stripe subscriptions","Accepted"],
+      ["ADR-004","Tiptap editor core","Accepted"],
+      ["ADR-005","Fly.io hosting","Accepted"]]]},
+ 3:{name:"Solutioning",step:"complete",gate:"✅ Approved by you · 3 days ago",
+    intro:"Epics broken into ordered, dependency-mapped user stories — the backlog the build loop consumes.",
+    docs:[
+      ["🗂️","epics.md","6 epics with acceptance criteria","done"],
+      ["📑","backlog.md","21 stories across 6 milestones","done"],
+      ["🔗","dependency-graph.md","Build order + what blocks what","done"]],
+    table:["Epic","Stories","Milestone",[
+      ["Scaffold & infra","3","M1"],["Authentication","3","M2"],
+      ["Editor core","3","M3"],["Monetization","4","M4"],
+      ["Document mgmt","4","M5"],["Polish","4","M6"]]]},
+ 4:{name:"Implementation",step:"in progress · Step 4.3 — build loop",gate:"🔄 Gate opens at 100% board + security pass",
+    intro:"The three-tier build loop is running: Orchestrator dispatches Workers per story and Validators per PR. Live status below.",
+    docs:[
+      ["📊","BOARD.md","Live agile board — 13/21 done, M4 in progress","wip"],
+      ["🧱","environment.md","Dev env + secrets (1 missing: webhook secret)","wip"],
+      ["📝","task-briefs/","Per-story specs handed to workers","wip"],
+      ["✅","validation-reports/","Per-PR acceptance-criteria checks","wip"]],
+    table:["Story","Title","Status",[
+      ["3.1–3.3","Editor core","✅ Done"],
+      ["4.1","Stripe checkout","🔵 In progress"],
+      ["4.2","Pricing page","🟡 Ready"],
+      ["4.3","Webhook handlers","🚫 Blocked"],
+      ["4.4","Billing portal","🟡 Ready"]]]},
+ 5:{name:"Launch",step:"not started",gate:"🔒 Locked — completes Phase 4 first",
+    intro:"Production deploy, metrics dashboard and growth loop. Becomes available once the build loop and security review pass.",
+    docs:[
+      ["🚀","launch-checklist.md","Pre-launch checklist (not yet generated)","todo"],
+      ["📈","metrics-dashboard.md","Activation / retention / MRR (not yet generated)","todo"]],
+    table:null}
+};
+const stBadge={done:'<span class="badge b-green">Approved</span>',wip:'<span class="badge b-blue">In progress</span>',todo:'<span class="badge b-mute">Pending</span>'};
+function renderPhase(p){
+  const d=PHASES[p];
+  let docs=d.docs.map(x=>`<div class="doccard"><span class="ic2">${x[0]}</span><div style="flex:1"><h4>${x[1]}</h4><p>${x[2]}</p><div class="foot">${stBadge[x[3]]}${x[3]!=='todo'?'<a href="#" style="font-size:12px">View →</a>':'<span class="muted" style="font-size:12px">to be created</span>'}</div></div></div>`).join('');
+  let table='';
+  if(d.table){
+    const[c1,c2,c3,rows]=d.table;
+    table=`<div class="sec">Detail</div><div class="card" style="padding:4px 0"><table class="tbl"><tr><th>${c1}</th><th>${c2}</th><th>${c3}</th></tr>${rows.map(r=>`<tr><td><code>${r[0]}</code></td><td style="color:var(--text)">${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</table></div>`;
+  }
+  document.getElementById('phase-body').innerHTML=`
+    <h1 class="page">Phase ${p} — ${d.name}</h1>
+    <div class="crumb">${d.step}</div>
+    <div class="card" style="margin-bottom:6px">${d.intro}</div>
+    <div class="gate"><span style="font-size:18px">🚦</span><div><b>Gate</b> · ${d.gate}</div></div>
+    <div class="sec">Documents</div>
+    <div class="docgrid">${docs}</div>
+    ${table}`;
+}
+document.querySelectorAll('#ln-phases a').forEach(a=>a.onclick=()=>{
+  document.querySelectorAll('#ln-phases a').forEach(x=>x.classList.remove('on'));
+  a.classList.add('on'); renderPhase(a.dataset.phase);
+});
+renderPhase(4);
+
+/* ---------- AGENTS terminals ---------- */
+const LOGS={
+ w41:{name:"Worker · Story 4.1",sub:"Stripe checkout session · branch feat/story-4.1-checkout",av:"⚙️",avbg:"rgba(63,185,80,.18)",
+   lines:[
+   ['ts','14:02:51'],['inf',' [worker:4.1] task brief loaded — story-4.1.md (7 acceptance criteria)'],
+   ['ts','14:02:53'],['dimx',' build order: Schema → Migration → API → Frontend → Test'],
+   ['ts','14:03:10'],['ok',' ✓ layer 1/4 Schema — order + line_item models written'],
+   ['ts','14:03:11'],['dimx',' git commit c10dd4e "feat(db): order + line-item schema"'],
+   ['ts','14:05:22'],['ok',' ✓ layer 2/4 Migration — 0007_orders.sql generated, applied to dev'],
+   ['ts','14:05:23'],['dimx',' git commit 7be0a12 "feat(db): orders table + migration 0007"'],
+   ['ts','14:07:40'],['inf',' [worker:4.1] layer 3/4 API — writing api/stripe/session.ts'],
+   ['ts','14:08:02'],['hl',' → tool: write_file api/stripe/session.ts (42 lines)'],
+   ['ts','14:08:15'],['hl',' → tool: read_file docs/02-planning/architecture/ADR-003-stripe.md'],
+   ['ts','14:09:31'],['warn',' ⚠ STRIPE_SECRET_KEY referenced — present in dev env ✓'],
+   ['ts','14:10:05'],['ok',' ✓ createCheckoutSession() implemented — running typecheck...'],
+   ['ts','14:10:48'],['ok',' ✓ tsc clean · 0 errors'],
+   ['ts','14:10:49'],['dimx',' git commit a3f1c9d "feat(api): add Stripe checkout session endpoint"'],
+   ['ts','14:11:02'],['inf',' [worker:4.1] layer 4/4 Frontend — wiring PricingPlans.tsx onSelect → /api/checkout'],
+   ['ts','14:11:30'],['hl',' → tool: edit_file web/PricingPlans.tsx'],
+   ['cursor','']]},
+ orch:{name:"Orchestrator",sub:"run-003 · managing 21 stories across 6 milestones",av:"🧭",avbg:"rgba(110,168,254,.18)",
+   lines:[
+   ['ts','13:51:03'],['ok',' ✓ Validator PASS on story 3.3 — all 5 AC met'],
+   ['ts','13:51:04'],['inf',' merging PR #13 (story 3.3) → main'],
+   ['ts','13:51:20'],['ok',' ✓ merged 5512aa0 · board updated 12→13/21'],
+   ['ts','13:51:21'],['dimx',' next ready: 4.1 (deps ✓), 4.2 (deps ✓)'],
+   ['ts','13:51:22'],['inf',' dispatching Worker → story 4.1 (Stripe checkout)'],
+   ['ts','13:51:25'],['dimx',' 4.2 queued — single-worker concurrency limit'],
+   ['ts','14:01:55'],['warn',' ⚠ story 4.3 worker escalated — STRIPE_WEBHOOK_SECRET missing'],
+   ['ts','14:01:56'],['err',' ✗ 4.3 marked BLOCKED — escalated to user (env var required)'],
+   ['ts','14:02:48'],['inf',' Worker 4.1 opened PR #14 → dispatching Validator'],
+   ['ts','14:02:49'],['warn',' ⚠ PR #14 touches payment flow — review policy: HUMAN REQUIRED'],
+   ['ts','14:02:50'],['hl',' ⏸ holding merge of PR #14 — awaiting your approval'],
+   ['cursor','']]},
+ v41:{name:"Validator · PR #14",sub:"checking story 4.1 against acceptance criteria + security",av:"🔍",avbg:"rgba(188,140,255,.18)",
+   lines:[
+   ['ts','14:02:50'],['inf',' [validator] PR #14 — 7 acceptance criteria from story-4.1.md'],
+   ['ts','14:03:02'],['ok',' ✓ AC1 checkout session created for valid price'],
+   ['ts','14:03:09'],['ok',' ✓ AC2 order row persisted with status=pending'],
+   ['ts','14:03:14'],['ok',' ✓ AC3 client_reference_id links order ↔ session'],
+   ['ts','14:03:20'],['ok',' ✓ AC4 success_url / cancel_url configured'],
+   ['ts','14:03:28'],['ok',' ✓ AC5 typecheck + lint clean'],
+   ['ts','14:03:41'],['warn',' ⚠ AC6 webhook confirms payment → cannot verify: 4.3 blocked'],
+   ['ts','14:03:52'],['inf',' running security checklist (payment-flow profile)...'],
+   ['ts','14:04:10'],['ok',' ✓ no secrets committed · ✓ amount server-derived · ✓ idempotency key set'],
+   ['ts','14:04:18'],['hl',' RESULT: 5/6 PASS · 1 PENDING (blocked dep) → ESCALATE to human review'],
+   ['cursor','']]}
+};
+let termTimer=null;
+function startTerm(id){
+  const a=LOGS[id]; if(!a) return;
+  document.querySelectorAll('#ln-agents .agcard').forEach(c=>c.classList.toggle('on',c.dataset.agent===id));
+  document.getElementById('ag-name').textContent=a.name;
+  document.getElementById('ag-sub').textContent=a.sub;
+  const av=document.getElementById('ag-av'); av.textContent=a.av; av.style.background=a.avbg;
+  const term=document.getElementById('term'); term.innerHTML=''; clearInterval(termTimer);
+  let i=0;
+  function step(){
+    if(i>=a.lines.length){return;}
+    const[cls,txt]=a.lines[i];
+    if(cls==='ts'){ // pair ts with next content line
+      const next=a.lines[i+1]||['dimx',''];
+      const div=document.createElement('div'); div.className='l';
+      div.innerHTML=`<span class="ts">${txt}</span><span class="${next[0]}">${escapeHtml(next[1])}</span>`;
+      term.appendChild(div); i+=2;
+    } else if(cls==='cursor'){
+      const div=document.createElement('div'); div.className='l'; div.innerHTML='<span class="hl">▋</span>';
+      term.appendChild(div); i++;
+    } else { i++; }
+    term.scrollTop=term.scrollHeight;
+  }
+  termTimer=setInterval(step,180);
+}
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+document.querySelectorAll('#ln-agents .agcard').forEach(c=>c.onclick=()=>startTerm(c.dataset.agent));
+</script>
+</body>
+</html>
