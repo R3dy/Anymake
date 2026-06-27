@@ -89,6 +89,7 @@ Every session:
 | "Adopt Anymake in this repo" / "I already have code" | Invokes the `anymake-brownfield` skill to reverse-engineer the Phase 0–3 artifacts from the existing codebase, then resumes the normal flow |
 | "Continue [project name]" | Reads `PROJECTS/[name]/PHASE_STATE.md`, loads the project's type guide, resumes last step (if already launched, invokes `anymake-iterate`) |
 | "What should we work on next?" | Reviews PARKING_LOT.md items or asks for a new idea (post-launch, invokes `anymake-iterate`) |
+| "Add/change/remove [feature]" on a built project | Invokes `anymake-evolve` — loads the engineering-intent layer, classifies the change against prior decisions, and gates any contradiction behind a superseding decision before building |
 
 **Choosing a type:** if the user doesn't specify one, ask a single question listing the available types and recommend the best fit (`saas` if the idea clearly describes a commercial product). Record the answer as `project_type` in PHASE_STATE.md. It is set once and governs the whole build.
 
@@ -153,6 +154,8 @@ Phase 4, Step 4.3 runs a three-tier agentic build loop. See `AGENTS/` for all ag
 
 **Visibility:** `PROJECTS/[name]/BOARD.md` — live agile board updated after every agent action. You can see every story's status, the run log, and any escalations at a glance.
 
+**Post-launch agent:** the **Cartographer** (`AGENTS/cartographer.md`) is a read-only mapping agent used by `anymake-evolve` to build and refresh the engineering-intent layer (`docs/SYSTEM_MAP.md`, `DECISIONS.md`, `INVARIANTS.md`) so later feature changes don't contradict the original design.
+
 ## Companion Skills
 
 Anymake is a **skill suite**: this hub owns the methodology and the state machine,
@@ -171,6 +174,7 @@ so state and conventions never fork. See `skills/README.md` for the full map.
 | `anymake-deploy` | Deployment & infrastructure — staging, production, env/secrets, monitoring, rollback | **Phase 4** staging and **Phase 5, Step 5.2** (production) |
 | `anymake-brownfield` | Onboarding an existing codebase — reverse-engineers Phase 0–3 artifacts | **Instead of Phase 0** when the user points at existing code |
 | `anymake-iterate` | The post-launch loop ("Phase 6") — triage, metrics→epics, release planning | **Phase 5, Step 5.6** onward, or on "Continue" when already launched |
+| `anymake-evolve` | Adding/changing/removing a feature on an already-built product without contradicting original intent — loads the intent layer, classifies the change, gates contradictions behind a superseding decision | When **`anymake-iterate` picks an increment to build**, or directly on a feature request |
 | `anymake-new-type` | Authoring a new project type (`manifest.md` + `guide.md`) | When **extending the type system** |
 
 **How to delegate:** at a delegating step, invoke the named companion via the

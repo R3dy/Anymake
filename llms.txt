@@ -38,7 +38,8 @@ Three-tier autonomous build loop in `AGENTS/`:
 
 - **Orchestrator** — Reads backlog and dependency graph, manages BOARD.md, dispatches Workers and Validators one story at a time, enforces PR policy, escalates to user only when blocked
 - **Worker** — Receives one story via task brief, implements in strict layer order (Schema → Migration → API → Frontend → Tests), commits each layer, opens a PR
-- **Validator** — Checks every acceptance criterion, runs security checklist, returns PASS / FAIL / ESCALATE
+- **Validator** — Checks every acceptance criterion, runs the security checklist and the intent-consistency check (no Active Decision or invariant contradicted), returns PASS / FAIL / ESCALATE
+- **Cartographer** (post-launch, read-only) — maps the as-built code to intent and maintains the engineering-intent layer (`docs/SYSTEM_MAP.md`, `DECISIONS.md`, `INVARIANTS.md`) that `anymake-evolve` checks future changes against
 - **Policies** — Shared retry matrix (max 2 environment retries, max 1 implementation retry), PR review rules (PRs 1–3 always require user review; webhooks/payments always require user review), escalation phrase lexicon, failure classification guide
 
 ## Skill suite
@@ -51,6 +52,7 @@ Anymake is a plugin that ships a **hub** skill (`anymake`) plus focused **compan
 - **anymake-deploy** — staging + production deployment, env/secrets, monitoring, rollback (Phase 4 staging, Phase 5.2)
 - **anymake-brownfield** — reverse-engineer Phase 0–3 artifacts from an existing codebase (in place of Phase 0)
 - **anymake-iterate** — post-launch loop: triage, metrics→epics, releases (Phase 5.6 onward)
+- **anymake-evolve** — add/change/remove a feature on a built product without contradicting original intent; loads the engineering-intent layer, classifies the change, and gates any contradiction behind a superseding decision before building
 - **anymake-new-type** — scaffold a new project-type profile
 
 See `skills/README.md` for the full map.
@@ -74,6 +76,7 @@ Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Pr
 - [AGENTS/worker.md](AGENTS/worker.md) — Worker agent instructions
 - [AGENTS/validator.md](AGENTS/validator.md) — Validator agent instructions
 - [AGENTS/product-owner-proxy.md](AGENTS/product-owner-proxy.md) — Product Owner Proxy instructions (autonomous mode gate evaluator)
+- [AGENTS/cartographer.md](AGENTS/cartographer.md) — Cartographer instructions (read-only; maintains the engineering-intent layer)
 - [AGENTS/policies.md](AGENTS/policies.md) — Retry, PR review, escalation policies, and autonomous mode policy
 - [TEMPLATES/project.md](TEMPLATES/project.md) — Phase 0 artifact template
 - [TEMPLATES/prd.md](TEMPLATES/prd.md) — PRD template
@@ -88,3 +91,6 @@ Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Pr
 - [TEMPLATES/phase-state.md](TEMPLATES/phase-state.md) — PHASE_STATE.md template
 - [TEMPLATES/launch-checklist.md](TEMPLATES/launch-checklist.md) — Pre-launch checklist
 - [TEMPLATES/metrics-dashboard.md](TEMPLATES/metrics-dashboard.md) — Metrics dashboard template
+- [TEMPLATES/system-map.md](TEMPLATES/system-map.md) — Engineering-intent layer: as-built system map
+- [TEMPLATES/decisions.md](TEMPLATES/decisions.md) — Engineering-intent layer: living decision index
+- [TEMPLATES/invariants.md](TEMPLATES/invariants.md) — Engineering-intent layer: non-negotiable behaviors

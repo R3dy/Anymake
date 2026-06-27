@@ -30,6 +30,7 @@ PR count is cumulative across all Phase 4 stories. It is not reset per milestone
 | Validation: FAIL (2nd) | No | 0 | Immediate escalation |
 | Validation: ESCALATE | No | 0 | Immediate escalation — never retry |
 | Security check FAIL | No | 0 | Immediate escalation — security never retries |
+| Intent conflict (ADR/invariant contradicted, no superseding ADR) | No | 0 | Immediate escalation — superseding a decision needs a gate, never a retry |
 | PR merge conflict | Worker resolves rebase | 1 attempt | After rebase fails |
 | CI failing on merge | No | 0 | Immediate escalation |
 | All stories blocked | No | 0 | Immediate escalation |
@@ -92,6 +93,15 @@ Any story whose title or technical task list contains the word "webhook" require
 **Security failure override:**
 Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
 
+**Intent-conflict override:**
+Any validation in which the implementation contradicts an Active Decision
+(`docs/DECISIONS.md`) or an invariant (`docs/INVARIANTS.md`) without a superseding
+ADR produces a verdict of ESCALATE, not FAIL. Contradicting intent is never the
+worker's to resolve — overriding a past decision requires a superseding ADR
+through a gate (the `anymake-evolve` conflict gate). The orchestrator escalates
+with type `intent-conflict`. If the conflict is security-related, it follows the
+security override (always the real user, in every mode).
+
 **Human-only criterion override:**
 Any acceptance criterion that requires visual inspection, browser testing, or UX judgment produces a verdict of ESCALATE. The validator must list the specific human-only criteria in the escalation reason. The orchestrator pauses and you manually verify before the orchestrator continues.
 
@@ -110,6 +120,8 @@ These are the exact phrases you use to unblock the orchestrator. The orchestrato
 | `"blocked — stop"` | Mark all in-progress stories as Blocked, halt orchestration, update PHASE_STATE.md |
 | `"resume"` | After you resolve a human-only validation escalation — mark story Done, continue |
 | `"fix and retry"` | After you provide a fix for an escalated failure — re-dispatch worker |
+| `"supersede ADR-N: [notes]"` | Approve overriding a contradicted decision — write the superseding ADR per `docs/DECISIONS.md`, then re-dispatch the worker with the change now buildable |
+| `"reject change"` | Decline the contradicting change — move it to `PARKING_LOT.md` (or reshape to fit intent), mark the story skipped, continue |
 
 ---
 
@@ -143,8 +155,10 @@ When `autonomous_mode: true` is set in `PROJECTS/[name]/PHASE_STATE.md`, the Pro
 | Phase 4 human-only criterion | Orchestrator | `phase4-escalation-human-only` |
 | Phase 4 implementation failure | Orchestrator | `phase4-escalation-implementation-failure` |
 | Phase 4 2nd validation FAIL | Orchestrator | `phase4-escalation-validation-fail-2nd` |
+| Phase 4 intent conflict | Orchestrator | `phase4-escalation-intent-conflict` |
 | Phase 4 all stories blocked | Orchestrator | `phase4-escalation-all-blocked` |
 | Phase 4.6 staging review | Main agent | `phase-4-staging-review` |
+| Evolve conflict gate (pre-build) | `anymake-evolve` skill | `evolve-intent-conflict` |
 
 **Security failure override (absolute — cannot be bypassed):**
 Any escalation with escalation type `security-failure` is handled by the standard escalation protocol regardless of autonomous mode. The proxy is not spawned. The orchestrator halts and notifies the real user directly. This override applies in all modes and all circumstances.

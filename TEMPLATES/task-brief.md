@@ -111,6 +111,27 @@ See: [file path] for the established fetch/mutation pattern
 
 ---
 
+## 6a. Intent Constraints
+
+The decisions and invariants this story must respect. Filled from the project's
+intent layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`) — this is how the
+original design's intent reaches you. Implement *within* these; do not contradict
+one to make the story easier.
+
+**Active decisions this story touches:**
+- ADR-[N]: [one-line decision + why it matters here — or "none"]
+
+**Invariants this story must not break:**
+- INV-[N]: [the always-true behavior — e.g. "monetary amounts stay integer cents"]
+
+**If a criterion cannot be met without violating one of the above:** do not
+proceed and do not work around it. Write `result: failed / implementation` with a
+description naming the ADR/INV in conflict. Contradicting intent requires a
+superseding decision through a gate (the `anymake-evolve` conflict gate) — it is
+never the Worker's call.
+
+---
+
 ## 7. Security Requirements
 
 Check every item before writing `result: success`. An unchecked item is a validation failure.

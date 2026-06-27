@@ -38,8 +38,13 @@ through the same disciplined machinery.
 4. **Right-size the planning.** Small change → a story or two straight to the
    backlog. Larger change → a focused mini Phase 2/3 (PRD delta + ADRs + epic →
    stories). Reuse the standard templates; don't reopen the whole phase machine.
-5. **Execute via the build engine.** Hand the new stories to `anymake-build-loop`.
-   It builds, validates, and PRs them exactly as in Phase 4.
+5. **Execute via `anymake-evolve`.** Hand the chosen change to `anymake-evolve`,
+   which loads the engineering-intent layer, checks the change against prior
+   decisions (gating any contradiction behind a superseding ADR), briefs the
+   stories with their Intent Constraints, and then runs them through
+   `anymake-build-loop` — building, validating, and PR'ing exactly as in Phase 4.
+   (For a trivial, clearly additive change you may go straight to the build loop,
+   but anything that touches existing behavior goes through `anymake-evolve`.)
 6. **Ship** via `anymake-deploy`; **verify** the metric moved.
 7. **Record** the increment in `PHASE_STATE.md` and refresh the dashboard. Loop.
 

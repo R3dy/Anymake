@@ -30,6 +30,15 @@ Reuses the same templates and locations as the hub — no parallel formats.
 | `PROJECTS/[name]/BACKLOG` (epics + stories) | `TEMPLATES/epic.md`, `TEMPLATES/story.md` | Gaps, TODOs, requested features, tech debt |
 | `PROJECTS/[name]/PHASE_STATE.md` | `TEMPLATES/phase-state.md` | Set `project_type`, `autonomous_mode`, and the resume point |
 
+> **Brownfield's map *is* the first run of the engineering-intent layer.** The
+> system map, as-built ADRs, and invariants you reverse-engineer here are exactly
+> what the Cartographer (`AGENTS/cartographer.md`) maintains going forward. Once
+> onboarded, future feature changes go through `anymake-evolve`, which reads this
+> layer and keeps it current — so the work done here is not throwaway. If you want
+> the full layer up front, you can produce `docs/SYSTEM_MAP.md`,
+> `docs/DECISIONS.md`, and `docs/INVARIANTS.md` (templates of the same name) here
+> too, or leave it for the first `anymake-evolve` cycle to generate.
+
 ## Procedure
 
 1. **Detect type.** Inspect the repo (manifests, frameworks, entrypoints, presence

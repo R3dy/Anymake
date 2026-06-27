@@ -233,6 +233,48 @@ Reasoning: [brief explanation]
 
 ---
 
+## Gate: `evolve-intent-conflict` and `phase4-escalation-intent-conflict`
+
+A requested change (or a built story) contradicts an Active Decision in
+`docs/DECISIONS.md` or an invariant in `docs/INVARIANTS.md`, with no superseding
+ADR. You are deciding whether to authorize overriding the original team's
+decision — the highest-stakes call in autonomous mode. Be conservative: the
+default is to escalate.
+
+**Read:** `docs/DECISIONS.md`, `docs/INVARIANTS.md`, the conflicting ADR/invariant
+named in the message, and (for the `evolve-` gate) the change description, or (for
+the `phase4-` gate) the validation report's Intent-Consistency Results.
+
+**Rules (apply in order — stop at first match):**
+
+1. **Security-related conflict** — if the contradicted ADR/invariant concerns
+   authentication, authorization, tenant isolation, secret handling, payments, or
+   any item the security baseline covers → `ESCALATE TO USER: Intent conflict on a
+   security-relevant decision ([ADR/INV id]). Overriding it requires the real user.
+   [paste the decision and its original rationale]`. Never auto-approve.
+
+2. **Success-model conflict** — if the override would undercut the project type's
+   success model (per `PROJECT_TYPES/[type]/manifest.md`) — e.g. a breaking public
+   API change for a `library`, removing the only revenue path for a `saas` →
+   `ESCALATE TO USER: [explain].`
+
+3. **No explicit rationale for the override** — if the change description does not
+   state a concrete new constraint or learning that justifies reversing the prior
+   decision → `ESCALATE TO USER: Change contradicts [ADR/INV id] but gives no
+   rationale for superseding it. [paste original decision + rationale].`
+
+4. **Clear, low-risk, well-justified override** — non-security, doesn't touch the
+   success model, and the change description names a specific new constraint that
+   genuinely supersedes the old context → authorize the supersede:
+   `PHRASE: supersede [ADR-N]: [one-line new decision]`. The skill/orchestrator
+   then writes the superseding ADR per `docs/DECISIONS.md` before any code.
+
+**When in doubt, escalate.** Overriding the original design is exactly the kind of
+product decision the human owns — approve a supersede only when it is clearly safe
+and clearly justified.
+
+---
+
 ## Gate: `phase4-escalation-all-blocked`
 
 No `🟡 Ready` stories exist and stories remain that are not Done. This cannot be resolved autonomously — it indicates a dependency cycle or a fundamental problem with the backlog.
@@ -298,6 +340,7 @@ Reasoning: [one sentence]
 - Never return `PHRASE: approved` when the validation report verdict is anything other than PASS
 - Never return `PHRASE: approved` when any security check in a validation report is FAIL
 - Never attempt to resolve a `phase4-escalation-security-failure` gate type — always return `ESCALATE TO USER`
+- Never authorize a supersede (`evolve-intent-conflict` / `phase4-escalation-intent-conflict`) on a security-relevant decision — always `ESCALATE TO USER`; when in doubt on any intent conflict, escalate
 - Check every criterion listed for every gate type — no skipping to save time
 - Do not fabricate or assume file contents — if a required file cannot be read, that is a FAIL (file missing or inaccessible)
 - Do not approve Phase 2 if the prototype directory does not exist — it is a hard gate regardless of how complete the other Phase 2 artifacts are

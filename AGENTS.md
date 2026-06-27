@@ -175,6 +175,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 - [ ] New dependencies are justified and not obviously malicious
 - [ ] Migration is reversible (has a `down` function)
 - [ ] Tests cover the happy path for each acceptance criterion
+- [ ] **Intent-consistency:** the change contradicts no Active Decision (`docs/DECISIONS.md`) or invariant (`docs/INVARIANTS.md`) named in the task brief's Intent Constraints (a contradiction with no superseding ADR is an `ESCALATE`, type `intent-conflict`)
 
 **Validator returns one of:**
 - `PASS` — all criteria met, no security issues; include merge recommendation
@@ -209,6 +210,21 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 - Return `PHRASE: approved` when a validation report verdict is not PASS
 - Return `PHRASE: approved` when any security check in a validation report is FAIL
 - Skip evaluation criteria to speed up processing — check every item
+
+### Cartographer (`AGENTS/cartographer.md`)
+
+**Role:** Read-only mapping agent for the **post-launch** path. Not part of the Phase 4 loop. Spawned by the `anymake-evolve` skill (or directly) to build and maintain the project's **engineering-intent layer** so that later feature changes are made by an agent that understands the system end to end and won't contradict the original design.
+
+**Produces / refreshes** (in `PROJECTS/[name]/docs/`):
+- `SYSTEM_MAP.md` — the as-built map (modules, data flow, data model, integrations, run/test/deploy)
+- `DECISIONS.md` — living index of every decision and which are still in force (append-only; supersede, never delete)
+- `INVARIANTS.md` — the non-negotiable behaviors a change must never break
+
+**Cartographer must never:**
+- Modify any file under `src/` (read-only over source)
+- Silently resolve a contradiction — it records drift in the SYSTEM_MAP Drift Log and leaves resolution to the evolve flow's gate
+- Invent ADRs/invariants to make undocumented behavior look intentional
+- Supersede a decision or update project state (PHASE_STATE.md/BOARD.md)
 
 ### Policies (`AGENTS/policies.md`)
 
@@ -267,6 +283,9 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 ### PARKING_LOT.md
 `PROJECTS/[name]/PARKING_LOT.md` captures ideas that arrive mid-phase. They are never acted on until a new phase gate is opened. Log them and continue — never expand scope mid-phase.
 
+### Engineering-intent layer
+`PROJECTS/[name]/docs/SYSTEM_MAP.md`, `docs/DECISIONS.md`, and `docs/INVARIANTS.md` are the durable record of *why the system is the way it is*. Maintained by the Cartographer and consumed by `anymake-evolve` and the Validator's intent-consistency check. `DECISIONS.md` is append-only — a decision is **superseded** (old ADR marked `Superseded by ADR-N`, new ADR added), never deleted, so the rationale of every past choice survives. Overriding a decision requires a superseding ADR through a gate; no agent does it on its own authority.
+
 ---
 
 ## Behavioral Rules for All Agents
@@ -303,6 +322,7 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 | `AGENTS/worker.md` | Full Worker instructions |
 | `AGENTS/validator.md` | Full Validator instructions |
 | `AGENTS/product-owner-proxy.md` | Product Owner Proxy instructions (autonomous mode gate evaluator) |
+| `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/policies.md` | Retry matrix, PR policy, escalation phrases, failure classification, autonomous mode policy |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
 | `TEMPLATES/task-brief.md` | Template Orchestrator uses to brief each Worker |
