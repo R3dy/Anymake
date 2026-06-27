@@ -27,7 +27,23 @@ request matches a companion's description.
 | `anymake-design-system` | Visual-quality bar: design system + prototype sprint, prototype-gate audit | Phase 2, Step 2.2b (UX-active types) | "design system", "prototype sprint", "make it look polished", "audit the UI" |
 | `anymake-security-review` | Security audit: per-PR checklist, the Phase 4.5 full pass, and the pre-launch gate | Phase 4 Step 4.5 + inside the Validator; pre-launch | "security review", "audit for vulnerabilities", "pen-test checklist" |
 | `anymake-iterate` | Post-launch loop ("Phase 6"): triage PARKING_LOT, turn metrics into the next epic, bug cycles | After Phase 5, or on "Continue" when the project is already launched | "what's next", "iterate", "triage the parking lot", "plan the next release" |
+| `anymake-evolve` | Adding/changing/removing a specific feature on an already-built product **without contradicting original intent**: loads the engineering-intent layer, classifies the change, and forces a superseding decision through a gate before any contradicting change is built | When `anymake-iterate` picks an increment to actually build, or directly on a feature request | "add a feature", "change how X works", "remove Y", "now I want it to…", "modify the behavior of…" |
 | `anymake-new-type` | Authoring a new project type: scaffold a `manifest.md` + `guide.md` pair | When extending the type system | "add a project type", "create a new Anymake type", "scaffold a manifest" |
+
+### The engineering-intent layer
+
+`anymake-evolve` depends on a durable record of *why the system is the way it is*,
+maintained by the **Cartographer** agent (`AGENTS/cartographer.md`) and stored in
+the project workspace:
+
+| Document | Template | Purpose |
+|----------|----------|---------|
+| `docs/SYSTEM_MAP.md` | `TEMPLATES/system-map.md` | The as-built map a new contributor reads day one |
+| `docs/DECISIONS.md` | `TEMPLATES/decisions.md` | Living index of every decision + which are still in force (append-only, supersede never delete) |
+| `docs/INVARIANTS.md` | `TEMPLATES/invariants.md` | The non-negotiable behaviors a change must never break |
+
+The Validator's **intent-consistency check** verifies every PR against this layer;
+a contradiction with no superseding ADR is an automatic `ESCALATE`.
 
 ## Design rules for this suite
 

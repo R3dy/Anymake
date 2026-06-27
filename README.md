@@ -148,6 +148,7 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 | `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
 | `anymake-brownfield` | Reverse-engineer Phase 0–3 artifacts from existing code | In place of Phase 0 |
 | `anymake-iterate` | Post-launch loop: triage, metrics→epics, releases | Phase 5.6 onward |
+| `anymake-evolve` | Add/change/remove a feature on a built product without contradicting original intent (intent layer + conflict gate) | Post-launch feature requests |
 | `anymake-new-type` | Scaffold a new project-type profile | Extending the system |
 
 ## Repository Layout
@@ -160,7 +161,8 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 AGENTS/
 ├── orchestrator.md         # Orchestrator agent instructions
 ├── worker.md               # Worker agent instructions
-├── validator.md            # Validator agent instructions
+├── validator.md            # Validator agent instructions (incl. intent-consistency check)
+├── cartographer.md         # Read-only agent that maps code→intent (intent layer)
 └── policies.md             # Retry matrix, escalation rules, failure classification
 
 skills/                     # The skill suite (registered with OpenCode)
@@ -172,6 +174,7 @@ skills/                     # The skill suite (registered with OpenCode)
 ├── anymake-security-review/ # Security checklists + gate (4.5, pre-launch)
 ├── anymake-deploy/         # Staging + production deployment
 ├── anymake-iterate/        # Post-launch loop ("Phase 6")
+├── anymake-evolve/         # Add/change/remove a feature without breaking original intent
 └── anymake-new-type/       # Author a new project type
 
 PHASE_GUIDES/
@@ -197,6 +200,9 @@ TEMPLATES/
 ├── phase-state.md          # PHASE_STATE.md template
 ├── launch-checklist.md     # Phase 5: Pre-launch checklist template
 ├── metrics-dashboard.md    # Phase 5: Metrics dashboard template
+├── system-map.md           # Intent layer: as-built system map (Cartographer)
+├── decisions.md            # Intent layer: living decision index (Cartographer)
+├── invariants.md           # Intent layer: non-negotiable behaviors (Cartographer)
 └── commit-message.md       # Conventional commit guidelines
 
 skills/anymake/SKILL.md     # Main skill definition (loaded by OpenCode plugin)

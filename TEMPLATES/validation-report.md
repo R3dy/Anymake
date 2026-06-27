@@ -14,11 +14,12 @@
 Work through this in order. Stop at the first matching rule. The result is your verdict.
 
 ```
-1. Any security check = FAIL?          → verdict = ESCALATE
-2. Any criterion = Human-Only (SKIP)?  → verdict = ESCALATE
-3. Any criterion = SKIP (environment)? → verdict = ESCALATE
-4. Any criterion = FAIL?               → verdict = FAIL
-5. All criteria = PASS or N/A?         → verdict = PASS
+1.  Any security check = FAIL?                        → verdict = ESCALATE
+1b. Any intent-consistency conflict, no superseding ADR? → verdict = ESCALATE (intent-conflict)
+2.  Any criterion = Human-Only (SKIP)?                → verdict = ESCALATE
+3.  Any criterion = SKIP (environment)?               → verdict = ESCALATE
+4.  Any criterion = FAIL?                             → verdict = FAIL
+5.  All criteria = PASS or N/A?                       → verdict = PASS
 ```
 
 ---
@@ -64,6 +65,24 @@ Work through this in order. Stop at the first matching rule. The result is your 
 
 ---
 
+## Intent-Consistency Results
+
+Checked against the story's Intent Constraints (task brief §6a) and the project
+intent layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`). A contradiction with no
+superseding ADR sets the verdict to ESCALATE (escalation type: intent-conflict).
+
+| ADR / INV | Statement | Result | Evidence |
+|-----------|-----------|--------|----------|
+| ADR-00N | [decision] | RESPECTED / CONTRADICTED / N/A | `src/...:NN` — [excerpt] |
+| INV-00N | [invariant] | RESPECTED / CONTRADICTED / N/A | `src/...:NN` — [excerpt] |
+
+**Result key:**
+- `RESPECTED` — implementation is consistent with the decision/invariant
+- `CONTRADICTED` — implementation violates it and no superseding ADR exists → ESCALATE
+- `N/A` — not touched by this story
+
+---
+
 ## Failures (if FAIL verdict)
 
 List every failed criterion with specific, actionable feedback for the worker.
@@ -82,7 +101,7 @@ List every failed criterion with specific, actionable feedback for the worker.
 
 Fill this section only when verdict is ESCALATE.
 
-**Escalation type:** security-failure | human-only-criterion | environment-failure
+**Escalation type:** security-failure | intent-conflict | human-only-criterion | environment-failure
 
 **Specific reason:**
 [Exact description of why this cannot be resolved autonomously]

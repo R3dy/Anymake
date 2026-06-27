@@ -97,6 +97,31 @@ Check each item against the code on the branch. Mark PASS, FAIL, or N/A (with re
 
 ---
 
+## Intent-Consistency Check
+
+Run this for every story, in addition to acceptance criteria and security. It is
+the "would an original team member object?" gate — it catches changes that are
+*correct* against their acceptance criteria but *contradict the system's intent*.
+
+Read the story's **Intent Constraints** (task brief §6a) and the project's intent
+layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`). For each listed ADR and
+invariant, check the implementation on the branch:
+
+- [ ] No Active Decision in `DECISIONS.md` is contradicted by this change
+- [ ] No invariant in `INVARIANTS.md` (especially those named in §6a) is broken
+- [ ] The change does not undercut the project type's success model
+
+**A contradiction with no superseding decision is an automatic `ESCALATE`** — not
+a FAIL. Like security, intent conflicts are not the Worker's to resolve: changing
+a decision requires a superseding ADR through a gate (the `anymake-evolve`
+conflict gate). Record the specific ADR/INV violated, with file:line evidence,
+and set the escalation type to `intent-conflict`.
+
+If a contradiction *is* covered by a superseding ADR that is now an Active
+Decision, it is not a conflict — note the superseding ADR as evidence and pass.
+
+---
+
 ## Writing Your Validation Report
 
 Write the report to `PROJECTS/[name]/docs/04-implementation/validation-reports/story-N.N.md`.
@@ -115,6 +140,10 @@ Work through this in order. Stop at the first matching rule.
 1. Any security check = FAIL?
    → verdict = ESCALATE
    (Security failures never go back to the worker — always escalate to the user)
+
+1b. Any intent-consistency check contradicted, with no superseding ADR?
+   → verdict = ESCALATE  (escalation type: intent-conflict)
+   (Contradicting a decision/invariant is never the worker's to resolve)
 
 2. Any criterion = Human-Only (SKIP)?
    → verdict = ESCALATE
@@ -142,7 +171,8 @@ Work through this in order. Stop at the first matching rule.
 
 - Do not change the acceptance criteria — they are the contract, not your opinion
 - Do not report PASS on criteria you could not actually verify
-- Do not skip the security checklist
+- Do not skip the security checklist or the intent-consistency check
+- Do not "fix" an intent conflict yourself or wave it through — record it and escalate (type: intent-conflict)
 - Do not provide code suggestions or refactoring advice in your report
 - Do not run arbitrary commands that modify the codebase — read-only and test-running only
 - Do not make product judgments ("this feature should work differently") — only contract judgments ("this criterion is not satisfied")

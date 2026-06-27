@@ -50,6 +50,7 @@ Each layer gets its own commit before the next layer starts.
 Pay special attention to:
 - Acceptance criteria — this is your contract. Every criterion must be satisfied.
 - Technical tasks — your ordered build list
+- Intent Constraints (§6a) — the ADRs and invariants this story must respect; implement within them, never around them
 - Constraints section — hard limits on what you can and cannot do
 - RETRY CONTEXT section (if present) — read this first, it overrides everything else
 - Security requirements — these are not optional
@@ -173,6 +174,7 @@ These are absolute. No exceptions.
 - **Never add a new npm/pip/cargo dependency** without noting it in your RESULT notes (orchestrator needs to know)
 - **Never skip a layer in the build order** — schema before migration, migration before API, API before frontend
 - **Never implement functionality not described in the acceptance criteria** — no bonus features
+- **Never contradict an Intent Constraint (§6a)** — if a criterion can't be met without violating a listed ADR or invariant, stop and write `failed / implementation` naming the conflict; superseding a decision is never the Worker's call
 - **Never commit secrets** — no API keys, connection strings, or tokens in code
 - **Never commit code that fails the linter** — fix lint errors before committing
 - **Never write `result: success` with zero tests** — if the story has runtime-verifiable acceptance criteria (any criterion requiring the app to run), you must write automated tests for them. Zero tests = incomplete story.
