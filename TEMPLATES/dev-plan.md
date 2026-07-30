@@ -71,7 +71,7 @@ requires justification.
 ## 6. Intent Constraints
 
 Classification against the intent layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`)
-per the Intent Conflict Policy (`AGENTS/policies.md`):
+per the Intent Conflict Policy (`AGENTS/arbiter.md`):
 
 **Classification:** Additive | Modifying | Contradicting
 

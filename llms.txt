@@ -42,7 +42,7 @@ Three-tier autonomous build loop in `AGENTS/`:
 - **Cartographer** (post-launch, read-only) — maps the as-built code to intent and maintains the engineering-intent layer (`docs/SYSTEM_MAP.md`, `DECISIONS.md`, `INVARIANTS.md`) that `anymake-agile` checks future changes against
 - **Solution Architect** (post-launch) — reviews the full project and writes the Development Plan for one tracked issue; never touches code
 - **Plan Reviewer** (post-launch) — fresh-context adversarial review of each Development Plan; approves, demands changes, or escalates before anything is built
-- **Policies** — Shared retry matrix (max 2 environment retries, max 1 implementation retry), PR review rules (PRs 1–3 always require user review; webhooks/payments always require user review), escalation phrase lexicon, failure classification guide
+- **Arbiter** — the shared rulebook every agent defers to (not spawned, read): retry matrix (max 2 environment retries, max 1 implementation retry), PR review rules (PRs 1–3 always require user review; webhooks/payments always require user review), escalation phrase lexicon, failure classification, intent conflict policy, agile plan review policy
 
 ## Skill suite
 
@@ -79,7 +79,7 @@ Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Pr
 - [AGENTS/validator.md](AGENTS/validator.md) — Validator agent instructions
 - [AGENTS/product-owner-proxy.md](AGENTS/product-owner-proxy.md) — Product Owner Proxy instructions (autonomous mode gate evaluator)
 - [AGENTS/cartographer.md](AGENTS/cartographer.md) — Cartographer instructions (read-only; maintains the engineering-intent layer)
-- [AGENTS/policies.md](AGENTS/policies.md) — Retry, PR review, escalation policies, and autonomous mode policy
+- [AGENTS/arbiter.md](AGENTS/arbiter.md) — Retry, PR review, escalation policies, and autonomous mode policy
 - [TEMPLATES/project.md](TEMPLATES/project.md) — Phase 0 artifact template
 - [TEMPLATES/prd.md](TEMPLATES/prd.md) — PRD template
 - [TEMPLATES/ux-design.md](TEMPLATES/ux-design.md) — UX design system template

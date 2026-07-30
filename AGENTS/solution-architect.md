@@ -62,7 +62,7 @@ clean — conclusions, not file dumps.
 3. **Map the current state.** Fill plan §3 from SYSTEM_MAP plus direct reading:
    modules, data, flows, integrations in the change's path.
 4. **Classify against intent** (plan §6) per the Intent Conflict Policy
-   (`AGENTS/policies.md`):
+   (`AGENTS/arbiter.md`):
    Additive / Modifying / **Contradicting**. A contradiction is reported to the
    calling skill for the conflict gate (user or Product Owner Proxy) **before**
    you continue — you never resolve it yourself, and a contradicting plan cannot
@@ -98,7 +98,7 @@ review report (`review-round-K.md`). For **every** numbered comment:
   next round; you never simply ignore a comment.
 
 Address all comments; resubmit the whole plan. If you and the reviewer still
-disagree after the round limit in `AGENTS/policies.md`, the disagreement
+disagree after the round limit in `AGENTS/arbiter.md`, the disagreement
 escalates to the user — it is never settled by either agent unilaterally.
 
 ---

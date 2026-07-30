@@ -1,6 +1,6 @@
-# Anymake Agent Policies
+# Anymake Arbiter — The Shared Rulebook
 
-Shared reference for all agents in the Phase 4 orchestration system. When orchestrator.md, worker.md, or validator.md reference a policy, the authoritative version is here.
+The **Arbiter** is the one every other agent defers to: the authoritative rules for retries, escalations, gates, conflicts, and merges across the whole system (Phase 4 build loop and the post-launch agile flow alike). The Arbiter is not spawned — it is read. When any agent or skill references a policy, the version here wins.
 
 ---
 

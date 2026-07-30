@@ -155,7 +155,7 @@ Orchestrator
 - `AGENTS/orchestrator.md` — orchestrator instructions and loop specification
 - `AGENTS/worker.md` — worker agent instructions (single story, single branch)
 - `AGENTS/validator.md` — validator agent instructions (contract enforcement)
-- `AGENTS/policies.md` — all retry, escalation, and PR review policies
+- `AGENTS/arbiter.md` — all retry, escalation, and PR review policies
 
 **You review:**
 - PRs #1, #2, #3 always require your approval (see board for notification)
@@ -175,7 +175,7 @@ The orchestrator stops and notifies you in these cases:
 | Human-only acceptance criterion | `🚫 Blocked` | Manually verify in staging, say `"resume"` when confirmed |
 | Implementation failure | `🚫 Blocked` | Diagnose with Claude, say `"retry story N.N"` or `"skip story N.N"` |
 
-Full phrase lexicon is in `AGENTS/policies.md`.
+Full phrase lexicon is in `AGENTS/arbiter.md`.
 
 **Autonomous mode:** In autonomous mode (`autonomous_mode: true` in PHASE_STATE.md), the orchestrator spawns the Product Owner Proxy instead of pausing at these points. The proxy evaluates the situation and returns the appropriate phrase from the lexicon. The only exception is security failures — those always halt and notify the real user regardless of mode. See `AGENTS/orchestrator.md` for the orchestrator's autonomous mode behavior and `AGENTS/product-owner-proxy.md` for the proxy's evaluation criteria.
 

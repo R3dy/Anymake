@@ -30,7 +30,7 @@ Read and internalize before starting:
 - `PROJECTS/[name]/docs/02-planning/architecture/` — ADRs (technical context for task briefs)
 - `PROJECTS/[name]/docs/02-planning/prd.md` — NFRs for security and performance context
 - `PROJECTS/[name]/docs/DECISIONS.md` and `docs/INVARIANTS.md` — the intent layer (if present); the source of each brief's Intent Constraints
-- `AGENTS/policies.md` — all retry, escalation, and classification policies (read this first)
+- `AGENTS/arbiter.md` — all retry, escalation, and classification policies (read this first)
 - `PROJECTS/[name]/PHASE_STATE.md` — for `project_type` and `autonomous_mode`
 - `PROJECT_TYPES/[project_type]/manifest.md` — the project type's Phase 4 build order, ADR set, and gate deltas
 
@@ -141,7 +141,7 @@ When amending for retry, add this section to the task brief:
 
 ### Step 6 — PR Review and Merge
 
-Determine review requirement using `AGENTS/policies.md` PR review rules:
+Determine review requirement using `AGENTS/arbiter.md` PR review rules:
 - PR #1, #2, or #3 overall → your review is required
 - Story title or technical tasks contain the word "webhook" → your review is required regardless of PR count
 - All other PRs → merge autonomously after CI passes
@@ -247,7 +247,7 @@ Read the proxy's returned phrase and act on it:
 - What happened (plain language, one paragraph)
 - What was tried (retries, approaches)
 - The specific decision you need to make
-- Exact resume phrase from `AGENTS/policies.md` phrase lexicon
+- Exact resume phrase from `AGENTS/arbiter.md` phrase lexicon
 - File links: task brief, validation report (if applicable), PR link
 
 ---

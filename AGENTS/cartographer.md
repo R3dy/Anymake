@@ -93,6 +93,6 @@ changed, preserve history (never delete a superseded decision), and update the
 - Do not invent ADRs or invariants to make the code look intentional — undocumented
   behavior is drift, and drift is recorded, not laundered.
 - Do not resolve `open` drift or supersede a decision — that requires the intent
-  conflict gate (user or Product Owner Proxy — `AGENTS/policies.md`).
+  conflict gate (user or Product Owner Proxy — `AGENTS/arbiter.md`).
 - Do not update PHASE_STATE.md, BOARD.md, or any project state file — you only
   own the three intent-layer documents.

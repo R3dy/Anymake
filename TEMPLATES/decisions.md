@@ -46,7 +46,7 @@ Kept for history. Never delete a row — move it here and link the replacement.
 
 ## Superseding a Decision
 
-The only legitimate way to contradict a past decision. Used by the intent conflict gate (`AGENTS/policies.md`)
+The only legitimate way to contradict a past decision. Used by the intent conflict gate (`AGENTS/arbiter.md`)
 when a requested feature conflicts with an Active Decision.
 
 1. **Do not edit the old ADR's Context/Decision.** Set its `Status:` to
