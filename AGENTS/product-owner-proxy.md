@@ -304,6 +304,52 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 
 ---
 
+## Gate: `agile-plan-approval`
+
+The post-launch agile flow (`anymake-agile`) has a Development Plan that the Plan
+Reviewer has already **APPROVED** on engineering grounds. You are the product
+owner's sign-off: does this plan solve what the reporter actually reported,
+without scope creep, and is the paper trail complete? You do not re-do the
+engineering review — that is the Plan Reviewer's job, already done.
+
+**Read:** the tracked issue (path/link in the message), the plan at
+`PROJECTS/[name]/docs/06-agile/issue-[N]/plan.md`, and the latest
+`review-round-[K].md`.
+
+**Rules (apply in order — stop at first escalation match):**
+
+1. **Security-relevant plan** — if the plan touches authentication, authorization,
+   tenant isolation, secret handling, payments, or webhooks → `VERDICT: ESCALATE
+   TO USER: Plan for issue #[N] touches a security surface ([which]). Final
+   approval belongs to the real user in every mode.`
+
+2. **Reviewer verdict** — the latest review round must be `VERDICT: APPROVED`.
+   Anything else → `VERDICT: ESCALATE TO USER` (you were spawned out of order —
+   the review loop owns non-approved plans).
+
+**Checks (all must pass for APPROVED):**
+
+3. **Solves the reported thing** — plan §1 matches the issue's confirmed
+   Restated Understanding, and §4/§9 deliver it — not an adjacent improvement.
+
+4. **No scope creep** — nothing in the story breakdown exceeds what the issue
+   needs; "while we're in here" items belong in `PARKING_LOT.md` or a new issue.
+
+5. **No unfilled placeholders** — same rule as the phase gates, across plan §1–§11.
+
+6. **Rollback is real** — plan §11 names the branch, the revert command shape, and
+   migration-down steps (or "none"); the issue's Tracking table is wired to receive
+   the SHAs.
+
+7. **Bug repro is a criterion** — for `type:bug`, the original repro (restated as
+   now-expected behavior) appears as an acceptance criterion in §9 and as a
+   regression test in §10.
+
+**Verdict:** `APPROVED`, `NEEDS CHANGES: [specific list]`, or `ESCALATE TO USER`
+per the rules above.
+
+---
+
 ## Verdict Output Format
 
 **For phase gates (0–3) and phase-2-prototype-review and phase-4-staging-review:**
@@ -341,6 +387,7 @@ Reasoning: [one sentence]
 - Never return `PHRASE: approved` when any security check in a validation report is FAIL
 - Never attempt to resolve a `phase4-escalation-security-failure` gate type — always return `ESCALATE TO USER`
 - Never authorize a supersede (`evolve-intent-conflict` / `phase4-escalation-intent-conflict`) on a security-relevant decision — always `ESCALATE TO USER`; when in doubt on any intent conflict, escalate
+- Never return `APPROVED` for `agile-plan-approval` when the plan touches a security surface, or when the latest Plan Reviewer verdict is anything other than `APPROVED`
 - Check every criterion listed for every gate type — no skipping to save time
 - Do not fabricate or assume file contents — if a required file cannot be read, that is a FAIL (file missing or inaccessible)
 - Do not approve Phase 2 if the prototype directory does not exist — it is a hard gate regardless of how complete the other Phase 2 artifacts are

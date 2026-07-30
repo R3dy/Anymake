@@ -125,6 +125,38 @@ These are the exact phrases you use to unblock the orchestrator. The orchestrato
 
 ---
 
+## Agile Plan Review Policy
+
+Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect authors a Development Plan; Plan Reviewer reviews it.
+
+**Role separation (absolute):**
+- The Architect and the Reviewer are always separate sub-agent contexts — the thing that designs is never the thing that approves (same law as Worker/Validator)
+- The Reviewer never edits the plan; the Architect never sets its own plan to `Approved`
+- The Reviewer is spawned fresh each round — it re-verifies prior fixes rather than trusting memory
+
+**Round limits:**
+| Event | Action |
+|-------|--------|
+| `NEEDS CHANGES` (round 1 or 2) | Re-spawn Architect with the review report; it resolves every numbered comment; fresh Reviewer next round |
+| `NEEDS CHANGES` (3rd time) | Stop the loop — escalate to user with the plan and unresolved comments. The Reviewer never lowers the bar to end a loop |
+| `ESCALATE` from Reviewer | Straight to the real user — never retried |
+| Security-relevant plan (auth, authz, tenant isolation, secrets, payments, webhooks) | Final approval is always the real user, in every mode |
+| Intent conflict found in a plan | `anymake-evolve` conflict gate before the plan may proceed — never resolved by Architect or Reviewer |
+
+**User phrases at the agile approval gate:**
+| Phrase | Action |
+|--------|--------|
+| `"approve plan"` | Plan `Status: Approved`, issue → `status:approved`, hand stories to the build engine |
+| `"revise plan: [notes]"` | Notes become review comments; re-spawn Architect (does not count against the round limit) |
+| `"reject issue"` | Close the issue as not-planned with the reason; nothing is built |
+
+**Traceability (every agile change):**
+- Branch `issue/[N]-[slug]`; every commit footer references `#[N]`; PR body `Closes #[N]`
+- Base `main` SHA recorded on the issue before merge; merge SHA + tag `issue-[N]` + exact revert command recorded after
+- An agile change with no issue reference in its commits fails validation
+
+---
+
 ## Board Status Symbols
 
 | Symbol | Status | Meaning |
@@ -159,6 +191,8 @@ When `autonomous_mode: true` is set in `PROJECTS/[name]/PHASE_STATE.md`, the Pro
 | Phase 4 all stories blocked | Orchestrator | `phase4-escalation-all-blocked` |
 | Phase 4.6 staging review | Main agent | `phase-4-staging-review` |
 | Evolve conflict gate (pre-build) | `anymake-evolve` skill | `evolve-intent-conflict` |
+| Agile plan approval (post Reviewer APPROVED) | `anymake-agile` skill | `agile-plan-approval` |
+| Agile reporter verification (issue close) | `anymake-agile` skill | `phase4-escalation-human-only` (reuse — code-level check of the fix) |
 
 **Security failure override (absolute — cannot be bypassed):**
 Any escalation with escalation type `security-failure` is handled by the standard escalation protocol regardless of autonomous mode. The proxy is not spawned. The orchestrator halts and notifies the real user directly. This override applies in all modes and all circumstances.

@@ -25,8 +25,12 @@ contradiction as something to surface and decide — never to paper over.
 - Directly — "add SSO", "change the export format", "remove the trial banner".
 
 > **Not this skill if:** the request is "what should we build next?" (that's
-> `anymake-iterate` — prioritization), or the repo has no Anymake workspace yet
-> (that's `anymake-brownfield` — bootstrap intent from external code first).
+> `anymake-iterate` — prioritization), the repo has no Anymake workspace yet
+> (that's `anymake-brownfield` — bootstrap intent from external code first), or
+> the request arrives as a **user report** — a bug from manual testing or a
+> feature ask that should be tracked and plan-reviewed (that's `anymake-agile`,
+> which runs intake → issue → plan → review and then invokes this skill's
+> machinery at execution time).
 
 ## The intent layer it depends on
 

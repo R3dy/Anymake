@@ -48,11 +48,19 @@ through the same disciplined machinery.
 6. **Ship** via `anymake-deploy`; **verify** the metric moved.
 7. **Record** the increment in `PHASE_STATE.md` and refresh the dashboard. Loop.
 
-## Bug-fix fast path
+## Bug-fix path
 
-For a defect with a clear repro: write one story with the repro + fix as
-acceptance criteria, run it through `anymake-build-loop` (security checklist still
-applies), deploy, confirm resolved. Don't let urgency skip validation.
+A **user-reported** defect ("this button isn't working") goes through
+`anymake-agile` — confirmed intake, a tracked issue, an architect-written plan,
+and independent plan review before any code. Jumping straight to a fix is the
+ad-hoc failure mode that skill exists to prevent.
+
+**Emergency fast path (explicit user request only):** for a production-down
+defect where the user explicitly asks to skip the plan-review loop, write one
+story with the repro + fix as acceptance criteria, run it through
+`anymake-build-loop` (security checklist still applies), deploy, confirm
+resolved — then backfill a tracking issue with the merge SHA and revert command.
+Don't let urgency skip validation.
 
 ## Guardrails
 

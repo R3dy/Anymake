@@ -133,6 +133,35 @@ Validator (per PR)
 
 **Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action. You can see every story's status, the full run log, and any escalations at a glance.
 
+## Post-Launch Agile Workflow
+
+Once a product is built, "the save button isn't working" should never trigger an
+ad-hoc fix. The `anymake-agile` skill runs the process a real dev team would:
+
+```
+1. Intake      — clarify + reproduce; restate the issue in system terms; reporter confirms
+2. Track       — labeled GitHub issue in the product repo (type / severity / status lifecycle)
+3. Solution    — Solution Architect agent reviews the whole project and writes a
+                 Development Plan: verified root cause, design, alternatives, intent
+                 constraints, design consistency, blast radius, stories, tests, rollback
+4. Review      — a fresh Plan Reviewer agent adversarially checks the plan against the
+                 PRD, design system, intent layer, and the actual code; the architect
+                 revises until APPROVED (max 3 rounds, then it escalates to you)
+5. Approve     — you sign off (or the Product Owner Proxy in autonomous mode;
+                 security-touching plans always come to you)
+6. Execute     — stories run through the standard build loop on branch issue/N-slug;
+                 every commit references the issue; merge SHA + tag + revert command
+                 are recorded on the issue
+7. Verify      — the original repro is re-tested, UI changes pass the design-system
+                 audit, and the reporter confirms before the issue closes
+```
+
+The design/review split mirrors Worker/Validator: the agent that writes the plan
+(`AGENTS/solution-architect.md`) is never the agent that approves it
+(`AGENTS/plan-reviewer.md`). No code is written until the plan clears review —
+so the fix fixes what you reported, breaks nothing around it, looks designed-in,
+and reverts with one recorded command if you ever need to undo it.
+
 ## The Skill Suite
 
 Anymake is a plugin that ships a **hub** skill plus focused **companion** skills.
@@ -148,6 +177,7 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 | `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
 | `anymake-brownfield` | Reverse-engineer Phase 0–3 artifacts from existing code | In place of Phase 0 |
 | `anymake-iterate` | Post-launch loop: triage, metrics→epics, releases | Phase 5.6 onward |
+| `anymake-agile` | Agile pipeline for user-reported bugs & feature requests: intake → GitHub issue → architect plan → independent plan review → traceable build → reporter verification | "X isn't working" / feature reports on a built product |
 | `anymake-evolve` | Add/change/remove a feature on a built product without contradicting original intent (intent layer + conflict gate) | Post-launch feature requests |
 | `anymake-new-type` | Scaffold a new project-type profile | Extending the system |
 
@@ -163,7 +193,9 @@ AGENTS/
 ├── worker.md               # Worker agent instructions
 ├── validator.md            # Validator agent instructions (incl. intent-consistency check)
 ├── cartographer.md         # Read-only agent that maps code→intent (intent layer)
-└── policies.md             # Retry matrix, escalation rules, failure classification
+├── solution-architect.md   # Agile flow: writes the Development Plan for a tracked issue
+├── plan-reviewer.md        # Agile flow: fresh-context adversarial plan review
+└── policies.md             # Retry matrix, escalation rules, failure classification, agile review policy
 
 skills/                     # The skill suite (registered with OpenCode)
 ├── README.md               # Suite map: hub + companions
@@ -175,6 +207,7 @@ skills/                     # The skill suite (registered with OpenCode)
 ├── anymake-deploy/         # Staging + production deployment
 ├── anymake-iterate/        # Post-launch loop ("Phase 6")
 ├── anymake-evolve/         # Add/change/remove a feature without breaking original intent
+├── anymake-agile/          # Agile bug/feature pipeline: intake → issue → plan → review → build
 └── anymake-new-type/       # Author a new project type
 
 PHASE_GUIDES/
@@ -200,6 +233,9 @@ TEMPLATES/
 ├── phase-state.md          # PHASE_STATE.md template
 ├── launch-checklist.md     # Phase 5: Pre-launch checklist template
 ├── metrics-dashboard.md    # Phase 5: Metrics dashboard template
+├── issue.md                # Agile flow: GitHub issue body (bug/feature, labels, traceability)
+├── dev-plan.md             # Agile flow: Development Plan (Solution Architect)
+├── plan-review.md          # Agile flow: per-round review report (Plan Reviewer)
 ├── system-map.md           # Intent layer: as-built system map (Cartographer)
 ├── decisions.md            # Intent layer: living decision index (Cartographer)
 ├── invariants.md           # Intent layer: non-negotiable behaviors (Cartographer)
