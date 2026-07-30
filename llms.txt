@@ -39,7 +39,9 @@ Three-tier autonomous build loop in `AGENTS/`:
 - **Orchestrator** — Reads backlog and dependency graph, manages BOARD.md, dispatches Workers and Validators one story at a time, enforces PR policy, escalates to user only when blocked
 - **Worker** — Receives one story via task brief, implements in strict layer order (Schema → Migration → API → Frontend → Tests), commits each layer, opens a PR
 - **Validator** — Checks every acceptance criterion, runs the security checklist and the intent-consistency check (no Active Decision or invariant contradicted), returns PASS / FAIL / ESCALATE
-- **Cartographer** (post-launch, read-only) — maps the as-built code to intent and maintains the engineering-intent layer (`docs/SYSTEM_MAP.md`, `DECISIONS.md`, `INVARIANTS.md`) that `anymake-evolve` checks future changes against
+- **Cartographer** (post-launch, read-only) — maps the as-built code to intent and maintains the engineering-intent layer (`docs/SYSTEM_MAP.md`, `DECISIONS.md`, `INVARIANTS.md`) that `anymake-agile` checks future changes against
+- **Solution Architect** (post-launch) — reviews the full project and writes the Development Plan for one tracked issue; never touches code
+- **Plan Reviewer** (post-launch) — fresh-context adversarial review of each Development Plan; approves, demands changes, or escalates before anything is built
 - **Policies** — Shared retry matrix (max 2 environment retries, max 1 implementation retry), PR review rules (PRs 1–3 always require user review; webhooks/payments always require user review), escalation phrase lexicon, failure classification guide
 
 ## Skill suite
@@ -52,7 +54,7 @@ Anymake is a plugin that ships a **hub** skill (`anymake`) plus focused **compan
 - **anymake-deploy** — staging + production deployment, env/secrets, monitoring, rollback (Phase 4 staging, Phase 5.2)
 - **anymake-brownfield** — reverse-engineer Phase 0–3 artifacts from an existing codebase (in place of Phase 0)
 - **anymake-iterate** — post-launch loop: triage, metrics→epics, releases (Phase 5.6 onward)
-- **anymake-evolve** — add/change/remove a feature on a built product without contradicting original intent; loads the engineering-intent layer, classifies the change, and gates any contradiction behind a superseding decision before building
+- **anymake-agile** — the single post-launch pipeline for changing a built product (bug reports and add/change/remove requests): confirmed intake → labeled GitHub issue → Solution Architect development plan checked against the engineering-intent layer → independent Plan Reviewer approval → traceable build via anymake-build-loop → reporter verification
 - **anymake-new-type** — scaffold a new project-type profile
 
 See `skills/README.md` for the full map.

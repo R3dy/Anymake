@@ -213,7 +213,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 
 ### Cartographer (`AGENTS/cartographer.md`)
 
-**Role:** Read-only mapping agent for the **post-launch** path. Not part of the Phase 4 loop. Spawned by the `anymake-evolve` skill (or directly) to build and maintain the project's **engineering-intent layer** so that later feature changes are made by an agent that understands the system end to end and won't contradict the original design.
+**Role:** Read-only mapping agent for the **post-launch** path. Not part of the Phase 4 loop. Spawned by the `anymake-agile` skill (or directly) to build and maintain the project's **engineering-intent layer** so that later changes are planned by agents that understand the system end to end and won't contradict the original design.
 
 **Produces / refreshes** (in `PROJECTS/[name]/docs/`):
 - `SYSTEM_MAP.md` — the as-built map (modules, data flow, data model, integrations, run/test/deploy)
@@ -222,7 +222,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 
 **Cartographer must never:**
 - Modify any file under `src/` (read-only over source)
-- Silently resolve a contradiction — it records drift in the SYSTEM_MAP Drift Log and leaves resolution to the evolve flow's gate
+- Silently resolve a contradiction — it records drift in the SYSTEM_MAP Drift Log and leaves resolution to the intent conflict gate
 - Invent ADRs/invariants to make undocumented behavior look intentional
 - Supersede a decision or update project state (PHASE_STATE.md/BOARD.md)
 
@@ -234,7 +234,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 - Modify source code or open a PR — it produces a plan, never a fix
 - Approve its own plan or skip the review loop, however obvious the change
 - Design against a stale intent layer (Cartographer refresh comes first)
-- Resolve an intent conflict itself — the `anymake-evolve` conflict gate decides
+- Resolve an intent conflict itself — the intent conflict gate (`AGENTS/policies.md`) decides
 - Expand scope beyond the tracked issue
 
 ### Plan Reviewer (`AGENTS/plan-reviewer.md`)
@@ -313,7 +313,7 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 `PROJECTS/[name]/docs/06-agile/` is the post-launch agile flow's home (`anymake-agile`). `ISSUES.md` is the local ledger mirroring the GitHub issue index (or the primary tracker when there is no remote). Each tracked issue gets `issue-[N]/` containing `plan.md` (the Development Plan) and `review-round-[K].md` (Plan Reviewer reports — one per round, never deleted). The GitHub issue carries the labels (`type:*`, `severity:*`, `status:*`), the plan link, and the traceability record: base SHA, merge SHA, tag `issue-[N]`, and the exact revert command. No code is written for an issue until its plan is reviewer-approved and gate-approved.
 
 ### Engineering-intent layer
-`PROJECTS/[name]/docs/SYSTEM_MAP.md`, `docs/DECISIONS.md`, and `docs/INVARIANTS.md` are the durable record of *why the system is the way it is*. Maintained by the Cartographer and consumed by `anymake-evolve` and the Validator's intent-consistency check. `DECISIONS.md` is append-only — a decision is **superseded** (old ADR marked `Superseded by ADR-N`, new ADR added), never deleted, so the rationale of every past choice survives. Overriding a decision requires a superseding ADR through a gate; no agent does it on its own authority.
+`PROJECTS/[name]/docs/SYSTEM_MAP.md`, `docs/DECISIONS.md`, and `docs/INVARIANTS.md` are the durable record of *why the system is the way it is*. Maintained by the Cartographer and consumed by the agile flow (Solution Architect, Plan Reviewer) and the Validator's intent-consistency check. `DECISIONS.md` is append-only — a decision is **superseded** (old ADR marked `Superseded by ADR-N`, new ADR added), never deleted, so the rationale of every past choice survives. Overriding a decision requires a superseding ADR through a gate; no agent does it on its own authority.
 
 ---
 
@@ -354,7 +354,7 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
-| `AGENTS/policies.md` | Retry matrix, PR policy, escalation phrases, failure classification, autonomous mode policy |
+| `AGENTS/policies.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
 | `TEMPLATES/task-brief.md` | Template Orchestrator uses to brief each Worker |
 | `TEMPLATES/BOARD.md` | Board template copied at Phase 4 start |

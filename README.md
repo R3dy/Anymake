@@ -177,8 +177,7 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 | `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
 | `anymake-brownfield` | Reverse-engineer Phase 0–3 artifacts from existing code | In place of Phase 0 |
 | `anymake-iterate` | Post-launch loop: triage, metrics→epics, releases | Phase 5.6 onward |
-| `anymake-agile` | Agile pipeline for user-reported bugs & feature requests: intake → GitHub issue → architect plan → independent plan review → traceable build → reporter verification | "X isn't working" / feature reports on a built product |
-| `anymake-evolve` | Add/change/remove a feature on a built product without contradicting original intent (intent layer + conflict gate) | Post-launch feature requests |
+| `anymake-agile` | The single post-launch pipeline for bugs & feature/change requests: intake → GitHub issue → architect plan (intent-layer checked) → independent plan review → traceable build → reporter verification | "X isn't working" / any add/change/remove on a built product |
 | `anymake-new-type` | Scaffold a new project-type profile | Extending the system |
 
 ## Repository Layout
@@ -206,8 +205,7 @@ skills/                     # The skill suite (registered with OpenCode)
 ├── anymake-security-review/ # Security checklists + gate (4.5, pre-launch)
 ├── anymake-deploy/         # Staging + production deployment
 ├── anymake-iterate/        # Post-launch loop ("Phase 6")
-├── anymake-evolve/         # Add/change/remove a feature without breaking original intent
-├── anymake-agile/          # Agile bug/feature pipeline: intake → issue → plan → review → build
+├── anymake-agile/          # Post-launch change pipeline: intake → issue → plan → review → build
 └── anymake-new-type/       # Author a new project type
 
 PHASE_GUIDES/

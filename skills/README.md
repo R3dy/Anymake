@@ -27,13 +27,12 @@ request matches a companion's description.
 | `anymake-design-system` | Visual-quality bar: design system + prototype sprint, prototype-gate audit | Phase 2, Step 2.2b (UX-active types) | "design system", "prototype sprint", "make it look polished", "audit the UI" |
 | `anymake-security-review` | Security audit: per-PR checklist, the Phase 4.5 full pass, and the pre-launch gate | Phase 4 Step 4.5 + inside the Validator; pre-launch | "security review", "audit for vulnerabilities", "pen-test checklist" |
 | `anymake-iterate` | Post-launch loop ("Phase 6"): triage PARKING_LOT, turn metrics into the next epic, bug cycles | After Phase 5, or on "Continue" when the project is already launched | "what's next", "iterate", "triage the parking lot", "plan the next release" |
-| `anymake-agile` | The post-launch agile pipeline for **user-reported bugs and feature requests**: confirmed intake → labeled GitHub issue → Solution Architect development plan → independent Plan Reviewer approval loop → traceable build (branch/SHA/tag/revert command on the issue) → reporter verification. Replaces ad-hoc "jump to a fix" troubleshooting | When the user reports something broken or requests a feature on a built project | "X isn't working", "I found a bug", "this button is broken", "feature request", "log an issue" |
-| `anymake-evolve` | Adding/changing/removing a specific feature on an already-built product **without contradicting original intent**: loads the engineering-intent layer, classifies the change, and forces a superseding decision through a gate before any contradicting change is built | When `anymake-iterate` picks an increment to actually build, when `anymake-agile` reaches execution, or directly on a feature request | "add a feature", "change how X works", "remove Y", "now I want it to…", "modify the behavior of…" |
+| `anymake-agile` | The **single post-launch pipeline** for changing a built product: confirmed intake → labeled GitHub issue → Solution Architect development plan (checked against the engineering-intent layer, contradictions gated behind a superseding decision) → independent Plan Reviewer approval loop → traceable build via `anymake-build-loop` (branch/SHA/tag/revert command on the issue) → reporter verification. Replaces ad-hoc "jump to a fix" troubleshooting | When the user reports something broken or requests any add/change/remove on a built project, or when `anymake-iterate` picks an increment to build | "X isn't working", "I found a bug", "this button is broken", "add a feature", "change how X works", "remove Y", "now I want it to…", "feature request", "log an issue" |
 | `anymake-new-type` | Authoring a new project type: scaffold a `manifest.md` + `guide.md` pair | When extending the type system | "add a project type", "create a new Anymake type", "scaffold a manifest" |
 
 ### The engineering-intent layer
 
-`anymake-evolve` depends on a durable record of *why the system is the way it is*,
+`anymake-agile` depends on a durable record of *why the system is the way it is*,
 maintained by the **Cartographer** agent (`AGENTS/cartographer.md`) and stored in
 the project workspace:
 

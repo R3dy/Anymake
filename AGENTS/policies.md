@@ -98,7 +98,7 @@ Any validation in which the implementation contradicts an Active Decision
 (`docs/DECISIONS.md`) or an invariant (`docs/INVARIANTS.md`) without a superseding
 ADR produces a verdict of ESCALATE, not FAIL. Contradicting intent is never the
 worker's to resolve — overriding a past decision requires a superseding ADR
-through a gate (the `anymake-evolve` conflict gate). The orchestrator escalates
+through a gate (the intent conflict gate — see Intent Conflict Policy below). The orchestrator escalates
 with type `intent-conflict`. If the conflict is security-related, it follows the
 security override (always the real user, in every mode).
 
@@ -125,6 +125,28 @@ These are the exact phrases you use to unblock the orchestrator. The orchestrato
 
 ---
 
+## Intent Conflict Policy
+
+The authoritative rules for changing a built product without silently contradicting its original design. Applied pre-build by the Solution Architect (plan §6), re-checked post-build by the Validator's intent-consistency check.
+
+**Classification.** Every post-launch change is classified against the intent layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`) before it is planned in detail:
+
+| Class | Meaning | Action |
+|-------|---------|--------|
+| **Additive** | Extends the system; conflicts with no Active Decision or invariant | Proceed |
+| **Modifying** | Changes documented behavior without violating a decision (e.g. tightening a limit the ADRs left open) | Proceed; note the behavior change for the intent-layer refresh |
+| **Contradicting** | Violates an Active Decision or invariant, or undercuts the type's success model | **Stop — intent conflict gate before any further planning** |
+
+**The intent conflict gate.** A contradicting change is never implemented silently. Surface it precisely — the contradicted ADR/INV id, its original rationale, and the cost of overriding it — then require an explicit decision **before any code**:
+
+- **Normal mode** → escalate to the user; act on `"supersede ADR-N: [notes]"` or `"reject change"` (see lexicon)
+- **Autonomous mode** → spawn the Product Owner Proxy with gate type `intent-conflict`; it may authorize a supersede, return required changes, or `ESCALATE TO USER`
+- **Security-related contradictions always escalate to the real user, in every mode** — same absolute override as Phase 4
+
+If the override is approved, **write the superseding ADR first** (per `docs/DECISIONS.md` → "Superseding a Decision": mark the old ADR superseded, add the new one, update the index) — only then is the change buildable. If rejected, the request goes to `PARKING_LOT.md` or is reshaped to fit intent. No agent overrides a past decision on its own authority.
+
+---
+
 ## Agile Plan Review Policy
 
 Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect authors a Development Plan; Plan Reviewer reviews it.
@@ -141,7 +163,7 @@ Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect a
 | `NEEDS CHANGES` (3rd time) | Stop the loop — escalate to user with the plan and unresolved comments. The Reviewer never lowers the bar to end a loop |
 | `ESCALATE` from Reviewer | Straight to the real user — never retried |
 | Security-relevant plan (auth, authz, tenant isolation, secrets, payments, webhooks) | Final approval is always the real user, in every mode |
-| Intent conflict found in a plan | `anymake-evolve` conflict gate before the plan may proceed — never resolved by Architect or Reviewer |
+| Intent conflict found in a plan | Intent conflict gate (see Intent Conflict Policy) before the plan may proceed — never resolved by Architect or Reviewer |
 
 **User phrases at the agile approval gate:**
 | Phrase | Action |
@@ -190,7 +212,7 @@ When `autonomous_mode: true` is set in `PROJECTS/[name]/PHASE_STATE.md`, the Pro
 | Phase 4 intent conflict | Orchestrator | `phase4-escalation-intent-conflict` |
 | Phase 4 all stories blocked | Orchestrator | `phase4-escalation-all-blocked` |
 | Phase 4.6 staging review | Main agent | `phase-4-staging-review` |
-| Evolve conflict gate (pre-build) | `anymake-evolve` skill | `evolve-intent-conflict` |
+| Intent conflict gate (pre-build) | `anymake-agile` skill (Solution stage) | `intent-conflict` |
 | Agile plan approval (post Reviewer APPROVED) | `anymake-agile` skill | `agile-plan-approval` |
 | Agile reporter verification (issue close) | `anymake-agile` skill | `phase4-escalation-human-only` (reuse — code-level check of the fix) |
 

@@ -233,7 +233,7 @@ Reasoning: [brief explanation]
 
 ---
 
-## Gate: `evolve-intent-conflict` and `phase4-escalation-intent-conflict`
+## Gate: `intent-conflict` and `phase4-escalation-intent-conflict`
 
 A requested change (or a built story) contradicts an Active Decision in
 `docs/DECISIONS.md` or an invariant in `docs/INVARIANTS.md`, with no superseding
@@ -242,8 +242,9 @@ decision — the highest-stakes call in autonomous mode. Be conservative: the
 default is to escalate.
 
 **Read:** `docs/DECISIONS.md`, `docs/INVARIANTS.md`, the conflicting ADR/invariant
-named in the message, and (for the `evolve-` gate) the change description, or (for
-the `phase4-` gate) the validation report's Intent-Consistency Results.
+named in the message, and (for the pre-build `intent-conflict` gate) the change
+description, or (for the `phase4-` gate) the validation report's Intent-Consistency
+Results.
 
 **Rules (apply in order — stop at first match):**
 
@@ -386,7 +387,7 @@ Reasoning: [one sentence]
 - Never return `PHRASE: approved` when the validation report verdict is anything other than PASS
 - Never return `PHRASE: approved` when any security check in a validation report is FAIL
 - Never attempt to resolve a `phase4-escalation-security-failure` gate type — always return `ESCALATE TO USER`
-- Never authorize a supersede (`evolve-intent-conflict` / `phase4-escalation-intent-conflict`) on a security-relevant decision — always `ESCALATE TO USER`; when in doubt on any intent conflict, escalate
+- Never authorize a supersede (`intent-conflict` / `phase4-escalation-intent-conflict`) on a security-relevant decision — always `ESCALATE TO USER`; when in doubt on any intent conflict, escalate
 - Never return `APPROVED` for `agile-plan-approval` when the plan touches a security surface, or when the latest Plan Reviewer verdict is anything other than `APPROVED`
 - Check every criterion listed for every gate type — no skipping to save time
 - Do not fabricate or assume file contents — if a required file cannot be read, that is a FAIL (file missing or inaccessible)

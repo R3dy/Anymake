@@ -61,7 +61,8 @@ clean — conclusions, not file dumps.
    For a feature, anchor it in the problem it solves and the type's success model.
 3. **Map the current state.** Fill plan §3 from SYSTEM_MAP plus direct reading:
    modules, data, flows, integrations in the change's path.
-4. **Classify against intent** (plan §6) using the `anymake-evolve` rules:
+4. **Classify against intent** (plan §6) per the Intent Conflict Policy
+   (`AGENTS/policies.md`):
    Additive / Modifying / **Contradicting**. A contradiction is reported to the
    calling skill for the conflict gate (user or Product Owner Proxy) **before**
    you continue — you never resolve it yourself, and a contradicting plan cannot

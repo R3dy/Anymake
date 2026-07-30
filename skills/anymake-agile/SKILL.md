@@ -1,6 +1,6 @@
 ---
 name: anymake-agile
-description: Use when the user reports a bug or requests a feature on a project Anymake has already built — "the save button isn't working", "X is broken", "I found a bug", "it should also do Y", "feature request", "log an issue". Runs the full agile pipeline instead of ad-hoc troubleshooting - first understands and confirms the exact issue, tracks it as a labeled GitHub issue, has a Solution Architect design a reviewed development plan, has an independent Plan Reviewer approve it, and only then builds — with full traceability so any change can be reverted. This is the front door for manual-testing feedback; anymake-evolve is the execution machinery it invokes.
+description: Use for any change to a project Anymake has already built — bug reports from manual testing ("the save button isn't working", "X is broken", "I found a bug") and feature or change requests ("add a feature", "change how X works", "remove Y", "now I want it to…", "feature request", "log an issue"). Runs the full agile pipeline instead of ad-hoc troubleshooting - first understands and confirms the exact issue, tracks it as a labeled GitHub issue, has a Solution Architect design a plan that respects the engineering-intent layer (gating any contradiction behind a superseding decision), has an independent Plan Reviewer approve it, and only then builds via anymake-build-loop — with full traceability so any change can be reverted. The single post-launch front door for changing the product.
 ---
 
 # Anymake Agile — From "This Button Isn't Working" to a Reviewed, Reverted-able Fix
@@ -23,14 +23,17 @@ The four promises this pipeline exists to keep:
 
 - The user reports something broken on a built project: "such-and-such button
   isn't working correctly", "I'm seeing an error when…"
-- The user requests a feature and wants it properly tracked and planned
+- The user requests a feature or change: "add SSO", "change the export format",
+  "remove the trial banner", "now I want it to also…"
+- `anymake-iterate` has picked the next increment and it's time to define and
+  build it
 - Directly: "log an issue", "report a bug", "run the agile flow on this"
 
 > **Not this skill if:** the question is "what should we build next?" (that's
 > `anymake-iterate` — prioritization), or the repo has no Anymake workspace
-> (that's `anymake-brownfield` first). This skill *invokes* `anymake-evolve`'s
-> intent machinery and `anymake-build-loop` at execution time — it doesn't
-> replace them.
+> (that's `anymake-brownfield` first). Execution runs through
+> `anymake-build-loop` — this skill defines and gates the work; the engine
+> builds it.
 
 ## The cast
 
@@ -96,9 +99,10 @@ the **Solution Architect** with: issue link, project root, plan output path.
 It reviews the whole project and writes `issue-[N]/plan.md`.
 
 - If it reports an **intent conflict** (plan would contradict an ADR/invariant):
-  run the `anymake-evolve` conflict gate before proceeding — user decision, or
-  Product Owner Proxy with gate type `evolve-intent-conflict` in autonomous
-  mode. Security-related conflicts always go to the real user
+  run the intent conflict gate (`AGENTS/policies.md` → Intent Conflict Policy)
+  before proceeding — user decision, or Product Owner Proxy with gate type
+  `intent-conflict` in autonomous mode. An approved override writes the
+  superseding ADR first. Security-related conflicts always go to the real user
 - Comment the plan's path/link on the issue; set `status:plan-review`
 
 ### 4. Review loop — independent approval or specific objections
