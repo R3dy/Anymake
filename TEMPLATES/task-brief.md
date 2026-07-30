@@ -127,7 +127,7 @@ one to make the story easier.
 **If a criterion cannot be met without violating one of the above:** do not
 proceed and do not work around it. Write `result: failed / implementation` with a
 description naming the ADR/INV in conflict. Contradicting intent requires a
-superseding decision through a gate (the `anymake-evolve` conflict gate) — it is
+superseding decision through a gate (the intent conflict gate, `AGENTS/policies.md`) — it is
 never the Worker's call.
 
 ---

@@ -33,11 +33,12 @@ Reuses the same templates and locations as the hub — no parallel formats.
 > **Brownfield's map *is* the first run of the engineering-intent layer.** The
 > system map, as-built ADRs, and invariants you reverse-engineer here are exactly
 > what the Cartographer (`AGENTS/cartographer.md`) maintains going forward. Once
-> onboarded, future feature changes go through `anymake-evolve`, which reads this
-> layer and keeps it current — so the work done here is not throwaway. If you want
-> the full layer up front, you can produce `docs/SYSTEM_MAP.md`,
-> `docs/DECISIONS.md`, and `docs/INVARIANTS.md` (templates of the same name) here
-> too, or leave it for the first `anymake-evolve` cycle to generate.
+> onboarded, future bug fixes and feature changes go through `anymake-agile`,
+> which reads this layer and keeps it current — so the work done here is not
+> throwaway. If you want the full layer up front, you can produce
+> `docs/SYSTEM_MAP.md`, `docs/DECISIONS.md`, and `docs/INVARIANTS.md` (templates
+> of the same name) here too, or leave it for the first `anymake-agile` cycle to
+> generate.
 
 ## Procedure
 

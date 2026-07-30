@@ -3,7 +3,7 @@
 Copy to `PROJECTS/[name]/docs/SYSTEM_MAP.md`. This is the **as-built** map of the
 product — the document a new engineer reads on day one to understand the system
 end to end. It is maintained by the Cartographer (`AGENTS/cartographer.md`) and
-refreshed at the end of every `anymake-evolve` cycle.
+refreshed at the end of every `anymake-agile` cycle.
 
 It describes **what the code actually is**, not what was planned. Where reality
 diverged from the Phase 2 ADRs, the map records reality and links the deviation
@@ -92,7 +92,7 @@ change. Reference `docs/environment.md` rather than duplicating it.
 Where the as-built code knowingly diverges from a planned ADR, or where intent
 is undocumented. Each entry is either resolved (linked to a superseding decision
 in DECISIONS.md) or open (needs a decision). The Cartographer never silently
-"corrects" drift — it records it here for the evolve flow to resolve.
+"corrects" drift — it records it here for the intent conflict gate to resolve.
 
 | # | Observed reality | Conflicts with | Status | Resolution |
 |---|------------------|----------------|--------|------------|

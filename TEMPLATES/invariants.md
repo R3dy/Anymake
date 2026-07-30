@@ -16,7 +16,7 @@ decision before any code is written (same gate as superseding an ADR).
 # [Project Name] — Invariants
 
 **Last updated:** [date]
-**Updated by:** [Cartographer | anymake-evolve | Phase 2/3]
+**Updated by:** [Cartographer | anymake-agile | Phase 2/3]
 
 ---
 

@@ -18,7 +18,7 @@ future contributor never re-litigates a decision without seeing its history.
 # [Project Name] — Decision Log
 
 **Last updated:** [date]
-**Updated by:** [Cartographer | anymake-evolve | Phase 2]
+**Updated by:** [Cartographer | anymake-agile | Phase 2]
 
 ---
 
@@ -46,7 +46,7 @@ Kept for history. Never delete a row — move it here and link the replacement.
 
 ## Superseding a Decision
 
-The only legitimate way to contradict a past decision. Used by `anymake-evolve`
+The only legitimate way to contradict a past decision. Used by the intent conflict gate (`AGENTS/policies.md`)
 when a requested feature conflicts with an Active Decision.
 
 1. **Do not edit the old ADR's Context/Decision.** Set its `Status:` to

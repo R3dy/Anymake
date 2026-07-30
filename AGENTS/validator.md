@@ -113,7 +113,7 @@ invariant, check the implementation on the branch:
 
 **A contradiction with no superseding decision is an automatic `ESCALATE`** — not
 a FAIL. Like security, intent conflicts are not the Worker's to resolve: changing
-a decision requires a superseding ADR through a gate (the `anymake-evolve`
+a decision requires a superseding ADR through a gate (the intent
 conflict gate). Record the specific ADR/INV violated, with file:line evidence,
 and set the escalation type to `intent-conflict`.
 
