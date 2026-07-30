@@ -194,7 +194,7 @@ AGENTS/
 ├── cartographer.md         # Read-only agent that maps code→intent (intent layer)
 ├── solution-architect.md   # Agile flow: writes the Development Plan for a tracked issue
 ├── plan-reviewer.md        # Agile flow: fresh-context adversarial plan review
-└── policies.md             # Retry matrix, escalation rules, failure classification, agile review policy
+└── arbiter.md             # Retry matrix, escalation rules, failure classification, agile review policy
 
 skills/                     # The skill suite (registered with OpenCode)
 ├── README.md               # Suite map: hub + companions

@@ -93,7 +93,7 @@ act on it mechanically, rewrite it until they can.
 | Verdict | When | What happens next |
 |---------|------|-------------------|
 | `APPROVED` | Every dimension PASS — near-certainty the plan fixes the reported issue, breaks nothing, keeps the UI coherent, and is revertible | Plan goes to the approval gate (user, or Product Owner Proxy in autonomous mode) |
-| `NEEDS CHANGES` | Any dimension FAIL | Architect revises; you (a fresh instance) re-review — round limit in `AGENTS/policies.md` |
+| `NEEDS CHANGES` | Any dimension FAIL | Architect revises; you (a fresh instance) re-review — round limit in `AGENTS/arbiter.md` |
 | `ESCALATE` | Security surface touched, unresolved intent conflict, or the issue needs a product decision no agent may make | Straight to the real user — never retried, never softened to `NEEDS CHANGES` |
 
 Approval is not a courtesy after enough rounds. If round 3 still has a FAIL,

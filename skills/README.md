@@ -55,7 +55,7 @@ but at the **planning** level:
 | Solution Architect | `AGENTS/solution-architect.md` | Reviews the full project and writes the Development Plan (`TEMPLATES/dev-plan.md`) for one tracked issue. Never touches code |
 | Plan Reviewer | `AGENTS/plan-reviewer.md` | Fresh-context adversarial review of the plan (`TEMPLATES/plan-review.md`) — verifies root cause against real code, blast radius, design consistency, rollback. Approves, demands changes, or escalates |
 
-The review loop and traceability rules live in `AGENTS/policies.md`
+The review loop and traceability rules live in `AGENTS/arbiter.md`
 ("Agile Plan Review Policy"); the plan approval gate in autonomous mode is the
 Product Owner Proxy's `agile-plan-approval` gate.
 

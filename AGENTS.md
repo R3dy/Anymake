@@ -107,7 +107,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 - `PROJECTS/[name]/docs/03-solutioning/dependency-graph.md`
 - `PROJECTS/[name]/docs/02-planning/architecture/` (ADRs)
 - `PROJECTS/[name]/docs/02-planning/prd.md`
-- `AGENTS/policies.md` ← **Read this first**
+- `AGENTS/arbiter.md` ← **Read this first**
 
 **Startup verification** (stop and write a startup-failure escalation if any fail):
 - `docs/03-solutioning/backlog.md` exists and is non-empty
@@ -122,7 +122,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 2. Dispatch a Worker with a task brief (`TEMPLATES/task-brief.md`)
 3. Update board to `🔵 In Progress`
 4. On Worker completion: move to `🟠 In Validation`, dispatch Validator
-5. On Validator PASS: apply PR merge policy (see Policies), mark `✅ Done`, update dependency readiness
+5. On Validator PASS: apply PR merge policy (see the Arbiter), mark `✅ Done`, update dependency readiness
 6. On Validator FAIL: dispatch a new Worker with failure context (max 1 retry)
 7. On ESCALATE or second failure: write escalation to BOARD.md, pause loop, notify user
 8. Repeat until all stories are Done
@@ -151,7 +151,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 **Commit convention:** One commit per layer, using conventional commit format (see `TEMPLATES/commit-message.md`). Example: `feat(auth): add user schema and migration`.
 
 **Worker must:**
-- Read `AGENTS/policies.md` before starting
+- Read `AGENTS/arbiter.md` before starting
 - Read the task brief completely before writing any code
 - Work only within the scope of the assigned story
 - Report completion with: PR link, layers implemented, any deviations from the brief
@@ -234,7 +234,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 - Modify source code or open a PR — it produces a plan, never a fix
 - Approve its own plan or skip the review loop, however obvious the change
 - Design against a stale intent layer (Cartographer refresh comes first)
-- Resolve an intent conflict itself — the intent conflict gate (`AGENTS/policies.md`) decides
+- Resolve an intent conflict itself — the intent conflict gate (`AGENTS/arbiter.md`) decides
 - Expand scope beyond the tracked issue
 
 ### Plan Reviewer (`AGENTS/plan-reviewer.md`)
@@ -243,7 +243,7 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 
 **Returns one of:**
 - `APPROVED` — near-certainty the plan fixes the reported issue, breaks nothing, keeps the UI coherent, and is revertible
-- `NEEDS CHANGES` — numbered, actionable comments the Architect must resolve and resubmit (round limit in `AGENTS/policies.md`)
+- `NEEDS CHANGES` — numbered, actionable comments the Architect must resolve and resubmit (round limit in `AGENTS/arbiter.md`)
 - `ESCALATE` — security surface, unresolved intent conflict, or a product decision; straight to the real user
 
 **Plan Reviewer must never:**
@@ -252,9 +252,9 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 - Soften a security or intent-conflict finding into a comment — those escalate
 - Lower the bar to end a review loop — deadlocks escalate to the user
 
-### Policies (`AGENTS/policies.md`)
+### Arbiter (`AGENTS/arbiter.md`)
 
-All agents read `AGENTS/policies.md` before operating. It defines:
+All agents read `AGENTS/arbiter.md` before operating. It defines:
 
 **PR review policy:**
 | Condition | Normal mode | Autonomous mode |
@@ -354,7 +354,7 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
-| `AGENTS/policies.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy |
+| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
 | `TEMPLATES/task-brief.md` | Template Orchestrator uses to brief each Worker |
 | `TEMPLATES/BOARD.md` | Board template copied at Phase 4 start |

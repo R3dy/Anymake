@@ -138,7 +138,7 @@ Every session:
 | Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` | — |
 | Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` | `anymake-design-system` (Step 2.2b) |
 | Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` | — |
-| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, worker, validator, policies | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging) |
+| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, worker, validator, arbiter | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging) |
 | Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` | `anymake-deploy` (5.2), `anymake-iterate` (5.6) |
 
 ## Agent System (Phase 4)
@@ -150,7 +150,7 @@ Phase 4, Step 4.3 runs a three-tier agentic build loop. See `AGENTS/` for all ag
 | Orchestrator | `AGENTS/orchestrator.md` | Reads backlog, manages board, dispatches workers and validators, enforces policies, escalates to you |
 | Worker | `AGENTS/worker.md` | Receives one story, builds schema→migration→API→frontend, commits, opens PR, reports result |
 | Validator | `AGENTS/validator.md` | Checks each acceptance criterion against the implementation, runs security checklist, returns PASS/FAIL/ESCALATE |
-| Policies | `AGENTS/policies.md` | Shared retry matrix, PR review rules, escalation phrase lexicon, failure classification guide |
+| Arbiter | `AGENTS/arbiter.md` | The shared rulebook (read, never spawned): retry matrix, PR review rules, escalation phrase lexicon, failure classification, intent conflict + agile plan review policies |
 
 **Visibility:** `PROJECTS/[name]/BOARD.md` — live agile board updated after every agent action. You can see every story's status, the run log, and any escalations at a glance.
 

@@ -47,7 +47,7 @@ Return one of three, using the same lexicon as the Validator and Product Owner P
 
 - **PASS** — every applicable box checked. Safe to merge / proceed to staging / launch.
 - **FAIL** — one or more fixable issues. Return the specific items so they can be
-  fixed (bounded by the retry policy in `AGENTS/policies.md`), then re-review.
+  fixed (bounded by the retry policy in `AGENTS/arbiter.md`), then re-review.
 - **ESCALATE TO USER** — anything touching **auth, payments, or webhooks**, or a
   finding you can't resolve. This always pauses for a human — **even in
   autonomous mode**. That override is absolute.

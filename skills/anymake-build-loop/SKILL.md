@@ -26,7 +26,7 @@ or an existing repo). It does **not** run the phase machine — it builds a back
 |-------|-------|---------|
 | Ordered backlog + dependency graph | `PROJECTS/[name]/` (Phase 3 output) or a backlog file you point it at | What to build and in what order |
 | `project_type` manifest | `PROJECT_TYPES/<id>/manifest.md` | Phase 4 **Build Order** (overrides the SaaS default), gate deltas |
-| Agent definitions | `AGENTS/orchestrator.md`, `AGENTS/worker.md`, `AGENTS/validator.md`, `AGENTS/policies.md` | The full instructions for each tier |
+| Agent definitions | `AGENTS/orchestrator.md`, `AGENTS/worker.md`, `AGENTS/validator.md`, `AGENTS/arbiter.md` | The full instructions for each tier |
 | Templates | `TEMPLATES/task-brief.md`, `TEMPLATES/BOARD.md`, `TEMPLATES/validation-report.md` | Worker task spec, the board, validator reports |
 
 ## The three tiers
@@ -50,7 +50,7 @@ this is the cardinal anti-pattern.
    `TEMPLATES/task-brief.md` (story + acceptance criteria + the type's build order).
 4. **Per PR:** spawn a Validator sub-agent; it returns PASS / FAIL / ESCALATE
    using `TEMPLATES/validation-report.md`.
-5. **Apply policies** (`AGENTS/policies.md`): retry matrix (max 2 environment
+5. **Apply policies** (`AGENTS/arbiter.md`): retry matrix (max 2 environment
    re-dispatches; a validation FAIL retries once, then escalate; implementation
    failures escalate immediately); PR review rules (PRs #1–3 and any webhook PR
    always require human review; others merge on Validator PASS); escalation lexicon.

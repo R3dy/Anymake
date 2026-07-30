@@ -99,7 +99,7 @@ the **Solution Architect** with: issue link, project root, plan output path.
 It reviews the whole project and writes `issue-[N]/plan.md`.
 
 - If it reports an **intent conflict** (plan would contradict an ADR/invariant):
-  run the intent conflict gate (`AGENTS/policies.md` → Intent Conflict Policy)
+  run the intent conflict gate (`AGENTS/arbiter.md` → Intent Conflict Policy)
   before proceeding — user decision, or Product Owner Proxy with gate type
   `intent-conflict` in autonomous mode. An approved override writes the
   superseding ADR first. Security-related conflicts always go to the real user
@@ -115,7 +115,7 @@ Spawn a **fresh Plan Reviewer**; it writes `review-round-K.md` and returns:
 - `ESCALATE` → straight to the user, always
 - `APPROVED` → proceed to the gate
 
-Round limit (see `AGENTS/policies.md`): after the 3rd `NEEDS CHANGES`, stop
+Round limit (see `AGENTS/arbiter.md`): after the 3rd `NEEDS CHANGES`, stop
 and escalate to the user with the plan and the unresolved comments. The
 reviewer never lowers the bar to end the loop.
 
@@ -135,7 +135,7 @@ Reviewer approval is engineering sign-off; the gate is product sign-off:
 
 Never hand-edit the fix. Feed the plan's stories to **`anymake-build-loop`**,
 with each task brief's §6a Intent Constraints and design-consistency criteria
-filled from plan §6–§7. Traceability rules (also in `AGENTS/policies.md`):
+filled from plan §6–§7. Traceability rules (also in `AGENTS/arbiter.md`):
 
 - Branch `issue/[N]-[slug]` (multi-story: story branches off it, one PR into it,
   one PR from it to main — or story PRs straight to main, each referencing the issue)
