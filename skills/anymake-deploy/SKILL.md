@@ -29,6 +29,7 @@ The word "deploy" means different things per type:
 | `cli` | Local install smoke test | Package registry (npm/PyPI/Homebrew), release binaries |
 | `library` | Pre-release/canary | Package registry publish, semver tag, changelog |
 | `hobby` | n/a or local | "It runs where I need it" — minimal |
+| `agentic-harness` | Dev/filesystem-backend end-to-end run | Long-running service (docker-compose / container orchestrator) against the production backend; dashboard only follows `saas`'s target if separately sold |
 
 ## Staging (Phase 4)
 

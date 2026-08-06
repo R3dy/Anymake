@@ -24,6 +24,7 @@ Profiles are **self-contained**: to build a project of a given type, you read th
 | `api-service` | API / Backend Service | A headless web service exposing endpoints | Optional (API keys) | No (or thin docs) |
 | `internal-tool` | Internal Tool | A team / line-of-business app, not sold | Never | Yes |
 | `static-site` | Static / Content Site | Marketing site, blog, docs, or portfolio | Optional | Yes |
+| `agentic-harness` | Agentic Harness | A multi-stage pipeline of sandboxed LLM agents with canonical handoffs, a pluggable backend, tracing, and a control/observability dashboard | Rare (only if the dashboard is sold) | Thin (control/observability only) |
 
 > **Type is two axes.** *Shape* (web app, CLI, library, API…) and *ambition* (personal-local vs. production-commercial). `hobby` is mostly an ambition setting; the rest are mostly shapes. Pick the one that matches your intent; each ships with sensible defaults.
 

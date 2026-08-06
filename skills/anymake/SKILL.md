@@ -53,6 +53,7 @@ Chosen once at project creation, stored as `project_type` in `PHASE_STATE.md`, a
 | `api-service` | Headless web service / API | Optional | No |
 | `internal-tool` | Team app, not sold | Never | Yes |
 | `static-site` | Marketing site, blog, docs, portfolio | Optional | Yes |
+| `agentic-harness` | Multi-stage pipeline of sandboxed LLM agents (canonical handoffs, pluggable backend, tracing, control dashboard) | Rare | Thin (control/observability only) |
 
 Full profiles in `PROJECT_TYPES/`. Each type has a `manifest.md` (structured rules agents read) and a self-contained `guide.md` (the phase walkthrough).
 
