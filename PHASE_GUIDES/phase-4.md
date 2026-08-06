@@ -283,7 +283,7 @@ You review the complete product on staging before launch approval:
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase-4-staging-review. Project root: [absolute path]. Artifacts: [absolute paths to PROJECTS/[name]/BOARD.md, PROJECTS/[name]/docs/environment.md]."
 })
 ```

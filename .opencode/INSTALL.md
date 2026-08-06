@@ -50,6 +50,26 @@ Anymake loads automatically at the start of every session. Trigger it with:
 | `"I have a product idea: [description]"` | Triggers Anymake, starts Phase 0 |
 | `"Build an app"` | Triggers Anymake |
 
+## Model Tiers (optional)
+
+By default every spawned agent (Planner, Worker, Validator, Product Owner Proxy,
+Cartographer, Solution Architect, Plan Reviewer) runs on whatever model your
+primary OpenCode session uses. To split cost/quality across three tiers instead
+— a frontier model for judgment calls, a cheaper capable model for translation
+and review, and your fastest model for high-volume Worker execution — set
+these before launching OpenCode:
+
+```bash
+export ANYMAKE_MODEL_TIER1="anthropic/claude-opus-5"     # frontier
+export ANYMAKE_MODEL_TIER2="anthropic/claude-sonnet-5"    # capable
+export ANYMAKE_MODEL_TIER3="anthropic/claude-haiku-4-5"  # economy
+```
+
+Each agent's tier is fixed in its own file (`AGENTS/*.md` frontmatter, `tier: 1|2|3`)
+— see `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and which
+agent lands on which tier. Unset any of these and that tier's agents fall back
+to the primary session's model — nothing breaks if you skip this section.
+
 ## Updating
 
 OpenCode pins git dependencies in its cache, so a restart may not pick up the latest

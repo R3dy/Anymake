@@ -77,7 +77,7 @@ Update dependency readiness each iteration: a story transitions from `⬜ Backlo
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/planner.md],
+  agent: "anymake-planner",  // named subagent the plugin registered on Tier 2 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/planner.md]
   message: "Story ID: N.N. Project root: [absolute project root]. This story is PR #[N]. Output path: [absolute path to task-briefs/story-N.N.md]."
 })
 ```
@@ -103,7 +103,7 @@ Never fill a gap in the brief yourself, even a small one — that is exactly the
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/worker.md],
+  agent: "anymake-worker",  // named subagent the plugin registered on Tier 3 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/worker.md]
   message: "Task brief: [absolute path to task-briefs/story-N.N.md]. Project root: [absolute project root]. Read the task brief completely before writing a single line of code."
 })
 ```
@@ -130,7 +130,7 @@ Read the `## RESULT` section of the task brief file.
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/validator.md],
+  agent: "anymake-validator",  // named subagent the plugin registered on Tier 2 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/validator.md]
   message: "Story definition: [acceptance criteria from epics.md]. Task brief: [absolute path to task-briefs/story-N.N.md — includes RESULT section]. Branch: story/N.N-[slug]. PR: #N. Project root: [absolute project root]."
 })
 ```
@@ -173,7 +173,7 @@ First, check `PROJECTS/[name]/PHASE_STATE.md` for `autonomous_mode: true`.
 **If autonomous mode is active:** spawn the Product Owner Proxy instead of pausing:
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase4-pr-review. Project root: [absolute path]. Story: [N.N]. Validation report: [absolute path to validation-reports/story-N.N.md]. Task brief: [absolute path to task-briefs/story-N.N.md]."
 })
 ```
@@ -239,7 +239,7 @@ When any escalation condition is met:
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase4-escalation-[type]. Project root: [absolute path]. Story: [N.N]. [Include relevant context: failure_description, validation report paths, task brief path, board state as applicable to the escalation type.]"
 })
 ```

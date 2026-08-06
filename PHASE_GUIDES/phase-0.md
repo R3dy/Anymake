@@ -98,7 +98,7 @@ You say "looks good, start Discovery" → proceed to Phase 1.
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase-0-approval. Project root: [absolute path]. Artifacts: [absolute path to PROJECTS/[name]/PROJECT.md]."
 })
 ```

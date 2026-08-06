@@ -3,7 +3,9 @@
  *
  * Registers the skills/ directory with OpenCode so the anymake skill
  * is natively discovered. Also auto-injects the skill at session start so
- * the AI has full context without a manual /skill load.
+ * the AI has full context without a manual /skill load, and registers each
+ * spawned agent in AGENTS/ as a named OpenCode subagent bound to a model
+ * tier — see "Model Tier Policy" in AGENTS/arbiter.md.
  */
 
 import path from 'path';
@@ -16,6 +18,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.resolve(__dirname, '../..');
 
 const SKILLS_DIR = path.join(PLUGIN_ROOT, 'skills');
+const AGENTS_DIR = path.join(PLUGIN_ROOT, 'AGENTS');
+
+// Tier N is whatever model the user sets in this env var. Unset → the
+// registered subagent falls back to OpenCode's default (the primary
+// session's model) — nothing breaks if a user never configures tiers.
+const MODEL_TIER_ENV_VAR = {
+  1: 'ANYMAKE_MODEL_TIER1',
+  2: 'ANYMAKE_MODEL_TIER2',
+  3: 'ANYMAKE_MODEL_TIER3',
+};
 
 const extractAndStripFrontmatter = (content) => {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
@@ -32,6 +44,40 @@ const extractAndStripFrontmatter = (content) => {
     }
   }
   return { frontmatter, content: body };
+};
+
+// Every AGENTS/*.md file with `mode: subagent` in its frontmatter becomes a
+// named OpenCode agent. The file's own `tier` field (1/2/3) — set once, in
+// the agent file itself — picks which ANYMAKE_MODEL_TIER<N> env var supplies
+// its model. arbiter.md has no frontmatter (it's read, never spawned) and is
+// skipped automatically. Deliberately NOT cached, unlike bootstrap content
+// below: this reads a handful of small files once at config time, and must
+// re-read process.env each time — caching it risks pinning a stale (or
+// missing) tier model if config() ever runs more than once in a process.
+const buildAgentRegistrations = () => {
+  const agents = {};
+  if (!fs.existsSync(AGENTS_DIR)) return agents;
+
+  for (const file of fs.readdirSync(AGENTS_DIR)) {
+    if (!file.endsWith('.md')) continue;
+    const fullContent = fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8');
+    const { frontmatter, content } = extractAndStripFrontmatter(fullContent);
+    if (frontmatter.mode !== 'subagent' || !frontmatter.name) continue;
+
+    const entry = {
+      description: frontmatter.description || '',
+      mode: 'subagent',
+      prompt: content.trim(),
+    };
+
+    const envVar = MODEL_TIER_ENV_VAR[frontmatter.tier];
+    const tierModel = envVar && process.env[envVar];
+    if (tierModel) entry.model = tierModel;
+
+    agents[frontmatter.name] = entry;
+  }
+
+  return agents;
 };
 
 // Cache bootstrap content after first read — no repeated FS work per turn
@@ -81,6 +127,12 @@ or \`TEMPLATES/prd.md\`, read them from their full path:
       config.skills.paths = config.skills.paths || [];
       if (!config.skills.paths.includes(SKILLS_DIR)) {
         config.skills.paths.push(SKILLS_DIR);
+      }
+
+      config.agent = config.agent || {};
+      for (const [name, def] of Object.entries(buildAgentRegistrations())) {
+        // Never clobber an agent the user already defined themselves.
+        if (!config.agent[name]) config.agent[name] = def;
       }
     },
     'experimental.chat.messages.transform': async (_input, output) => {

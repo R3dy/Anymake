@@ -4,6 +4,35 @@ The **Arbiter** is the one every other agent defers to: the authoritative rules 
 
 ---
 
+## Model Tier Policy
+
+Every spawned agent runs at one of three importance tiers, so a project can use a strong model for judgment calls and a cheaper one for high-volume mechanical execution, without losing the trust boundary each role already enforces. The tier is set once, directly in each agent's own file (`AGENTS/*.md` frontmatter, `tier: 1|2|3`) — not scattered across a separate config that could drift out of sync with what the agent actually does.
+
+| Tier | Meaning | Agent | File | Why this tier |
+|------|---------|-------|------|----------------|
+| — | *(not spawned)* | Orchestrator | `orchestrator.md` | Runs as your primary session, not a sub-agent — there's nothing to bind. Point your session itself at your Tier 1 model and the Orchestrator is Tier 1 by construction. |
+| 1 | Frontier | Product Owner Proxy | `product-owner-proxy.md` | A strict stand-in for the human at every gate — needs the same judgment bar a human reviewer would apply. |
+| 1 | Frontier | Plan Reviewer | `plan-reviewer.md` | The reviewer must be at least as capable as what it's reviewing — never let the checker be weaker than the thing it checks. |
+| 2 | Capable | Planner | `planner.md` | Mechanical translation, but has to correctly read and synthesize ADRs, the intent layer, and established conventions — a misread here corrupts every downstream Worker. |
+| 2 | Capable | Solution Architect | `solution-architect.md` | Full-project design work for a tracked change — root cause, blast radius, alternatives. |
+| 2 | Capable | Validator | `validator.md` | The backstop that has to reliably catch a Tier 3 Worker's mistakes — cheapen the generator, not the checker. |
+| 2 | Capable | Cartographer | `cartographer.md` | Maps code to intent; needs real comprehension of the codebase, not just pattern-matching. |
+| 3 | Economy | Worker | `worker.md` | Highest-volume role (every story), and the narrowest-scoped — it executes a detailed brief and escalates rather than guessing, which is what makes a cheaper model safe here. |
+
+**How it's wired (OpenCode only).** The plugin (`.opencode/plugins/anymake.js`) reads every `AGENTS/*.md` file's frontmatter at config time. Any file with `mode: subagent` is registered as a named OpenCode agent; its `tier` field picks which of these environment variables supplies its `model`:
+
+| Env var | Tier | Set it to |
+|---------|------|-----------|
+| `ANYMAKE_MODEL_TIER1` | Frontier | Your best model, `provider/model-id` (e.g. `anthropic/claude-opus-5`) |
+| `ANYMAKE_MODEL_TIER2` | Capable | A strong-but-cheaper model |
+| `ANYMAKE_MODEL_TIER3` | Economy | Your fastest/cheapest model |
+
+Set these before launching OpenCode (shell profile, or wherever you already set `ANTHROPIC_API_KEY` and friends). **Unset is safe** — a tier with no env var falls back to OpenCode's default subagent behavior (the primary session's model), so nothing breaks if you never configure this.
+
+**Known caveat.** This depends on your OpenCode version supporting dispatch of a custom `mode: subagent` agent by name from another agent's tool calls — this has been unreliable across some OpenCode releases. Every spawn instruction in this system (`AGENTS/orchestrator.md`, `PHASE_GUIDES/*.md`) names the registered agent first and documents the inline-instructions fallback next to it. If named dispatch silently falls back, every agent just runs on your primary session's model — the system still works, you just lose the cost/quality split. Verify once after setup: spawn a Tier 3 story and confirm (e.g. by asking the Worker sub-agent which model it is) that it actually landed on your `ANYMAKE_MODEL_TIER3` choice.
+
+---
+
 ## PR Review Policy
 
 | Condition | Review requirement |

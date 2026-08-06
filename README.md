@@ -140,6 +140,8 @@ Validator (per PR)
 
 **Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action. You can see every story's status, the full run log, and any escalations at a glance.
 
+**Model tiers (optional):** every spawned agent — Planner, Worker, Validator, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Set `ANYMAKE_MODEL_TIER1/2/3` to the three models you want before launching OpenCode and the plugin binds each agent to its tier automatically — unset, everything just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
+
 ## Post-Launch Agile Workflow
 
 Once a product is built, "the save button isn't working" should never trigger an

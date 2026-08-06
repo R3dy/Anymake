@@ -271,6 +271,8 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 
 All agents read `AGENTS/arbiter.md` before operating. It defines:
 
+**Model tier policy:** every spawned agent's importance tier (1 = frontier, 2 = capable, 3 = economy) is fixed in its own `AGENTS/*.md` frontmatter (`tier: 1|2|3`); the OpenCode plugin binds each tier to a model via `ANYMAKE_MODEL_TIER1/2/3`. Full table in `AGENTS/arbiter.md`.
+
 **PR review policy:**
 | Condition | Normal mode | Autonomous mode |
 |-----------|-------------|----------------|
@@ -372,7 +374,7 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
-| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy |
+| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
 | `TEMPLATES/task-brief.md` | Template the Planner fills to brief each Worker |
 | `TEMPLATES/conventions.md` | Template for `CONVENTIONS.md` — patterns Workers establish, Planners reuse |
