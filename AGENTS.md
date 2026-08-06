@@ -38,7 +38,7 @@ Take a raw product idea all the way to a live, revenue-generating SaaS — witho
 - **Artifacts are truth because AI memory is fragile.** Conversation context gets truncated, summarized, and forgotten between sessions. Durable documents (especially `PHASE_STATE.md`, the bookmark) let any fresh session resume exactly where the last one stopped. This is why agents must read documents rather than rely on conversation history.
 - **"One step / one artifact per session" and `PARKING_LOT.md` exist to fight scope creep** — the most common way AI-assisted projects die. The parking lot gives mid-phase ideas a respectful home so they are neither lost nor allowed to derail current work.
 - **Revenue and visual quality are first-class, not afterthoughts.** Monetization is designed in Phase 2 and built by Milestone 4 because retrofitting payments is a redesign. The Phase 2 prototype must look like a funded SaaS product *before* any production code, because it is far cheaper to fix visual direction in a throwaway prototype than in a built backend.
-- **The Phase 4 three-tier agent system exists to make autonomous building trustworthy.** A single AI building an entire backlog accumulates context, cuts corners, and grades its own homework. Splitting the work across an Orchestrator (coordinates, never codes), a Worker (builds exactly one story), and a Validator (checks against acceptance criteria, never edits code) means the thing that builds is never the thing that approves. Collapsing these roles into one context destroys that guarantee — which is why it is the system's primary anti-pattern.
+- **The Phase 4 multi-agent system exists to make autonomous building trustworthy.** A single AI building an entire backlog accumulates context, cuts corners, and grades its own homework. Splitting the work across an Orchestrator (coordinates, never codes), a Planner (translates an approved story into a self-contained brief, never codes), a Worker (builds exactly one story), and a Validator (checks against acceptance criteria, never edits code) means the thing that builds is never the thing that approves. Collapsing these roles into one context destroys that guarantee — which is why it is the system's primary anti-pattern. The Planner exists for a second reason too: brief-authoring is mechanical translation work, not coordination judgment, so splitting it out of the Orchestrator keeps the coordination layer's context light and lets that step run on a lighter-weight model without weakening the trust boundary.
 - **Escalation over assumption exists because guessing at product intent is the costliest error.** Workers and Validators execute; they never invent product or design decisions. When something is ambiguous, they stop and escalate.
 - **The security override is absolute because some risks cannot be delegated.** Security failures in Phase 4 always wake the real human, in every mode, with no exception — even autonomous mode cannot bypass this.
 
@@ -96,7 +96,7 @@ When loaded via the OpenCode plugin, the contents of `skills/anymake/SKILL.md` a
 
 ## Phase 4 Agent Hierarchy
 
-Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definitions live in `AGENTS/`.
+Phase 4, Step 4.3 runs an autonomous four-stage agent system. All agent definitions live in `AGENTS/`.
 
 ### Orchestrator (`AGENTS/orchestrator.md`)
 
@@ -104,11 +104,11 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 
 **Inputs:**
 - `PROJECTS/[name]/docs/03-solutioning/backlog.md`
-- `PROJECTS/[name]/docs/03-solutioning/epics.md`
+- `PROJECTS/[name]/docs/03-solutioning/epics.md` (story selection only — the Planner reads full story content)
 - `PROJECTS/[name]/docs/03-solutioning/dependency-graph.md`
-- `PROJECTS/[name]/docs/02-planning/architecture/` (ADRs)
-- `PROJECTS/[name]/docs/02-planning/prd.md`
 - `AGENTS/arbiter.md` ← **Read this first**
+
+The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer in full — the Planner reads those itself per story. Keeping that content out of the coordination layer's context is the point.
 
 **Startup verification** (stop and write a startup-failure escalation if any fail):
 - `docs/03-solutioning/backlog.md` exists and is non-empty
@@ -120,11 +120,11 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 
 **Orchestration loop:**
 1. Select the first `🟡 Ready` story (no story currently `🔵 In Progress` or `🟠 In Validation`)
-2. Dispatch a Worker with a task brief (`TEMPLATES/task-brief.md`)
-3. Update board to `🔵 In Progress`
+2. Dispatch a Planner for the task brief (`TEMPLATES/task-brief.md`); check it for completeness (not a rewrite)
+3. Dispatch a Worker with the approved brief; update board to `🔵 In Progress`
 4. On Worker completion: move to `🟠 In Validation`, dispatch Validator
 5. On Validator PASS: apply PR merge policy (see the Arbiter), mark `✅ Done`, update dependency readiness
-6. On Validator FAIL: dispatch a new Worker with failure context (max 1 retry)
+6. On Validator FAIL: re-dispatch the Worker directly with failure context (max 1 retry) — no Planner re-run
 7. On ESCALATE or second failure: write escalation to BOARD.md, pause loop, notify user
 8. Repeat until all stories are Done
 
@@ -133,8 +133,23 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 **Orchestrator must never:**
 - Change scope, acceptance criteria, or architecture
 - Make product or design decisions
+- Author task brief content itself — that is the Planner's job, even for a simple-looking story
 - Skip the startup verification
 - Run two stories concurrently
+
+### Planner (`AGENTS/planner.md`)
+
+**Role:** Translation layer. Given one approved story ID, turns it into a self-contained task brief — the same document a Worker with no memory of this conversation could build from. Never writes code, never opens a PR, never invents or edits acceptance criteria (those are copied verbatim from `epics.md`).
+
+**Inputs:** the story's entry in `epics.md`, the dependency graph, the relevant ADRs, the intent layer (`DECISIONS.md`/`INVARIANTS.md`), the project type's manifest build order, and `docs/04-implementation/CONVENTIONS.md` — the running record of patterns already established by earlier Workers, read instead of re-deriving patterns from the codebase on every story.
+
+**Returns:** a filled `TEMPLATES/task-brief.md`, or a `## BLOCKED` section (with a specific reason) if the story definition itself doesn't have what it needs — treated by the Orchestrator as an escalation, the same discipline the Worker applies to ambiguous briefs, just caught one step earlier.
+
+**Planner must never:**
+- Modify acceptance criteria, `epics.md`, `backlog.md`, or `dependency-graph.md`
+- Write code or touch `src/`
+- Invent an ADR or invariant to fill a gap
+- Leave a template placeholder unfilled in a brief it hands off as complete
 
 ### Worker (`AGENTS/worker.md`)
 
@@ -257,11 +272,14 @@ Phase 4, Step 4.3 runs an autonomous three-tier agent system. All agent definiti
 
 All agents read `AGENTS/arbiter.md` before operating. It defines:
 
+**Model tier policy:** every spawned agent's importance tier (1 = frontier, 2 = capable, 3 = economy) is fixed in its own `AGENTS/*.md` frontmatter (`tier: 1|2|3`); the OpenCode plugin binds each tier to a model via `ANYMAKE_MODEL_TIER1/2/3`. Full table in `AGENTS/arbiter.md`.
+
 **PR review policy:**
 | Condition | Normal mode | Autonomous mode |
 |-----------|-------------|----------------|
 | PR number ≤ 3 | Escalate to user for review | Spawn Product Owner Proxy to review |
 | Story involves webhooks | Escalate to user for review | Spawn Product Owner Proxy to review |
+| Story touches an Active Decision (ADR) | Escalate to user for review | Spawn Product Owner Proxy to review |
 | Security failure in validation | Escalate to user — always | Escalate to user — always (proxy not used) |
 | All other PRs | Orchestrator merges on Validator PASS | Orchestrator merges on Validator PASS |
 
@@ -338,7 +356,8 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 - Treating monetization as a Phase 5 problem
 - Pushing unreviewed code (first 3 PRs always go to user review)
 - Producing multiple artifacts in one session
-- Running two Worker agents concurrently
+- Running two Worker (or Planner, or Validator) agents concurrently
+- The Orchestrator authoring task brief content itself instead of dispatching the Planner
 - Modifying `PHASE_GUIDES/`, `AGENTS/`, or `TEMPLATES/` during a build
 
 ---
@@ -349,15 +368,17 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 |------|---------|
 | `skills/anymake/SKILL.md` | Skill definition loaded by OpenCode |
 | `AGENTS/orchestrator.md` | Full Orchestrator instructions (includes autonomous mode handling) |
+| `AGENTS/planner.md` | Full Planner instructions (story → self-contained task brief) |
 | `AGENTS/worker.md` | Full Worker instructions |
 | `AGENTS/validator.md` | Full Validator instructions |
 | `AGENTS/product-owner-proxy.md` | Product Owner Proxy instructions (autonomous mode gate evaluator) |
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
-| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy |
+| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
-| `TEMPLATES/task-brief.md` | Template Orchestrator uses to brief each Worker |
+| `TEMPLATES/task-brief.md` | Template the Planner fills to brief each Worker |
+| `TEMPLATES/conventions.md` | Template for `CONVENTIONS.md` — patterns Workers establish, Planners reuse |
 | `TEMPLATES/BOARD.md` | Board template copied at Phase 4 start |
 | `TEMPLATES/validation-report.md` | Template Validator fills out |
 | `TEMPLATES/phase-state.md` | Template for PHASE_STATE.md (includes `autonomous_mode` field) |

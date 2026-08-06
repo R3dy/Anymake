@@ -4,13 +4,55 @@ The **Arbiter** is the one every other agent defers to: the authoritative rules 
 
 ---
 
+## Model Tier Policy
+
+Every spawned agent runs at one of three importance tiers, so a project can use a strong model for judgment calls and a cheaper one for high-volume mechanical execution, without losing the trust boundary each role already enforces. The tier is set once, directly in each agent's own file (`AGENTS/*.md` frontmatter, `tier: 1|2|3`) — not scattered across a separate config that could drift out of sync with what the agent actually does.
+
+| Tier | Meaning | Agent | File | Why this tier |
+|------|---------|-------|------|----------------|
+| — | *(not spawned)* | Orchestrator | `orchestrator.md` | Runs as your primary session, not a sub-agent — there's nothing to bind. Point your session itself at your Tier 1 model and the Orchestrator is Tier 1 by construction. |
+| 1 | Frontier | Product Owner Proxy | `product-owner-proxy.md` | A strict stand-in for the human at every gate — needs the same judgment bar a human reviewer would apply. |
+| 1 | Frontier | Plan Reviewer | `plan-reviewer.md` | The reviewer must be at least as capable as what it's reviewing — never let the checker be weaker than the thing it checks. |
+| 2 | Capable | Planner | `planner.md` | Mechanical translation, but has to correctly read and synthesize ADRs, the intent layer, and established conventions — a misread here corrupts every downstream Worker. |
+| 2 | Capable | Solution Architect | `solution-architect.md` | Full-project design work for a tracked change — root cause, blast radius, alternatives. |
+| 2 | Capable | Validator | `validator.md` | The backstop that has to reliably catch a Tier 3 Worker's mistakes — cheapen the generator, not the checker. |
+| 2 | Capable | Cartographer | `cartographer.md` | Maps code to intent; needs real comprehension of the codebase, not just pattern-matching. |
+| 3 | Economy | Worker | `worker.md` | Highest-volume role (every story), and the narrowest-scoped — it executes a detailed brief and escalates rather than guessing, which is what makes a cheaper model safe here. |
+
+**How it's wired (OpenCode only).** The plugin (`.opencode/plugins/anymake.js`) reads every `AGENTS/*.md` file's frontmatter at config time. Any file with `mode: subagent` is registered as a named OpenCode agent (`prompt`, `description`, `mode` all sourced from the file) — this part can't live in your `opencode.json`, because it mirrors repo content the plugin regenerates on every load, not something worth hand-copying and keeping in sync yourself.
+
+**Setting the three tier models — two ways, in priority order:**
+
+1. **Per-agent, in your own `opencode.json`** (schema-safe, recommended if you want per-agent control): set just the field you want to override —
+   ```json
+   { "agent": { "anymake-worker": { "model": "anthropic/claude-haiku-4-5" } } }
+   ```
+   The plugin merges this in field-by-field — your `model` wins, `mode`/`prompt`/`description` still come from the plugin, so you never have to redeclare the whole agent. (A bare custom top-level key like `"anymake": {...}` was deliberately avoided here — OpenCode's config schema is strict enough that an unrecognized key can throw `ConfigInvalidError`, and in some reported cases has silently discarded the entire config file. `agent.<name>.model` is a real, schema-recognized field, so this path can't break your config.)
+
+2. **Three environment variables** (zero JSON editing, applies to every agent in a tier at once):
+
+   | Env var | Tier | Set it to |
+   |---------|------|-----------|
+   | `ANYMAKE_MODEL_TIER1` | Frontier | Your best model, `provider/model-id` (e.g. `anthropic/claude-opus-5`) |
+   | `ANYMAKE_MODEL_TIER2` | Capable | A strong-but-cheaper model |
+   | `ANYMAKE_MODEL_TIER3` | Economy | Your fastest/cheapest model |
+
+   Set before launching OpenCode (shell profile, or wherever you already set `ANTHROPIC_API_KEY`).
+
+A per-agent `opencode.json` override always wins over the tier env var for that agent. **Both are optional** — an agent with neither falls back to OpenCode's default subagent behavior (the primary session's model), so nothing breaks if you configure none of this.
+
+**Known caveat.** This depends on your OpenCode version supporting dispatch of a custom `mode: subagent` agent by name from another agent's tool calls — this has been unreliable across some OpenCode releases. Every spawn instruction in this system (`AGENTS/orchestrator.md`, `PHASE_GUIDES/*.md`) names the registered agent first and documents the inline-instructions fallback next to it. If named dispatch silently falls back, every agent just runs on your primary session's model — the system still works, you just lose the cost/quality split. Verify once after setup: spawn a Tier 3 story and confirm (e.g. by asking the Worker sub-agent which model it is) that it actually landed on your `ANYMAKE_MODEL_TIER3` choice.
+
+---
+
 ## PR Review Policy
 
 | Condition | Review requirement |
 |-----------|-------------------|
 | PR #1, #2, or #3 overall in Phase 4 | your review is required — always |
 | Story title or technical tasks contain "webhook" | your review is required — always, regardless of PR count |
-| PR #4+ and no webhook keyword | Autonomous merge after CI passes |
+| Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | your review is required — always, regardless of PR count |
+| PR #4+, no webhook keyword, and no ADR touched | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 
 PR count is cumulative across all Phase 4 stories. It is not reset per milestone.
@@ -90,6 +132,9 @@ Story ordering within a milestone follows the dependency graph. Stories with no 
 **Webhook handler override:**
 Any story whose title or technical task list contains the word "webhook" requires your review of the PR regardless of the current PR count. The orchestrator checks for this keyword when evaluating the PR review rule after each validation PASS.
 
+**ADR-touching override:**
+Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires your review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
+
 **Security failure override:**
 Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
 
@@ -116,7 +161,7 @@ These are the exact phrases you use to unblock the orchestrator. The orchestrato
 | `"approved"` | Merge the PR currently awaiting review, mark story Done, continue loop |
 | `"changes needed: [notes]"` | Write notes to RETRY CONTEXT, re-dispatch worker with amendment |
 | `"skip story N.N"` | Mark story N.N as Done with note "manually skipped by you", continue loop |
-| `"retry story N.N"` | Re-dispatch worker from scratch (fresh task brief, no RETRY CONTEXT) |
+| `"retry story N.N"` | Re-dispatch planner for a fresh task brief (no RETRY CONTEXT), then dispatch worker from that brief |
 | `"blocked — stop"` | Mark all in-progress stories as Blocked, halt orchestration, update PHASE_STATE.md |
 | `"resume"` | After you resolve a human-only validation escalation — mark story Done, continue |
 | `"fix and retry"` | After you provide a fix for an escalated failure — re-dispatch worker |

@@ -96,5 +96,63 @@ for (const dir of dirs) {
   if (missing === 0) ok(`${dir}: all ${new Set(refs).size} path references resolve`);
 }
 
+// 6. AGENTS/*.md subagent frontmatter + config.agent registration (model tiers)
+console.log('\n[6] Agent discovery + model-tier registration');
+const AGENTS_DIR = path.join(ROOT, 'AGENTS');
+const agentFiles = fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md'));
+const seenAgentNames = new Set();
+let subagentCount = 0;
+for (const file of agentFiles) {
+  const raw = fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8');
+  const parsed = parseFrontmatter(raw);
+  if (file === 'arbiter.md' || file === 'orchestrator.md') {
+    if (!parsed) ok(`${file}: no frontmatter (expected — not spawned as a subagent)`);
+    else bad(`${file}: unexpectedly has frontmatter — this file should never be spawned`);
+    continue;
+  }
+  if (!parsed) { bad(`${file}: missing frontmatter (every spawned agent needs mode: subagent)`); continue; }
+  const { fm } = parsed;
+  if (fm.mode !== 'subagent') { bad(`${file}: mode is '${fm.mode}', expected 'subagent'`); continue; }
+  if (!fm.name) { bad(`${file}: missing 'name'`); continue; }
+  if (seenAgentNames.has(fm.name)) { bad(`${file}: duplicate agent name '${fm.name}'`); continue; }
+  seenAgentNames.add(fm.name);
+  if (!fm.description) bad(`${file}: missing 'description'`);
+  if (!['1', '2', '3'].includes(fm.tier)) { bad(`${file}: tier '${fm.tier}' is not 1, 2, or 3`); continue; }
+  ok(`${file} → ${fm.name} (tier ${fm.tier})`);
+  subagentCount++;
+}
+
+console.log('\n[6b] plugin registers agents into config.agent, tier env vars bind models');
+process.env.ANYMAKE_MODEL_TIER1 = 'anthropic/claude-opus-5';
+process.env.ANYMAKE_MODEL_TIER2 = 'anthropic/claude-sonnet-5';
+process.env.ANYMAKE_MODEL_TIER3 = 'anthropic/claude-haiku-4-5';
+const agentPlugin = await AnymakePlugin({ client: {}, directory: ROOT });
+const agentCfg = {};
+await agentPlugin.config(agentCfg);
+const registered = Object.keys(agentCfg.agent || {});
+if (registered.length === subagentCount) ok(`config.agent has all ${subagentCount} discovered subagents`);
+else bad(`config.agent has ${registered.length} entries, expected ${subagentCount}: ${JSON.stringify(registered)}`);
+for (const name of registered) {
+  const entry = agentCfg.agent[name];
+  if (entry.mode !== 'subagent') bad(`${name}: mode is '${entry.mode}'`);
+  if (!entry.prompt || entry.prompt.trimStart().startsWith('---') || entry.prompt.includes('\nmode: subagent')) bad(`${name}: prompt missing or frontmatter not stripped`);
+  if (!entry.model) bad(`${name}: no model bound even though tier env vars are set`);
+}
+if (agentCfg.agent?.['anymake-worker']?.model === 'anthropic/claude-haiku-4-5') ok('anymake-worker (tier 3) bound to ANYMAKE_MODEL_TIER3');
+else bad(`anymake-worker model mismatch: ${JSON.stringify(agentCfg.agent?.['anymake-worker'])}`);
+
+console.log('\n[6c] a user opencode.json override wins per-field, without redeclaring the whole agent');
+const overrideCfg = { agent: { 'anymake-worker': { model: 'custom/override-model' } } };
+await agentPlugin.config(overrideCfg);
+const overridden = overrideCfg.agent['anymake-worker'];
+if (overridden.model === 'custom/override-model') ok('user-supplied model wins over the tier-resolved default');
+else bad(`user override did not win: ${JSON.stringify(overridden)}`);
+if (overridden.mode === 'subagent' && overridden.prompt) ok('plugin still supplied mode + prompt — user did not have to redeclare them');
+else bad(`plugin fields missing after merge: ${JSON.stringify(overridden)}`);
+
+delete process.env.ANYMAKE_MODEL_TIER1;
+delete process.env.ANYMAKE_MODEL_TIER2;
+delete process.env.ANYMAKE_MODEL_TIER3;
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

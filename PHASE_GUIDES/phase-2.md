@@ -144,7 +144,7 @@ Both must be Yes before proceeding. If No on either: revise the prototype, do no
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase-2-prototype-review. Project root: [absolute path]. Prototype directory: [absolute path to PROJECTS/[name]/prototype/]. UX design: [absolute path to PROJECTS/[name]/docs/02-planning/ux-design.md]."
 })
 ```
@@ -274,7 +274,7 @@ You say "planning complete, start solutioning" → proceed to Phase 3.
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase-2-approval. Project root: [absolute path]. Artifacts: [absolute paths to PROJECTS/[name]/docs/02-planning/prd.md, ux-design.md, architecture/ADR-001.md through ADR-007.md, monetization.md, MVP_SCOPE.md]."
 })
 ```

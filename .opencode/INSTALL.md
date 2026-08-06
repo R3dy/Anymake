@@ -50,6 +50,42 @@ Anymake loads automatically at the start of every session. Trigger it with:
 | `"I have a product idea: [description]"` | Triggers Anymake, starts Phase 0 |
 | `"Build an app"` | Triggers Anymake |
 
+## Model Tiers (optional)
+
+By default every spawned agent (Planner, Worker, Validator, Product Owner Proxy,
+Cartographer, Solution Architect, Plan Reviewer) runs on whatever model your
+primary OpenCode session uses. To split cost/quality across three tiers instead
+— a frontier model for judgment calls, a cheaper capable model for translation
+and review, and your fastest model for high-volume Worker execution — pick one:
+
+**Option A — your own `opencode.json`, per agent** (schema-safe, no shell setup):
+```json
+{
+  "agent": {
+    "anymake-worker": { "model": "anthropic/claude-haiku-4-5" },
+    "anymake-planner": { "model": "anthropic/claude-sonnet-5" },
+    "anymake-validator": { "model": "anthropic/claude-sonnet-5" },
+    "anymake-product-owner-proxy": { "model": "anthropic/claude-opus-5" }
+  }
+}
+```
+Only the field you set is overridden — the plugin still fills in `mode`/`prompt`/`description`.
+
+**Option B — three environment variables** (applies to a whole tier at once, no JSON editing):
+```bash
+export ANYMAKE_MODEL_TIER1="anthropic/claude-opus-5"     # frontier
+export ANYMAKE_MODEL_TIER2="anthropic/claude-sonnet-5"    # capable
+export ANYMAKE_MODEL_TIER3="anthropic/claude-haiku-4-5"  # economy
+```
+Set before launching OpenCode. An `opencode.json` override (Option A) always wins over the matching env var for that agent.
+
+Each agent's tier is fixed in its own file (`AGENTS/*.md` frontmatter, `tier: 1|2|3`)
+— see `AGENTS/arbiter.md` → **Model Tier Policy** for the full table, which agent
+lands on which tier, and why a bare custom config key (e.g. `"anymake": {...}`)
+isn't used — OpenCode's config schema is strict enough that an unrecognized key
+can throw `ConfigInvalidError`. Configure neither option and everything falls
+back to the primary session's model — nothing breaks if you skip this section.
+
 ## Updating
 
 OpenCode pins git dependencies in its cache, so a restart may not pick up the latest

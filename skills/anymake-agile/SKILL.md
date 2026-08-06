@@ -43,7 +43,7 @@ The four promises this pipeline exists to keep:
 | **Solution Architect** | `AGENTS/solution-architect.md` | Full-project review + the Development Plan (`TEMPLATES/dev-plan.md`). Never touches code |
 | **Plan Reviewer** | `AGENTS/plan-reviewer.md` | Adversarial review of the plan (`TEMPLATES/plan-review.md`). Fresh context each round; never edits the plan |
 | Cartographer | `AGENTS/cartographer.md` | Refreshing the intent layer before design, and after merge |
-| Build engine | `anymake-build-loop` (Orchestrator → Worker → Validator) | Building the approved stories |
+| Build engine | `anymake-build-loop` (Orchestrator → Planner → Worker → Validator) | Building the approved stories |
 
 Architect and Reviewer **must be separate sub-agents** — the thing that designs
 is never the thing that approves. Same law as Phase 4's Worker/Validator split;
@@ -93,10 +93,11 @@ Advance the status label at every stage transition; mirror a one-line entry in
 
 ### 3. Solution — spawn the Solution Architect
 
-First ensure the intent layer is fresh (spawn the **Cartographer** if
-`SYSTEM_MAP.md` is missing or `Last mapped` predates recent merges). Then spawn
-the **Solution Architect** with: issue link, project root, plan output path.
-It reviews the whole project and writes `issue-[N]/plan.md`.
+First ensure the intent layer is fresh (spawn the **Cartographer** — registered
+agent `anymake-cartographer`, Tier 2 — if `SYSTEM_MAP.md` is missing or `Last
+mapped` predates recent merges). Then spawn the **Solution Architect**
+(`anymake-solution-architect`, Tier 2) with: issue link, project root, plan
+output path. It reviews the whole project and writes `issue-[N]/plan.md`.
 
 - If it reports an **intent conflict** (plan would contradict an ADR/invariant):
   run the intent conflict gate (`AGENTS/arbiter.md` → Intent Conflict Policy)
@@ -107,7 +108,8 @@ It reviews the whole project and writes `issue-[N]/plan.md`.
 
 ### 4. Review loop — independent approval or specific objections
 
-Spawn a **fresh Plan Reviewer**; it writes `review-round-K.md` and returns:
+Spawn a **fresh Plan Reviewer** (`anymake-plan-reviewer`, Tier 1 — see
+`AGENTS/arbiter.md` → Model Tier Policy); it writes `review-round-K.md` and returns:
 
 - `NEEDS CHANGES` → re-spawn the Architect with the review report; it resolves
   every numbered comment (fix or reasoned push-back in the plan's Review Log)

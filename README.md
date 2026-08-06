@@ -4,7 +4,7 @@
 
 ## What It Is
 
-**Anymake** is an AI skill for [OpenCode.ai](https://opencode.ai) that acts as your co-founder and CTO rolled into one. It takes an idea through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, gating every transition on your approval, and auto-building your product in Phase 4 with a three-tier agent system (Orchestrator → Worker → Validator).
+**Anymake** is an AI skill for [OpenCode.ai](https://opencode.ai) that acts as your co-founder and CTO rolled into one. It takes an idea through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, gating every transition on your approval, and auto-building your product in Phase 4 with a four-stage agent system (Orchestrator → Planner → Worker → Validator).
 
 Anymake adapts to **what** you're building: a chosen project type (SaaS, CLI, library, API, internal tool, static site, hobby) reshapes which phases run, which questions get asked, the build order, and the quality gates. See [`PROJECT_TYPES/`](PROJECT_TYPES/).
 
@@ -105,15 +105,21 @@ PROJECTS/[name]/
 
 ## Phase 4: Multi-Agent Build Loop
 
-Phase 4, Step 4.3 runs an autonomous three-tier agent system that builds your entire backlog without you having to manage individual tasks:
+Phase 4, Step 4.3 runs an autonomous four-stage agent system that builds your entire backlog without you having to manage individual tasks:
 
 ```
 Orchestrator
   ├── reads backlog + dependency graph
   ├── manages BOARD.md (live status for every story)
-  ├── dispatches Worker agents (one story at a time)
+  ├── dispatches a Planner agent per story and approves the brief for completeness
+  ├── dispatches Worker agents from the approved brief
   ├── dispatches Validator agents after each PR
   └── escalates to you only when blocked
+
+Planner (per story)
+  ├── translates the approved story + ADRs + intent layer + CONVENTIONS.md
+  │   into a self-contained task brief — the Orchestrator never authors this itself
+  └── never writes code or opens a PR
 
 Worker (per story)
   ├── implements in strict order: Schema → Migration → API → Frontend
@@ -129,9 +135,12 @@ Validator (per PR)
 **PR review policy:**
 - PRs #1–3 always require your review
 - Any PR touching webhooks or payment flows requires your review
+- Any PR touching an Active Decision (ADR) requires your review, regardless of PR count
 - All other PRs: Orchestrator merges on Validator PASS
 
 **Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action. You can see every story's status, the full run log, and any escalations at a glance.
+
+**Model tiers (optional):** every spawned agent — Planner, Worker, Validator, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Point each tier at a model either per-agent in your own `opencode.json` (`agent.<name>.model` — schema-safe, no shell setup) or with three environment variables (`ANYMAKE_MODEL_TIER1/2/3`, applies to a whole tier at once); unset either and that agent just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
 
 ## Post-Launch Agile Workflow
 
@@ -171,7 +180,7 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 | Skill | What it owns | Invoked at |
 |-------|--------------|------------|
 | `anymake` | Methodology, state machine, gates, routing (auto-loaded) | Always |
-| `anymake-build-loop` | Three-tier Orchestrator → Worker → Validator build engine | Phase 4.3 |
+| `anymake-build-loop` | Four-stage Orchestrator → Planner → Worker → Validator build engine | Phase 4.3 |
 | `anymake-design-system` | Design system + Prototype Sprint + prototype gate | Phase 2.2b |
 | `anymake-security-review` | Per-PR + full + pre-launch security checklists | Phase 4.5, pre-launch |
 | `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
@@ -189,6 +198,7 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 
 AGENTS/
 ├── orchestrator.md         # Orchestrator agent instructions
+├── planner.md              # Planner agent instructions (story → self-contained task brief)
 ├── worker.md               # Worker agent instructions
 ├── validator.md            # Validator agent instructions (incl. intent-consistency check)
 ├── cartographer.md         # Read-only agent that maps code→intent (intent layer)
@@ -199,7 +209,7 @@ AGENTS/
 skills/                     # The skill suite (registered with OpenCode)
 ├── README.md               # Suite map: hub + companions
 ├── anymake/SKILL.md        # Hub skill — methodology + router (auto-loaded)
-├── anymake-build-loop/     # Phase 4.3 three-tier build engine
+├── anymake-build-loop/     # Phase 4.3 four-stage build engine
 ├── anymake-brownfield/     # Onboard an existing codebase
 ├── anymake-design-system/  # Phase 2.2b design system + prototype
 ├── anymake-security-review/ # Security checklists + gate (4.5, pre-launch)
@@ -225,7 +235,8 @@ TEMPLATES/
 ├── monetization.md         # Phase 2: Revenue model template
 ├── epic.md                 # Phase 3: Epic template
 ├── story.md                # Phase 3: User story template
-├── task-brief.md           # Phase 4: Worker task spec template
+├── task-brief.md           # Phase 4: Worker task spec template (filled by the Planner)
+├── conventions.md          # Phase 4: CONVENTIONS.md template — patterns Workers establish, Planners reuse
 ├── BOARD.md                # Phase 4: Agile board template
 ├── validation-report.md    # Phase 4: Validator report template
 ├── phase-state.md          # PHASE_STATE.md template
@@ -255,7 +266,7 @@ package.json                # npm metadata
 
 ## Acknowledgements
 
-Anymake began as an exploration of the [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) (Breakthrough Method for Agile AI-Driven Development) and owes that project a debt for the original spark — agentic, agile, phase-driven building. It has since grown into its own system with a distinct architecture (the 0–5 phase gates, the project-type engine, the Orchestrator → Worker → Validator loop, and the autonomous Product Owner Proxy). Credit to BMAD-METHOD as the inspiration; Anymake is an independent project.
+Anymake began as an exploration of the [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) (Breakthrough Method for Agile AI-Driven Development) and owes that project a debt for the original spark — agentic, agile, phase-driven building. It has since grown into its own system with a distinct architecture (the 0–5 phase gates, the project-type engine, the Orchestrator → Planner → Worker → Validator loop, and the autonomous Product Owner Proxy). Credit to BMAD-METHOD as the inspiration; Anymake is an independent project.
 
 ## License
 

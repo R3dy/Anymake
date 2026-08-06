@@ -98,9 +98,9 @@ First real product code. Everything else depends on this being correct.
 
 ## Step 4.3 — Epic Build Loop (Agentic)
 
-Step 4.3 is executed by the **Anymake Orchestration System** — a three-tier agent loop that builds every story in the approved backlog autonomously, with your visibility into all progress via the agile board.
+Step 4.3 is executed by the **Anymake Orchestration System** — a four-stage agent loop that builds every story in the approved backlog autonomously, with your visibility into all progress via the agile board.
 
-> **Delegate to the `anymake-build-loop` skill** to run this step — it owns the Orchestrator → Worker → Validator engine over the backlog. Invoke it via the `Skill` tool. The detail below is its source spec.
+> **Delegate to the `anymake-build-loop` skill** to run this step — it owns the Orchestrator → Planner → Worker → Validator engine over the backlog. Invoke it via the `Skill` tool. The detail below is its source spec.
 
 ### How to Start the Orchestration Loop
 
@@ -113,7 +113,7 @@ Invoke the orchestrator (Claude runs it as an Agent with `AGENTS/orchestrator.md
 The orchestrator will:
 1. Verify that Steps 4.1 and 4.2 are complete (scaffold + auth)
 2. Initialize `PROJECTS/[name]/BOARD.md` — the live agile board
-3. Begin dispatching worker and validator agents story by story
+3. Begin dispatching planner, worker, and validator agents story by story
 
 ### How to Follow Along: The Agile Board
 
@@ -139,20 +139,25 @@ The board also shows the Run Log (every event timestamped) and the Escalations s
 Orchestrator
   ├── reads the backlog and board
   ├── selects the next ready story
-  ├── builds a task brief (self-contained context package for the story)
+  ├── spawns Planner agent
+  │     └── Planner: reads the story + ADRs + intent layer + CONVENTIONS.md,
+  │                  writes a self-contained task brief (never invents scope)
+  ├── checks the brief for completeness (not a rewrite), then
   ├── spawns Worker agent
   │     └── Worker: reads brief, builds schema→migration→API→frontend,
-  │                 commits, opens PR, writes result
+  │                 commits, opens PR, writes result, records any new
+  │                 pattern to CONVENTIONS.md
   ├── spawns Validator agent
   │     └── Validator: checks each acceptance criterion against the code,
   │                    runs security checklist, writes verdict (PASS/FAIL/ESCALATE)
   └── on PASS: merges PR (or pauses for your review), updates board, loops
-      on FAIL: retries once with specific failure notes
+      on FAIL: retries the Worker once with specific failure notes (no Planner re-run)
       on ESCALATE: pauses and notifies you
 ```
 
 **Agent files:**
 - `AGENTS/orchestrator.md` — orchestrator instructions and loop specification
+- `AGENTS/planner.md` — planner instructions (story → self-contained task brief)
 - `AGENTS/worker.md` — worker agent instructions (single story, single branch)
 - `AGENTS/validator.md` — validator agent instructions (contract enforcement)
 - `AGENTS/arbiter.md` — all retry, escalation, and PR review policies
@@ -160,6 +165,7 @@ Orchestrator
 **You review:**
 - PRs #1, #2, #3 always require your approval (see board for notification)
 - All Stripe webhook handler PRs always require your approval
+- Any PR touching an Active Decision (ADR) always requires your approval
 - All other PRs are merged autonomously after CI passes
 
 ### When the Orchestrator Pauses and Asks for you
@@ -181,7 +187,7 @@ Full phrase lexicon is in `AGENTS/arbiter.md`.
 
 ### Story Build Contract
 
-Every story the worker builds is governed by a task brief at:
+Every story the worker builds is governed by a task brief (written by the Planner) at:
 `PROJECTS/[name]/docs/04-implementation/task-briefs/story-N.N.md`
 
 Every story the validator checks produces a report at:
@@ -277,7 +283,7 @@ You review the complete product on staging before launch approval:
 
 ```
 Agent({
-  instructions: [full contents of AGENTS/product-owner-proxy.md],
+  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
   message: "Gate type: phase-4-staging-review. Project root: [absolute path]. Artifacts: [absolute paths to PROJECTS/[name]/BOARD.md, PROJECTS/[name]/docs/environment.md]."
 })
 ```
