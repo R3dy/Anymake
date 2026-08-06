@@ -140,6 +140,16 @@ for (const name of registered) {
 }
 if (agentCfg.agent?.['anymake-worker']?.model === 'anthropic/claude-haiku-4-5') ok('anymake-worker (tier 3) bound to ANYMAKE_MODEL_TIER3');
 else bad(`anymake-worker model mismatch: ${JSON.stringify(agentCfg.agent?.['anymake-worker'])}`);
+
+console.log('\n[6c] a user opencode.json override wins per-field, without redeclaring the whole agent');
+const overrideCfg = { agent: { 'anymake-worker': { model: 'custom/override-model' } } };
+await agentPlugin.config(overrideCfg);
+const overridden = overrideCfg.agent['anymake-worker'];
+if (overridden.model === 'custom/override-model') ok('user-supplied model wins over the tier-resolved default');
+else bad(`user override did not win: ${JSON.stringify(overridden)}`);
+if (overridden.mode === 'subagent' && overridden.prompt) ok('plugin still supplied mode + prompt — user did not have to redeclare them');
+else bad(`plugin fields missing after merge: ${JSON.stringify(overridden)}`);
+
 delete process.env.ANYMAKE_MODEL_TIER1;
 delete process.env.ANYMAKE_MODEL_TIER2;
 delete process.env.ANYMAKE_MODEL_TIER3;

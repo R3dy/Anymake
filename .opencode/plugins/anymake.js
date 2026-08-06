@@ -131,8 +131,10 @@ or \`TEMPLATES/prd.md\`, read them from their full path:
 
       config.agent = config.agent || {};
       for (const [name, def] of Object.entries(buildAgentRegistrations())) {
-        // Never clobber an agent the user already defined themselves.
-        if (!config.agent[name]) config.agent[name] = def;
+        // Field-level merge, user's opencode.json wins per field: this lets
+        // someone override just { model: "..." } for one agent in their own
+        // config without having to redeclare mode/prompt/description too.
+        config.agent[name] = { ...def, ...(config.agent[name] || {}) };
       }
     },
     'experimental.chat.messages.transform': async (_input, output) => {
