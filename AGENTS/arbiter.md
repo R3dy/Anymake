@@ -10,7 +10,8 @@ The **Arbiter** is the one every other agent defers to: the authoritative rules 
 |-----------|-------------------|
 | PR #1, #2, or #3 overall in Phase 4 | your review is required — always |
 | Story title or technical tasks contain "webhook" | your review is required — always, regardless of PR count |
-| PR #4+ and no webhook keyword | Autonomous merge after CI passes |
+| Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | your review is required — always, regardless of PR count |
+| PR #4+, no webhook keyword, and no ADR touched | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 
 PR count is cumulative across all Phase 4 stories. It is not reset per milestone.
@@ -90,6 +91,9 @@ Story ordering within a milestone follows the dependency graph. Stories with no 
 **Webhook handler override:**
 Any story whose title or technical task list contains the word "webhook" requires your review of the PR regardless of the current PR count. The orchestrator checks for this keyword when evaluating the PR review rule after each validation PASS.
 
+**ADR-touching override:**
+Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires your review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
+
 **Security failure override:**
 Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
 
@@ -116,7 +120,7 @@ These are the exact phrases you use to unblock the orchestrator. The orchestrato
 | `"approved"` | Merge the PR currently awaiting review, mark story Done, continue loop |
 | `"changes needed: [notes]"` | Write notes to RETRY CONTEXT, re-dispatch worker with amendment |
 | `"skip story N.N"` | Mark story N.N as Done with note "manually skipped by you", continue loop |
-| `"retry story N.N"` | Re-dispatch worker from scratch (fresh task brief, no RETRY CONTEXT) |
+| `"retry story N.N"` | Re-dispatch planner for a fresh task brief (no RETRY CONTEXT), then dispatch worker from that brief |
 | `"blocked — stop"` | Mark all in-progress stories as Blocked, halt orchestration, update PHASE_STATE.md |
 | `"resume"` | After you resolve a human-only validation escalation — mark story Done, continue |
 | `"fix and retry"` | After you provide a fix for an escalated failure — re-dispatch worker |

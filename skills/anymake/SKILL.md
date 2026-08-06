@@ -127,7 +127,7 @@ Every session:
 - **Ignoring the project type** — running the SaaS defaults (monetization, prototype gate, AARRR) on a type whose manifest skips them, or vice versa
 - Pushing unreviewed code (first 3 PRs always require your review)
 - Producing multiple artifacts in one session
-- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + worker + validator into one context. The Agent tool must be used to spawn sub-agents — doing it all yourself defeats the three-tier architecture.
+- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + planner + worker + validator into one context. The Agent tool must be used to spawn sub-agents — doing it all yourself defeats the four-stage architecture.
 - **"No test suite" as a result:** Every story with runtime-verifiable acceptance criteria must have automated tests. "Works on my machine" is not a validation strategy.
 
 ## Available Phases
@@ -138,19 +138,20 @@ Every session:
 | Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` | — |
 | Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` | `anymake-design-system` (Step 2.2b) |
 | Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` | — |
-| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, worker, validator, arbiter | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging) |
+| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, planner, worker, validator, arbiter | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging) |
 | Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` | `anymake-deploy` (5.2), `anymake-iterate` (5.6) |
 
 ## Agent System (Phase 4)
 
-Phase 4, Step 4.3 runs a three-tier agentic build loop. See `AGENTS/` for all agent definitions.
+Phase 4, Step 4.3 runs a four-stage agentic build loop. See `AGENTS/` for all agent definitions.
 
 | Agent | File | Role |
 |-------|------|------|
-| Orchestrator | `AGENTS/orchestrator.md` | Reads backlog, manages board, dispatches workers and validators, enforces policies, escalates to you |
-| Worker | `AGENTS/worker.md` | Receives one story, builds schema→migration→API→frontend, commits, opens PR, reports result |
+| Orchestrator | `AGENTS/orchestrator.md` | Reads backlog, manages board, dispatches planners, workers, and validators, enforces policies, escalates to you |
+| Planner | `AGENTS/planner.md` | Receives one story ID, translates it (+ ADRs, intent layer, `CONVENTIONS.md`) into a self-contained task brief; never codes |
+| Worker | `AGENTS/worker.md` | Receives the approved brief, builds schema→migration→API→frontend, commits, opens PR, reports result, records any new pattern to `CONVENTIONS.md` |
 | Validator | `AGENTS/validator.md` | Checks each acceptance criterion against the implementation, runs security checklist, returns PASS/FAIL/ESCALATE |
-| Arbiter | `AGENTS/arbiter.md` | The shared rulebook (read, never spawned): retry matrix, PR review rules, escalation phrase lexicon, failure classification, intent conflict + agile plan review policies |
+| Arbiter | `AGENTS/arbiter.md` | The shared rulebook (read, never spawned): retry matrix, PR review rules (incl. ADR-touching override), escalation phrase lexicon, failure classification, intent conflict + agile plan review policies |
 
 **Visibility:** `PROJECTS/[name]/BOARD.md` — live agile board updated after every agent action. You can see every story's status, the run log, and any escalations at a glance.
 
@@ -168,7 +169,7 @@ so state and conventions never fork. See `skills/README.md` for the full map.
 
 | Companion skill | Owns | Hub invokes it at… |
 |-----------------|------|--------------------|
-| `anymake-build-loop` | The three-tier agentic build engine (Orchestrator → Worker → Validator) over a backlog | **Phase 4, Step 4.3** |
+| `anymake-build-loop` | The four-stage agentic build engine (Orchestrator → Planner → Worker → Validator) over a backlog | **Phase 4, Step 4.3** |
 | `anymake-design-system` | The visual-quality bar: design system + Prototype Sprint + prototype-gate audit | **Phase 2, Step 2.2b** (UX-active types) |
 | `anymake-security-review` | The per-PR checklist, the full security pass, and the pre-launch security gate | **Phase 4, Step 4.5** (and inside the Validator; pre-launch) |
 | `anymake-deploy` | Deployment & infrastructure — staging, production, env/secrets, monitoring, rollback | **Phase 4** staging and **Phase 5, Step 5.2** (production) |

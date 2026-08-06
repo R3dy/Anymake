@@ -43,7 +43,7 @@ The four promises this pipeline exists to keep:
 | **Solution Architect** | `AGENTS/solution-architect.md` | Full-project review + the Development Plan (`TEMPLATES/dev-plan.md`). Never touches code |
 | **Plan Reviewer** | `AGENTS/plan-reviewer.md` | Adversarial review of the plan (`TEMPLATES/plan-review.md`). Fresh context each round; never edits the plan |
 | Cartographer | `AGENTS/cartographer.md` | Refreshing the intent layer before design, and after merge |
-| Build engine | `anymake-build-loop` (Orchestrator → Worker → Validator) | Building the approved stories |
+| Build engine | `anymake-build-loop` (Orchestrator → Planner → Worker → Validator) | Building the approved stories |
 
 Architect and Reviewer **must be separate sub-agents** — the thing that designs
 is never the thing that approves. Same law as Phase 4's Worker/Validator split;

@@ -1,6 +1,6 @@
 # Task Brief — [Story N.N: Story Name]
 
-**Created by:** Anymake Orchestrator
+**Created by:** Anymake Planner
 **Created at:** [ISO datetime]
 **Project:** [Project name]
 **Project root:** [absolute path]
@@ -75,6 +75,8 @@ Use these for patterns and consistency — do not reinvent what's already built.
 - Styling: [CSS approach + component library]
 
 **Existing patterns to follow:**
+
+Pulled from `docs/04-implementation/CONVENTIONS.md` where available — see that file's matching entry for each pattern below before falling back to a fresh code scan.
 
 Database queries:
 ```
@@ -155,7 +157,7 @@ Story-specific security notes:
 **PR title:** `Story N.N: [Story Name]`
 **Base branch:** `main`
 **PR description:** Use `TEMPLATES/commit-message.md` format
-**Review requirement:** [your review is required (PR #1/2/3 or webhook) | Autonomous merge after CI passes]
+**Review requirement:** [your review is required (PR #1/2/3, webhook, or touches ADR-N) | Autonomous merge after CI passes]
 
 Screenshots are required in the PR description for any story that produces UI changes.
 
@@ -172,7 +174,7 @@ Screenshots are required in the PR description for any story that produces UI ch
 
 ---
 
-<!-- ORCHESTRATOR: Fill above sections before dispatch. Leave section 10 blank. -->
+<!-- PLANNER: Fill above sections before dispatch. Leave section 10 blank. -->
 <!-- WORKER: Fill section 10 when complete. Do not modify sections 1-9. -->
 
 ---
