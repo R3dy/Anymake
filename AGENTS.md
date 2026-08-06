@@ -61,6 +61,7 @@ The system adapts to the **kind of thing being built**. The type is chosen at pr
 | `api-service` | Headless web service / API | Optional | No |
 | `internal-tool` | Team app, not sold | Never | Yes |
 | `static-site` | Marketing site, blog, docs, portfolio | Optional | Yes |
+| `agentic-harness` | Multi-stage pipeline of sandboxed LLM agents (canonical handoffs, pluggable backend, tracing, control dashboard) | Rare | Thin (control/observability only) |
 
 Each profile is two files:
 - `PROJECT_TYPES/<id>/manifest.md` — structured rules: phase map, success model, stack, mandatory/optional ADRs, **Phase 4 build order**, and **gate-criteria deltas**. Agents read this.

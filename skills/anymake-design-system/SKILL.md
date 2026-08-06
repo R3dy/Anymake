@@ -26,6 +26,7 @@ Read `PROJECT_TYPES/<id>/manifest.md` → **Phase 2 Tracks**.
 | `static-site` | Full — visual quality *is* the product. |
 | `hobby` | Lite or skipped per manifest. |
 | `cli`, `library`, `api-service` | **Skip** — headless. (For CLI, "UX" = help text / output formatting, not visuals.) |
+| `agentic-harness` | **Scoped** — full design system + prototype gate apply only to the control/observability dashboard (queue/board view, per-item trace view, run controls). The pipeline itself is headless. |
 
 ## Part 1 — Design system
 
