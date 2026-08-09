@@ -4,7 +4,7 @@
 
 ## What It Is
 
-**Anymake** is an AI skill for [OpenCode.ai](https://opencode.ai) that acts as your co-founder and CTO rolled into one. It takes an idea through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, gating every transition on your approval, and auto-building your product in Phase 4 with a four-stage agent system (Orchestrator → Planner → Worker → Validator).
+**Anymake** is an AI skill for [OpenCode.ai](https://opencode.ai) that acts as your co-founder and CTO rolled into one. It takes an idea through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, gating every transition on your approval, and auto-building your product in Phase 4 with a five-stage agent system (Orchestrator → Planner → Worker → Validator → Experience Runner) that ships nothing without actually driving it first.
 
 Anymake adapts to **what** you're building: a chosen project type (SaaS, CLI, library, API, internal tool, static site, hobby) reshapes which phases run, which questions get asked, the build order, and the quality gates. See [`PROJECT_TYPES/`](PROJECT_TYPES/).
 
@@ -21,6 +21,7 @@ The system defeats two failure modes:
 | **Artifacts are truth** | Every decision lives in a document. Conversation memory is ephemeral; documents are permanent |
 | **Revenue is first-class** | Monetization is designed in Phase 2 and built in Phase 4 — never bolted on post-launch |
 | **Visual quality is non-negotiable** | Phase 2 produces a polished prototype. If you wouldn't show it to a potential customer, it fails the gate |
+| **"Done" means actually driven** | Every user-observable story ships with a literal Experience Script — the Experience Runner launches the real app and clicks, types, or runs commands through it before a story counts as done. A green test suite is never treated as proof someone tried it |
 | **One step per session** | Prevents scope creep and context thrash; every session ends with a clear artifact and a named next action |
 
 ## The Six Phases
@@ -105,7 +106,7 @@ PROJECTS/[name]/
 
 ## Phase 4: Multi-Agent Build Loop
 
-Phase 4, Step 4.3 runs an autonomous four-stage agent system that builds your entire backlog without you having to manage individual tasks:
+Phase 4, Step 4.3 runs an autonomous five-stage agent system that builds your entire backlog without you having to manage individual tasks:
 
 ```
 Orchestrator
@@ -114,11 +115,13 @@ Orchestrator
   ├── dispatches a Planner agent per story and approves the brief for completeness
   ├── dispatches Worker agents from the approved brief
   ├── dispatches Validator agents after each PR
+  ├── dispatches Experience Runner agents after each Validator PASS
   └── escalates to you only when blocked
 
 Planner (per story)
   ├── translates the approved story + ADRs + intent layer + CONVENTIONS.md
-  │   into a self-contained task brief — the Orchestrator never authors this itself
+  │   into a self-contained task brief, including a literal Experience Script —
+  │   the Orchestrator never authors this itself
   └── never writes code or opens a PR
 
 Worker (per story)
@@ -129,8 +132,18 @@ Worker (per story)
 Validator (per PR)
   ├── checks every acceptance criterion against the implementation
   ├── runs security checklist
+  ├── defers Human-Only criteria with Experience Script coverage to the next stage
   └── returns PASS / FAIL / ESCALATE
+
+Experience Runner (per Validator PASS)
+  ├── launches the real application on the story's branch
+  ├── drives it exactly as scripted — clicking, typing, running commands, sending requests
+  ├── compares the actual observed result to the scripted expectation, step by step
+  └── returns PASS / FAIL / ESCALATE — never edits code, only observes and diagnoses
 ```
+
+A Validator `PASS` alone does not clear a story for PR review — see
+**[The Experience Harness](#the-experience-harness)** below.
 
 **PR review policy:**
 - PRs #1–3 always require your review
@@ -140,7 +153,53 @@ Validator (per PR)
 
 **Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action. You can see every story's status, the full run log, and any escalations at a glance.
 
-**Model tiers (optional):** every spawned agent — Planner, Worker, Validator, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Point each tier at a model either per-agent in your own `opencode.json` (`agent.<name>.model` — schema-safe, no shell setup) or with three environment variables (`ANYMAKE_MODEL_TIER1/2/3`, applies to a whole tier at once); unset either and that agent just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
+**Model tiers (optional):** every spawned agent — Planner, Worker, Validator, Experience Runner, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Experience Runner, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Point each tier at a model either per-agent in your own `opencode.json` (`agent.<name>.model` — schema-safe, no shell setup) or with three environment variables (`ANYMAKE_MODEL_TIER1/2/3`, applies to a whole tier at once); unset either and that agent just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
+
+## The Experience Harness
+
+The most common failure Anymake is built to prevent: an agent reports a story
+done, the acceptance criteria read as satisfied, the test suite is green — and
+then a real person clicks through it and it doesn't work. That gap exists
+because reading code and running unit tests can't confirm what a person
+actually experiences: that a button really redirects where it should, that a
+CLI's output really reads the way the spec promised, that an API really returns
+what the docs say. Those criteria used to be called "Human-Only" — they either
+waited for a real human to click through manually, or, in autonomous mode, got
+waived because the relevant code merely existed.
+
+The Experience Harness closes that gap with three additions woven through the
+whole system, not a bolt-on feature:
+
+1. **The Experience Script** — every story's acceptance criteria (Phase 3) are
+   paired with a literal walkthrough: a table of concrete actions (click, type,
+   run a command, send a request) and the exact, checkable result each should
+   produce — not "works correctly," but "returns HTTP 201 with an `id` field"
+   or "redirects to `/dashboard` and shows 'Welcome, Jane'." Format:
+   `TEMPLATES/experience-script.md`.
+2. **The Experience Runner** (`AGENTS/experience-runner.md`) — a new agent in
+   the Phase 4 build loop that actually launches the built application (per
+   `docs/environment.md`) on the story's branch and drives it: real browser
+   interaction for a web app, real terminal commands for a CLI, real HTTP
+   requests for an API, a real imported call for a library. It compares what
+   actually happened to what the script promised, and diagnoses any divergence
+   with a file:line pointer — it never fixes the code itself; a failure feeds
+   the same Worker retry loop a Validator failure does.
+3. **A gate that can no longer be waived by inspection alone** — the Product
+   Owner Proxy, the autonomous stand-in for a human at every gate, used to be
+   able to approve a Human-Only criterion because the relevant code existed on
+   the branch. It can't anymore: `phase4-pr-review` now hard-requires an
+   Experience Runner `PASS` (or an explicit "no user-observable behavior")
+   before a PR clears review, in every mode, and the one legitimate waiver left
+   — a criterion too subjective to script at all — has to be written out loud
+   on the board, not silently assumed.
+
+This doesn't replace the code-level Validator, the automated test suite, or
+your own review — it adds the one check none of those can do: that someone,
+human or agent, actually watched the feature work. It runs in Phase 4's build
+loop for every new story and again in the post-launch `anymake-agile` flow,
+where a bug's reproduction steps become the Experience Script the fix is
+verified against — the same scenario the reporter would have manually replayed
+is what closes the issue.
 
 ## Post-Launch Agile Workflow
 
@@ -158,11 +217,12 @@ ad-hoc fix. The `anymake-agile` skill runs the process a real dev team would:
                  revises until APPROVED (max 3 rounds, then it escalates to you)
 5. Approve     — you sign off (or the Product Owner Proxy in autonomous mode;
                  security-touching plans always come to you)
-6. Execute     — stories run through the standard build loop on branch issue/N-slug;
-                 every commit references the issue; merge SHA + tag + revert command
-                 are recorded on the issue
-7. Verify      — the original repro is re-tested, UI changes pass the design-system
-                 audit, and the reporter confirms before the issue closes
+6. Execute     — stories run through the standard build loop (five stages, including
+                 the Experience Runner) on branch issue/N-slug; every commit references
+                 the issue; merge SHA + tag + revert command are recorded on the issue
+7. Verify      — the original repro, rewritten as an Experience Script, is replayed
+                 live against the running app; UI changes pass the design-system audit;
+                 the reporter reviews that passing evidence before the issue closes
 ```
 
 The design/review split mirrors Worker/Validator: the agent that writes the plan
@@ -180,7 +240,7 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 | Skill | What it owns | Invoked at |
 |-------|--------------|------------|
 | `anymake` | Methodology, state machine, gates, routing (auto-loaded) | Always |
-| `anymake-build-loop` | Four-stage Orchestrator → Planner → Worker → Validator build engine | Phase 4.3 |
+| `anymake-build-loop` | Five-stage Orchestrator → Planner → Worker → Validator → Experience Runner build engine | Phase 4.3 |
 | `anymake-design-system` | Design system + Prototype Sprint + prototype gate | Phase 2.2b |
 | `anymake-security-review` | Per-PR + full + pre-launch security checklists | Phase 4.5, pre-launch |
 | `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
@@ -201,6 +261,7 @@ AGENTS/
 ├── planner.md              # Planner agent instructions (story → self-contained task brief)
 ├── worker.md               # Worker agent instructions
 ├── validator.md            # Validator agent instructions (incl. intent-consistency check)
+├── experience-runner.md    # Launches and drives the real app against a story's Experience Script
 ├── cartographer.md         # Read-only agent that maps code→intent (intent layer)
 ├── solution-architect.md   # Agile flow: writes the Development Plan for a tracked issue
 ├── plan-reviewer.md        # Agile flow: fresh-context adversarial plan review
@@ -235,7 +296,10 @@ TEMPLATES/
 ├── monetization.md         # Phase 2: Revenue model template
 ├── epic.md                 # Phase 3: Epic template
 ├── story.md                # Phase 3: User story template
-├── task-brief.md           # Phase 4: Worker task spec template (filled by the Planner)
+├── task-brief.md           # Phase 4: Worker task spec template (filled by the Planner; §3a is the Experience Script)
+├── experience-script.md    # Phase 3/4: literal interaction-script format (clicks, keystrokes, commands, requests)
+├── experience-report.md    # Phase 4: Experience Runner report template
+├── environment.md          # Phase 4: docs/environment.md template — incl. "How to Run It Locally"
 ├── conventions.md          # Phase 4: CONVENTIONS.md template — patterns Workers establish, Planners reuse
 ├── BOARD.md                # Phase 4: Agile board template
 ├── validation-report.md    # Phase 4: Validator report template

@@ -29,7 +29,8 @@ Read yourself, in full, before writing anything:
 - `PROJECTS/[name]/docs/02-planning/prd.md` — NFRs for security/performance context
 - `PROJECTS/[name]/docs/DECISIONS.md` and `docs/INVARIANTS.md` — the intent layer (if present)
 - `PROJECTS/[name]/docs/04-implementation/CONVENTIONS.md` — established patterns from already-built stories (if it doesn't exist yet, this is a pattern-setting story — note that in §6 instead of inventing patterns)
-- `PROJECT_TYPES/[project_type]/manifest.md` — the Phase 4 Build Order and any ADR set specific to this project type (read `project_type` from `PHASE_STATE.md`)
+- `PROJECT_TYPES/[project_type]/manifest.md` — the Phase 4 Build Order, any ADR set specific to this project type, and the **Experience Harness** section (interaction mode — Browser/Terminal/HTTP/Snippet — for §3a below) (read `project_type` from `PHASE_STATE.md`)
+- `PROJECTS/[name]/docs/environment.md` → "How to Run It Locally" — the launch command, ready signal, base URL/entry point, and test account/seed data that §3a's Preconditions must match exactly
 - `AGENTS/arbiter.md` — PR review policy, so you can fill §8's review requirement correctly
 
 ---
@@ -39,6 +40,7 @@ Read yourself, in full, before writing anything:
 Fill every section of `TEMPLATES/task-brief.md` completely for the one story you were given, then write it to the output path. No placeholder text survives — every bracketed `[...]` in the template must be replaced with real content or an explicit "none."
 
 **What you author (translation, not invention):**
+- §3a Experience Script — see below, its own section
 - §4 Technical Tasks — ordered per the project type's Build Order
 - §5 Build Order Constraint — which prior stories must be `✅ Done` first, from the dependency graph
 - §6 Technical Context — stack, and **existing patterns pulled from `CONVENTIONS.md`** (file:line pointers, not re-derived from scratch — that's the whole point of the conventions file existing)
@@ -49,6 +51,37 @@ Fill every section of `TEMPLATES/task-brief.md` completely for the one story you
 
 **What you copy, never touch:**
 - §3 Acceptance Criteria — verbatim from `epics.md`. This is the Worker's contract; you are not a party to changing it.
+
+---
+
+## Authoring §3a — the Experience Script
+
+This is the translation step that makes the Experience Runner possible: turning
+§3's acceptance criteria into a literal, driveable walkthrough. Use
+`TEMPLATES/experience-script.md` for the format.
+
+- **Preconditions** come straight from `docs/environment.md` → "How to Run It
+  Locally" — launch command, ready signal, base URL/entry point, test account.
+  Do not invent credentials or a URL that isn't documented there; if the doc is
+  missing what you need, note that gap rather than guessing.
+- **Interaction mode** comes from the project type's manifest → Experience
+  Harness section (Browser / Terminal / HTTP / Snippet).
+- Write **one scenario per acceptance-criteria group** — the positive path,
+  each error path, each edge case — as a table of literal
+  action → target/input → expected-result rows, using the Action Vocabulary in
+  the template. Every expected result must be a checkable fact (visible text,
+  status code, exit code, exact stdout substring, return value) — never a
+  judgment phrase.
+- **Every Human-Only acceptance criterion in §3 must have a corresponding
+  scenario here.** This is the one hard rule: skipping it is what forces the
+  Validator to escalate a criterion to a human instead of the Experience Runner
+  verifying it. If you genuinely cannot express one as a literal scenario (a
+  subjective aesthetic judgment with no checkable observable), say so explicitly
+  in §3a rather than silently omitting it — that is a real signal, not a gap.
+- **N/A is a real option, not a default.** Only write
+  `§3a: N/A — no user-observable behavior` for a story with zero observable
+  behavior change (pure schema, an invisible refactor). If the story has any
+  UI, CLI, API, or public-call surface, it needs scenarios.
 
 **§8 review requirement.** Per `AGENTS/arbiter.md`: your review is required if this is PR #1, #2, or #3 overall; if the story title or technical tasks contain "webhook"; **or if the Intent Constraints (§6a) you just filled list any Active Decision (ADR)** — the ADR-touching trigger applies regardless of PR count. Otherwise: autonomous merge after CI passes.
 
@@ -79,6 +112,8 @@ The Orchestrator treats a `BLOCKED` brief as an escalation, not a brief ready fo
 - **Never invent an ADR or invariant** to fill a gap — if the intent layer doesn't cover something relevant, note "not covered by intent layer" rather than fabricating a constraint
 - **Never leave a template placeholder unfilled** — an unfilled `[...]` in a dispatched brief is a Planner failure, not something the Worker should have to notice
 - **Never expand scope beyond the one story you were given**
+- **Never leave a Human-Only criterion without a corresponding §3a scenario** — that gap is what forces an avoidable escalation later; if a criterion truly cannot be scripted, say so explicitly in §3a instead of omitting it
+- **Never invent Preconditions in §3a that aren't backed by `docs/environment.md`** — a launch command, URL, or test account the Experience Runner can't actually reproduce fails every story's experience check, not just this one
 
 ---
 

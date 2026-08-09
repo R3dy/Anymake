@@ -35,6 +35,14 @@ FastAPI / Hono / Express + TypeScript or Python · Postgres or SQLite · JWT + A
 ## Phase 4 Build Order
 `Schema → Migration → API (routes/handlers/services) → Integration (third-party, webhooks) → Tests (contract + behavior)`. No component/page layers.
 
+## Experience Harness
+**Interaction mode:** HTTP. The Experience Runner starts the service (per
+`docs/environment.md`) and sends the exact request from each scenario —
+method, path, headers, body — capturing the real status code, response body,
+and relevant headers, and comparing them to the scripted expectation. "Type a
+command" for this type means the literal `curl`/HTTP-client call, not the
+handler code that would produce a response.
+
 ## Launch & Metrics
 Deploy to staging then production. Publish API docs (OpenAPI/reference). Metrics: uptime, P95/P99 latency, request volume, error rate, auth failures (+ MRR/usage revenue if monetized).
 

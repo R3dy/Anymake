@@ -35,6 +35,13 @@ Astro / Next.js (static export) / Hugo · Markdown/MDX or a headless CMS (Sanity
 ## Phase 4 Build Order
 `Design system / layout & components → Pages & content → SEO & meta (titles, descriptions, OG, sitemap, robots) → Forms & integrations (analytics, newsletter) → Checks (Lighthouse, broken links, responsive) → Deploy`. No schema/migration/auth unless a specific feature needs it.
 
+## Experience Harness
+**Interaction mode:** Browser. Mostly `Navigate` + observe scenarios (no auth
+by default) — the Experience Runner loads each page and checks rendered
+content, links, and any form/newsletter interaction against the scripted
+expectation; SEO/meta tags are checked as part of the story's scenario when
+the acceptance criteria call for them.
+
 ## Launch & Metrics
 Deploy to CDN with custom domain + SSL. Submit `sitemap.xml` to search consoles. Metrics: traffic by source, search rankings/impressions, bounce rate, conversion on the primary CTA, Core Web Vitals.
 

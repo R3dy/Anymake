@@ -39,6 +39,7 @@ Take a raw product idea all the way to a live, revenue-generating SaaS — witho
 - **"One step / one artifact per session" and `PARKING_LOT.md` exist to fight scope creep** — the most common way AI-assisted projects die. The parking lot gives mid-phase ideas a respectful home so they are neither lost nor allowed to derail current work.
 - **Revenue and visual quality are first-class, not afterthoughts.** Monetization is designed in Phase 2 and built by Milestone 4 because retrofitting payments is a redesign. The Phase 2 prototype must look like a funded SaaS product *before* any production code, because it is far cheaper to fix visual direction in a throwaway prototype than in a built backend.
 - **The Phase 4 multi-agent system exists to make autonomous building trustworthy.** A single AI building an entire backlog accumulates context, cuts corners, and grades its own homework. Splitting the work across an Orchestrator (coordinates, never codes), a Planner (translates an approved story into a self-contained brief, never codes), a Worker (builds exactly one story), and a Validator (checks against acceptance criteria, never edits code) means the thing that builds is never the thing that approves. Collapsing these roles into one context destroys that guarantee — which is why it is the system's primary anti-pattern. The Planner exists for a second reason too: brief-authoring is mechanical translation work, not coordination judgment, so splitting it out of the Orchestrator keeps the coordination layer's context light and lets that step run on a lighter-weight model without weakening the trust boundary.
+- **The Experience Runner exists because "the tests pass" and "a person tried it and it worked" are different claims, and the system used to conflate them.** A Validator checking code and running the automated test suite cannot confirm that a button actually redirects where the story says it should, or that a CLI's output actually reads the way the spec promised — those criteria used to be labeled "Human-Only" and either waited on a real person, or, in autonomous mode, got waived because the relevant code merely existed. That gap is exactly where "the agent says it's good to go, then I test it and it isn't" comes from. The Experience Runner closes it by actually launching the built application and driving it — clicking, typing, running commands, sending requests — against a literal script (§3a of the task brief) authored alongside the acceptance criteria, so the claim "this works" always means someone, human or agent, actually watched it work.
 - **Escalation over assumption exists because guessing at product intent is the costliest error.** Workers and Validators execute; they never invent product or design decisions. When something is ambiguous, they stop and escalate.
 - **The security override is absolute because some risks cannot be delegated.** Security failures in Phase 4 always wake the real human, in every mode, with no exception — even autonomous mode cannot bypass this.
 
@@ -96,7 +97,7 @@ When loaded via the OpenCode plugin, the contents of `skills/anymake/SKILL.md` a
 
 ## Phase 4 Agent Hierarchy
 
-Phase 4, Step 4.3 runs an autonomous four-stage agent system. All agent definitions live in `AGENTS/`.
+Phase 4, Step 4.3 runs an autonomous five-stage agent system. All agent definitions live in `AGENTS/`.
 
 ### Orchestrator (`AGENTS/orchestrator.md`)
 
@@ -192,16 +193,35 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 - [ ] Migration is reversible (has a `down` function)
 - [ ] Tests cover the happy path for each acceptance criterion
 - [ ] **Intent-consistency:** the change contradicts no Active Decision (`docs/DECISIONS.md`) or invariant (`docs/INVARIANTS.md`) named in the task brief's Intent Constraints (a contradiction with no superseding ADR is an `ESCALATE`, type `intent-conflict`)
+- [ ] **Human-Only criteria have §3a coverage:** every acceptance criterion requiring visual/interactive verification has a matching scenario in the task brief's §3a Experience Script — marked `DEFERRED (experience)`, not escalated, when it does
 
 **Validator returns one of:**
 - `PASS` — all criteria met, no security issues; include merge recommendation
 - `FAIL` — one or more criteria not met; list each failure with line references
-- `ESCALATE` — ambiguous requirement, conflicting ADRs, or security concern requiring human judgment
+- `ESCALATE` — ambiguous requirement, conflicting ADRs, security concern, or a Human-Only criterion with no §3a coverage at all, requiring human judgment
 
 **Validator must never:**
 - Modify code
 - Approve a PR with unresolved security issues
 - Return PASS when acceptance criteria are only partially met
+- Escalate a Human-Only criterion that already has §3a coverage — that goes to the Experience Runner, not straight to a human
+
+### Experience Runner (`AGENTS/experience-runner.md`)
+
+**Role:** The agent that actually proves a story works, not just that it reads correctly. After a Validator `PASS`, launches the real application on the story's branch — per `docs/environment.md` — and drives it exactly as scripted in the task brief's §3a Experience Script: navigating, clicking, typing, running terminal commands, sending HTTP requests, or calling a library's public API, depending on the project type's interaction mode. Compares the actual observed result at every step to the literal expected result and reports the divergence, with a file:line diagnosis, when it doesn't match.
+
+**Why this agent exists:** a Validator can confirm code exists and tests pass; it cannot confirm that clicking "Create account" actually lands on the dashboard with the right message. Before this agent existed, that gap was called a "Human-Only criterion" and either waited on a real person or — in autonomous mode — was waived because the relevant code merely existed. Both of those are exactly how "the agent said it's good to go" and "I tested it and it wasn't" used to diverge. This agent closes that gap by actually running the thing, every time.
+
+**Experience Runner returns one of:**
+- `PASS` — every scenario step's actual result matched its scripted expectation
+- `FAIL` — one or more steps diverged; each with expected/actual evidence and a likely-cause file:line pointer
+- `ESCALATE` — the app could not be launched, a step needs a real external dependency the harness can't simulate (`environment-failure`), or a §3a scenario isn't literally executable as written (`unscriptable-criterion`)
+
+**Experience Runner must never:**
+- Modify code, tests, or configuration — it observes and diagnoses, never fixes (the same separation as Worker/Validator, applied to this stage)
+- Mark a step `PASS` without having actually executed it
+- Infer a result from reading the implementation instead of running it
+- Leave the app process it launched running after it finishes
 
 ### Product Owner Proxy (`AGENTS/product-owner-proxy.md`)
 
@@ -219,12 +239,14 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 - `VERDICT: NEEDS CHANGES` with a specific list — revise and re-run
 - `VERDICT: ESCALATE TO USER` — override autonomous mode, notify real user
 
-**Key constraint:** Security failures (`phase4-escalation-security-failure` gate type) always produce `ESCALATE TO USER`. The proxy never auto-resolves security issues — that override is absolute and cannot be bypassed.
+**Key constraint:** Security failures (`phase4-escalation-security-failure` gate type) always produce `ESCALATE TO USER`. The proxy never auto-resolves security issues — that override is absolute and cannot be bypassed. Equally absolute: at `phase4-pr-review`, an Experience Runner `PASS` (or an explicit §3a `N/A`) is required regardless of what the validation report says — the proxy never treats code existing, or tests passing, as a substitute for the app having actually been driven. At `phase4-escalation-human-only`, the proxy's default action is to send the story back for a missing §3a scenario, never to wave a criterion through because the relevant code is present.
 
 **Proxy must never:**
 - Approve a gate with unfilled template placeholder text in required content sections
 - Return `PHRASE: approved` when a validation report verdict is not PASS
 - Return `PHRASE: approved` when any security check in a validation report is FAIL
+- Return `PHRASE: approved` for `phase4-pr-review` when a required experience report is missing, FAIL, or ESCALATE
+- Return `PHRASE: resume` at `phase4-escalation-human-only` on the strength of code existing alone
 - Skip evaluation criteria to speed up processing — check every item
 
 ### Cartographer (`AGENTS/cartographer.md`)
@@ -331,6 +353,9 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 ### Agile issue workspace
 `PROJECTS/[name]/docs/06-agile/` is the post-launch agile flow's home (`anymake-agile`). `ISSUES.md` is the local ledger mirroring the GitHub issue index (or the primary tracker when there is no remote). Each tracked issue gets `issue-[N]/` containing `plan.md` (the Development Plan) and `review-round-[K].md` (Plan Reviewer reports — one per round, never deleted). The GitHub issue carries the labels (`type:*`, `severity:*`, `status:*`), the plan link, and the traceability record: base SHA, merge SHA, tag `issue-[N]`, and the exact revert command. No code is written for an issue until its plan is reviewer-approved and gate-approved.
 
+### Experience Harness workspace
+`PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md` holds every Experience Runner report; evidence (screenshots, transcripts) lives beside it under `experience-evidence/story-N.N/`. `PROJECTS/[name]/docs/environment.md` (`TEMPLATES/environment.md`) is the single source of truth the Experience Runner reads to actually launch the app — keep its "How to Run It Locally" section exact, not aspirational.
+
 ### Engineering-intent layer
 `PROJECTS/[name]/docs/SYSTEM_MAP.md`, `docs/DECISIONS.md`, and `docs/INVARIANTS.md` are the durable record of *why the system is the way it is*. Maintained by the Cartographer and consumed by the agile flow (Solution Architect, Plan Reviewer) and the Validator's intent-consistency check. `DECISIONS.md` is append-only — a decision is **superseded** (old ADR marked `Superseded by ADR-N`, new ADR added), never deleted, so the rationale of every past choice survives. Overriding a decision requires a superseding ADR through a gate; no agent does it on its own authority.
 
@@ -356,8 +381,10 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 - Treating monetization as a Phase 5 problem
 - Pushing unreviewed code (first 3 PRs always go to user review)
 - Producing multiple artifacts in one session
-- Running two Worker (or Planner, or Validator) agents concurrently
+- Running two Worker (or Planner, Validator, or Experience Runner) agents concurrently
 - The Orchestrator authoring task brief content itself instead of dispatching the Planner
+- Marking a story done on a Validator `PASS` alone, without an Experience Runner `PASS` (or an explicit §3a: N/A) — a passing test suite is not the same claim as "a person clicked through it and it worked"
+- Waiving a Human-Only criterion because the relevant code exists, instead of routing it to a §3a scenario the Experience Runner can actually verify
 - Modifying `PHASE_GUIDES/`, `AGENTS/`, or `TEMPLATES/` during a build
 
 ---
@@ -371,13 +398,17 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 | `AGENTS/planner.md` | Full Planner instructions (story → self-contained task brief) |
 | `AGENTS/worker.md` | Full Worker instructions |
 | `AGENTS/validator.md` | Full Validator instructions |
+| `AGENTS/experience-runner.md` | Full Experience Runner instructions (launches and drives the real app against the story's §3a script; never edits code) |
 | `AGENTS/product-owner-proxy.md` | Product Owner Proxy instructions (autonomous mode gate evaluator) |
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
 | `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
-| `TEMPLATES/task-brief.md` | Template the Planner fills to brief each Worker |
+| `TEMPLATES/task-brief.md` | Template the Planner fills to brief each Worker (§3a is the Experience Script) |
+| `TEMPLATES/experience-script.md` | Format for the literal, driveable interaction script (§3a) — one scenario per acceptance-criteria group |
+| `TEMPLATES/experience-report.md` | Template the Experience Runner fills out after driving the real app |
+| `TEMPLATES/environment.md` | Template for `docs/environment.md` — includes "How to Run It Locally," what the Experience Runner reads to launch the app |
 | `TEMPLATES/conventions.md` | Template for `CONVENTIONS.md` — patterns Workers establish, Planners reuse |
 | `TEMPLATES/BOARD.md` | Board template copied at Phase 4 start |
 | `TEMPLATES/validation-report.md` | Template Validator fills out |

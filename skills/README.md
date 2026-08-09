@@ -21,7 +21,7 @@ request matches a companion's description.
 
 | Skill | Owns | Hub calls it at… | Also triggers directly on… |
 |-------|------|------------------|----------------------------|
-| `anymake-build-loop` | The four-stage agentic build engine (Orchestrator → Planner → Worker → Validator) over a backlog | Phase 4, Step 4.3 | "run the build loop", "implement my backlog", "build these stories" |
+| `anymake-build-loop` | The five-stage agentic build engine (Orchestrator → Planner → Worker → Validator → Experience Runner) over a backlog — the last stage actually launches and drives the built app against a literal interaction script before a story counts as done | Phase 4, Step 4.3 | "run the build loop", "implement my backlog", "build these stories" |
 | `anymake-brownfield` | Onboarding an existing codebase: reverse-engineer PROJECT.md, discovery, and a backlog | Instead of Phase 0 when the user points at existing code | "adopt Anymake in this repo", "onboard an existing project", "reverse-engineer a PRD" |
 | `anymake-deploy` | Deployment & infrastructure (staging + production, env, rollback, smoke tests) | Phase 4 staging (Step 4.6 review), Phase 5 Step 5.2 (production) | "deploy", "set up staging", "ship to prod", "roll back" |
 | `anymake-design-system` | Visual-quality bar: design system + prototype sprint, prototype-gate audit | Phase 2, Step 2.2b (UX-active types) | "design system", "prototype sprint", "make it look polished", "audit the UI" |
@@ -44,6 +44,19 @@ the project workspace:
 
 The Validator's **intent-consistency check** verifies every PR against this layer;
 a contradiction with no superseding ADR is an automatic `ESCALATE`.
+
+### The Experience Harness
+
+Every story's acceptance criteria are paired with an **Experience Script**
+(`TEMPLATES/experience-script.md`) — a literal, driveable sequence of clicks,
+keystrokes, commands, or requests and the exact observable result each should
+produce. The **Experience Runner** agent (`AGENTS/experience-runner.md`)
+launches the real application on the story's branch and executes that script
+against it, the same way a person testing the feature would, instead of a
+Human-Only criterion defaulting to a manual check or — in autonomous mode —
+being waived because the code merely exists. It runs as the fifth stage of
+`anymake-build-loop` and is replayed again at the `anymake-agile` Verify step
+for bug fixes and features alike.
 
 ### The agile design/review pair
 

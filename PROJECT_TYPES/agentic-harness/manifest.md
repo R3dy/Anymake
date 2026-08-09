@@ -37,6 +37,17 @@ Orchestration engine in Python (asyncio or a thread/process pool) or TypeScript/
 
 Build the contract before the engine, and the engine before any real agent — the first stage you implement should be provably wired into a working end-to-end loop, not debugged as a monolith. The stage-graph loader must exist and be data-driven **before** the first per-stage AgentSpec is written; wiring a new stage should never require editing the dispatcher.
 
+## Experience Harness
+**Interaction mode:** Mixed — Request/Run for the pipeline, Browser for the dashboard.
+For engine/backend/agent-runner stories: the Experience Runner submits a real
+synthetic work item (via `Request` to the queue API or `Run` against a CLI
+trigger, per `docs/environment.md`) and inspects the resulting trace/artifact
+output at each stage transition against the scripted expectation — this is the
+"type a command, get a specific result" case applied to a work item moving
+through the graph. For dashboard stories (queue/board view, per-item trace
+view, run controls): Browser, same as `saas`, scoped to just those screens.
+A story's §3a states which mode(s) its scenarios use.
+
 ## Launch & Metrics
 Deploy as a long-running service (docker-compose or a container orchestrator), not published to a package registry — unless the dashboard is separately sold as SaaS, in which case apply `saas`'s deploy target to the dashboard only. Metrics: throughput (items/hour per stage), per-stage success/failure/escalation rate, cost per item (LLM token spend), P50/P95 stage latency, queue depth and backlog age, human-escalation rate and resolution time, and trace coverage (% of runs with a complete, unbroken trace). Revenue metrics apply only if monetized.
 

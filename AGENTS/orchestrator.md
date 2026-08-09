@@ -143,7 +143,7 @@ Read the validation report's `verdict` field.
 
 | Verdict | Validation attempts | Action |
 |---------|--------------------|----|
-| `PASS` | Any | Proceed to Step 6 |
+| `PASS` | Any | Proceed to Step 5a |
 | `FAIL` | 1st | Append `RETRY CONTEXT` to the existing task brief, re-dispatch worker directly → back to Step 2b (no planner re-run — the brief itself wasn't the problem) |
 | `FAIL` | 2nd | **ESCALATE** with full failure evidence |
 | `ESCALATE` | Any | **ESCALATE** immediately — never retry on ESCALATE verdicts |
@@ -155,6 +155,56 @@ When amending for retry, add this section to the task brief:
 **Failed criteria (verbatim from validation report):**
 [copy exact failed criterion rows — do not paraphrase]
 **Do not:** [specific anti-patterns noted by validator]
+**Prioritize:** [specific changes required to pass]
+```
+
+### Step 5a — Dispatch Experience Runner
+
+A Validator `PASS` is not the finish line. Skip this step only when the task
+brief's §3a Experience Script is explicitly `N/A — no user-observable behavior`
+— every other story gets driven live before its PR can proceed to review. This
+is the step that closes the gap between "the code looks right" and "it actually
+works when someone uses it" — do not treat it as optional because the story
+looks simple.
+
+1. Update BOARD.md: story → `🧪 Experience Check`, increment experience attempt counter
+2. Append to Run Log: `[time] Story N.N experience runner dispatched — attempt [N]`
+
+**Spawn experience runner agent** using the Agent tool — mandatory:
+
+```
+Agent({
+  agent: "anymake-experience-runner",  // named subagent the plugin registered on Tier 2 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/experience-runner.md]
+  message: "Task brief: [absolute path to task-briefs/story-N.N.md]. Environment doc: [absolute path to docs/environment.md]. Branch: story/N.N-[slug]. PR: #N. Project root: [absolute project root]."
+})
+```
+
+The experience runner checks out the branch, launches the app per
+`docs/environment.md`, executes every scenario in §3a against the real running
+app, and writes its report to
+`PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md` before
+the agent exits. Do not proceed until the agent completes.
+
+### Step 5b — Evaluate Experience Result
+
+Read the experience report's `VERDICT` field.
+
+| Verdict | Experience attempts | Action |
+|---------|---------------------|--------|
+| `PASS` | Any | Proceed to Step 6 |
+| `FAIL` | 1st | Append `RETRY CONTEXT` to the task brief (from the report's Failure Diagnosis section), re-dispatch worker directly → back to Step 2b (no planner re-run) |
+| `FAIL` | 2nd | **ESCALATE** with full failure evidence (type: `experience-fail-2nd`) |
+| `ESCALATE` (unscriptable-criterion) | Any | **ESCALATE** immediately (type: `experience-unscriptable`) — the brief's §3a is missing coverage for a scenario/criterion; note it as a brief-quality gap, not a build failure |
+| `ESCALATE` (environment-failure) | 1st or 2nd | Re-dispatch the experience runner directly (no worker involved) — max 2 attempts, same as any environment failure. After the 2nd failure, **ESCALATE** (type: `experience-environment`) |
+
+When amending for retry, add this section to the task brief (same shape as validation RETRY CONTEXT):
+```
+## RETRY CONTEXT — Attempt [N]
+**Triggered by:** EXPERIENCE FAIL
+**Failed scenario steps (verbatim from experience report):**
+[copy exact failed step rows — action, expected, actual — do not paraphrase]
+**Likely cause (from the report's Failure Diagnosis):** [copy verbatim]
+**Do not:** [specific anti-patterns noted by the experience runner]
 **Prioritize:** [specific changes required to pass]
 ```
 
@@ -245,10 +295,13 @@ Agent({
 ```
 
 Escalation types and their gate type values:
-- Human-only criterion in validator → `phase4-escalation-human-only`
+- Human-only criterion with no §3a Experience Script coverage → `phase4-escalation-human-only`
 - Worker implementation failure → `phase4-escalation-implementation-failure`
 - Second validation FAIL → `phase4-escalation-validation-fail-2nd`
 - Intent conflict (validator escalation type `intent-conflict`) → `phase4-escalation-intent-conflict` (if the conflict is security-related, treat as security-failure — real user, every mode)
+- Second experience FAIL → `phase4-escalation-experience-fail-2nd`
+- Experience Runner reports an unscriptable §3a scenario → `phase4-escalation-experience-unscriptable`
+- Experience Runner cannot launch the app after 2 attempts, or a step needs an unsimulable external dependency → `phase4-escalation-experience-environment`
 - All stories blocked → `phase4-escalation-all-blocked`
 
 Read the proxy's returned phrase and act on it:
@@ -283,7 +336,8 @@ Maintain a cumulative count of PRs merged during Phase 4 (not reset per mileston
 - **Do not write implementation code, test code, migration files, or any `src/` content** — that is exclusively the worker's job. If you find yourself editing source files, you have broken the architecture. Stop immediately.
 - **Do not author task brief content yourself** — spawn the planner agent, even for a story that looks simple enough to brief in your head. Step 2a is a completeness check, not license to fill gaps yourself.
 - **Do not perform validation or run acceptance criterion checks yourself** — spawn the validator agent. Doing it yourself defeats the purpose of the multi-agent system.
-- **Do not collapse orchestrator + planner + worker + validator into a single context** — sub-agent spawning is mandatory, not a shortcut you can skip when it seems easier.
+- **Do not skip the Experience Runner dispatch** for any story whose §3a is not explicitly `N/A` — a Validator `PASS` alone does not clear a story for PR review. Do not drive the app yourself, either — spawn the experience runner agent, even for a change that looks trivially safe.
+- **Do not collapse orchestrator + planner + worker + validator + experience runner into a single context** — sub-agent spawning is mandatory, not a shortcut you can skip when it seems easier.
 - Do not make product or design decisions — you execute the approved plan
 - Do not modify acceptance criteria or the backlog — those are locked from Phase 3
 - Do not change story build order without your explicit instruction

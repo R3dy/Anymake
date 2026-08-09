@@ -21,7 +21,8 @@ Every dimension gets a result. FAIL requires a numbered comment below.
 | 5 | **Design consistency** — §7 complete for UI-touching changes; reuses existing components; any new pattern updates `ux-design.md` | PASS / FAIL / N/A | |
 | 6 | **Blast radius honest** — §8 names the real shared paths (spot-checked against SYSTEM_MAP and code); protections exist | PASS / FAIL | |
 | 7 | **Stories buildable** — §9 criteria are specific and testable; bug repro is an acceptance criterion; a Worker could build from these + the plan alone | PASS / FAIL | |
-| 8 | **Test plan sufficient** — repro becomes a regression test; blast-radius tests named; no "works correctly" language | PASS / FAIL | |
+| 7a | **Experience Script present** — every story in §9 has a literal Experience Script scenario (or explicit N/A justification); for a bug, the scenario is the repro rewritten as action/expected-result steps, not a restatement of the acceptance criteria | PASS / FAIL | |
+| 8 | **Test plan sufficient** — repro becomes a regression test; the Experience Script scenario is named in §10 as what the Experience Runner replays; blast-radius tests named; no "works correctly" language | PASS / FAIL | |
 | 9 | **Rollback complete** — §11 has real branch/revert/migration-down steps, not placeholders | PASS / FAIL | |
 | 10 | **Security** — no auth/authz/tenant-isolation/secret/payment surface weakened; security-relevant plans flagged for real-user approval | PASS / ESCALATE | |
 

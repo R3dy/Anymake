@@ -128,8 +128,9 @@ Every session:
 - **Ignoring the project type** — running the SaaS defaults (monetization, prototype gate, AARRR) on a type whose manifest skips them, or vice versa
 - Pushing unreviewed code (first 3 PRs always require your review)
 - Producing multiple artifacts in one session
-- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + planner + worker + validator into one context. The Agent tool must be used to spawn sub-agents — doing it all yourself defeats the four-stage architecture.
+- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + planner + worker + validator + experience runner into one context. The Agent tool must be used to spawn sub-agents — doing it all yourself defeats the five-stage architecture.
 - **"No test suite" as a result:** Every story with runtime-verifiable acceptance criteria must have automated tests. "Works on my machine" is not a validation strategy.
+- **"Validator PASS" as the finish line:** A story is not done until it also has an Experience Runner PASS (or an explicit §3a: N/A) — someone, human or agent, has to have actually driven it.
 
 ## Available Phases
 
@@ -144,15 +145,16 @@ Every session:
 
 ## Agent System (Phase 4)
 
-Phase 4, Step 4.3 runs a four-stage agentic build loop. See `AGENTS/` for all agent definitions.
+Phase 4, Step 4.3 runs a five-stage agentic build loop. See `AGENTS/` for all agent definitions.
 
 | Agent | File | Role |
 |-------|------|------|
-| Orchestrator | `AGENTS/orchestrator.md` | Reads backlog, manages board, dispatches planners, workers, and validators, enforces policies, escalates to you |
-| Planner | `AGENTS/planner.md` | Receives one story ID, translates it (+ ADRs, intent layer, `CONVENTIONS.md`) into a self-contained task brief; never codes |
+| Orchestrator | `AGENTS/orchestrator.md` | Reads backlog, manages board, dispatches planners, workers, validators, and experience runners, enforces policies, escalates to you |
+| Planner | `AGENTS/planner.md` | Receives one story ID, translates it (+ ADRs, intent layer, `CONVENTIONS.md`, `docs/environment.md`) into a self-contained task brief including a literal Experience Script (§3a); never codes |
 | Worker | `AGENTS/worker.md` | Receives the approved brief, builds schema→migration→API→frontend, commits, opens PR, reports result, records any new pattern to `CONVENTIONS.md` |
-| Validator | `AGENTS/validator.md` | Checks each acceptance criterion against the implementation, runs security checklist, returns PASS/FAIL/ESCALATE |
-| Arbiter | `AGENTS/arbiter.md` | The shared rulebook (read, never spawned): retry matrix, PR review rules (incl. ADR-touching override), escalation phrase lexicon, failure classification, intent conflict + agile plan review policies |
+| Validator | `AGENTS/validator.md` | Checks each acceptance criterion against the implementation, runs security checklist, defers Human-Only criteria with §3a coverage to the Experience Runner, returns PASS/FAIL/ESCALATE |
+| Experience Runner | `AGENTS/experience-runner.md` | Launches the real application on the story's branch and drives it exactly as scripted in §3a — clicking, typing, running commands, sending requests — comparing actual results to the scripted expectation; never edits code |
+| Arbiter | `AGENTS/arbiter.md` | The shared rulebook (read, never spawned): retry matrix, PR review rules (incl. ADR-touching and experience-gate overrides), escalation phrase lexicon, failure classification, intent conflict + agile plan review policies |
 
 **Visibility:** `PROJECTS/[name]/BOARD.md` — live agile board updated after every agent action. You can see every story's status, the run log, and any escalations at a glance.
 
@@ -170,7 +172,7 @@ so state and conventions never fork. See `skills/README.md` for the full map.
 
 | Companion skill | Owns | Hub invokes it at… |
 |-----------------|------|--------------------|
-| `anymake-build-loop` | The four-stage agentic build engine (Orchestrator → Planner → Worker → Validator) over a backlog | **Phase 4, Step 4.3** |
+| `anymake-build-loop` | The five-stage agentic build engine (Orchestrator → Planner → Worker → Validator → Experience Runner) over a backlog — the last stage actually launches and drives the built app before a story counts as done | **Phase 4, Step 4.3** |
 | `anymake-design-system` | The visual-quality bar: design system + Prototype Sprint + prototype-gate audit | **Phase 2, Step 2.2b** (UX-active types) |
 | `anymake-security-review` | The per-PR checklist, the full security pass, and the pre-launch security gate | **Phase 4, Step 4.5** (and inside the Validator; pre-launch) |
 | `anymake-deploy` | Deployment & infrastructure — staging, production, env/secrets, monitoring, rollback | **Phase 4** staging and **Phase 5, Step 5.2** (production) |

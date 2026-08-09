@@ -43,6 +43,38 @@ This is your contract. Every criterion must be satisfied before you write `resul
 
 ---
 
+## 3a. Experience Script
+
+The literal walkthrough the **Experience Runner** (`AGENTS/experience-runner.md`)
+will execute against your branch, live, after the Validator passes it. Format:
+`TEMPLATES/experience-script.md`. Filled by the Planner from the story's own
+Experience Script (or synthesized from §3 if the story didn't have one) plus
+`docs/environment.md` for Preconditions and the project type's manifest for
+Interaction mode.
+
+**Interaction mode:** Browser | Terminal | HTTP | Snippet
+
+**Preconditions:**
+**Launch command:** [from docs/environment.md]
+**Ready signal:** [from docs/environment.md]
+**Base URL / entry point:** [from docs/environment.md]
+**Seed data / test account:** [from docs/environment.md, or "none required"]
+
+**Scenarios:**
+```
+## Scenario 1: [name]
+**Verifies acceptance criteria:** [which ones from §3]
+| # | Action | Target | Input | Expected Result |
+|---|--------|--------|-------|-----------------|
+| 1 | [...] | [...] | [...] | [exact, checkable] |
+```
+*(repeat per scenario — one per acceptance-criteria group)*
+
+Every Human-Only criterion in §3 must have a scenario here. If none applies to
+this story at all: `N/A — no user-observable behavior`.
+
+---
+
 ## 4. Technical Tasks
 
 Build in this exact order. Each task gets its own commit.

@@ -15,6 +15,7 @@
 | 🟡 | Ready | Not started — all dependencies satisfied, next in queue |
 | 🔵 | In Progress | Worker agent actively building |
 | 🟠 | In Validation | Validator agent checking against acceptance criteria |
+| 🧪 | Experience Check | Experience Runner agent driving the real app against the story's Experience Script |
 | 👁 | Awaiting Review | PR open — waiting for you to approve and merge |
 | ✅ | Done | Merged to main |
 | 🚫 | Blocked | Escalated to you — awaiting decision |
@@ -77,8 +78,10 @@
 **Worker branch:** —
 **Started:** —
 **Validation attempt:** —
+**Experience attempt:** —
 **Task brief:** —
 **Validation report:** —
+**Experience report:** —
 
 ---
 
@@ -101,6 +104,7 @@
 **Relevant files:**
 - Task brief: `docs/04-implementation/task-briefs/story-N.N.md`
 - Validation report: `docs/04-implementation/validation-reports/story-N.N.md` (if applicable)
+- Experience report: `docs/04-implementation/experience-reports/story-N.N.md` (if applicable)
 - PR: [URL] (if applicable)
 
 **To unblock, say one of:**
@@ -109,8 +113,8 @@
 - `"skip story N.N"` — to skip and continue
 - `"retry story N.N"` — to retry from scratch
 - `"blocked — stop"` — to halt orchestration entirely
-- `"resume"` — after manually verifying a human-only acceptance criterion
-- `"fix and retry"` — after providing a fix for an escalated implementation failure
+- `"resume"` — after manually verifying a human-only acceptance criterion (or accepting a documented, genuinely-unscriptable waiver)
+- `"fix and retry"` — after providing a fix for an escalated implementation or experience failure
 
 -->
 

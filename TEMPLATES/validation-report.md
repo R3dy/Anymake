@@ -16,11 +16,18 @@ Work through this in order. Stop at the first matching rule. The result is your 
 ```
 1.  Any security check = FAIL?                        → verdict = ESCALATE
 1b. Any intent-consistency conflict, no superseding ADR? → verdict = ESCALATE (intent-conflict)
-2.  Any criterion = Human-Only (SKIP)?                → verdict = ESCALATE
+2.  Any criterion = Human-Only with NO §3a scenario (SKIP)? → verdict = ESCALATE (human-only)
+    (Human-Only criteria WITH §3a coverage are DEFERRED (experience), not SKIP — they do not trigger this rule)
 3.  Any criterion = SKIP (environment)?               → verdict = ESCALATE
 4.  Any criterion = FAIL?                             → verdict = FAIL
-5.  All criteria = PASS or N/A?                       → verdict = PASS
+5.  All criteria = PASS, DEFERRED (experience), or N/A? → verdict = PASS
 ```
+
+A `PASS` here still leaves the story's §3a scenarios unverified — that happens
+next, in the Orchestrator's Step 5a/5b dispatch of the **Experience Runner**,
+which produces its own report and its own verdict. This report's `PASS` means
+"code-level and test-level checks are satisfied," not "a person confirmed it
+works." Don't let the two be confused when reading this report later.
 
 ---
 
@@ -34,18 +41,20 @@ Work through this in order. Stop at the first matching rule. The result is your 
 |---|-----------|------|--------|---------|
 | 1 | [criterion text] | Code | PASS | `src/api/users/route.ts:12` — auth middleware applied |
 | 2 | [criterion text] | Runtime | PASS | Test: "creates user on OAuth callback" — passed |
-| 3 | [criterion text] | Human-Only | SKIP | Requires visual browser verification |
+| 3 | [criterion text] | Human-Only | DEFERRED (experience) | Covered by task brief §3a Scenario 2 — Experience Runner verifies next |
 | 4 | [criterion text] | Code | FAIL | `src/api/data/route.ts:28` — no authorization check on user data |
+| 5 | [criterion text] | Human-Only | SKIP | No §3a scenario covers this criterion — Planner brief gap |
 
 **Type key:**
 - `Code` — verified statically against the branch
 - `Runtime` — verified by running tests or a local server
-- `Human-Only` — requires visual/manual verification; always SKIP
+- `Human-Only` — requires visual/manual/interactive verification; cannot be checked by reading code or running the test suite
 
 **Result key:**
 - `PASS` — criterion satisfied with evidence
 - `FAIL` — criterion not satisfied; specific evidence of failure provided
-- `SKIP (human-only)` — cannot be mechanically verified; always triggers ESCALATE
+- `DEFERRED (experience)` — Human-Only criterion with a matching §3a scenario; the Experience Runner verifies it next — does not by itself trigger ESCALATE
+- `SKIP (human-only)` — Human-Only criterion with NO matching §3a scenario; a brief-authoring gap — always triggers ESCALATE
 - `SKIP (environment)` — could not verify due to build/environment failure; always triggers ESCALATE
 - `N/A` — criterion does not apply to this story (explain why)
 

@@ -35,10 +35,17 @@ Whatever is fastest and most enjoyable for you. Sensible defaults: a single-proc
 ## Phase 4 Build Order
 Adapts to shape. Default for a small local app: `Data/State → Core logic → Interface (UI or CLI) → Tests (optional)`. Skip layers that don't apply.
 
+## Experience Harness
+**Interaction mode:** Browser if the project has user-facing screens; Terminal
+otherwise — follow whichever shape the project actually took. Experience
+Scripts are still encouraged for anything you'd want to know actually works,
+but per the Gate Criteria Deltas below, a hobby project's gate does not hard-fail
+solely for missing scenario coverage the way `saas`/`internal-tool` do.
+
 ## Launch & Metrics
 Run locally (`npm run dev`, `python main.py`, etc.). Optionally push to a personal repo or share with friends. No metrics dashboard, no legal pages, no monitoring required.
 
 ## Gate Criteria Deltas
 - **Skip:** all monetization checks (pricing, upgrade trigger, monetization milestone), the mandatory-prototype gate, market-size/competitor checks, GDPR/legal, AARRR metrics, mandatory ADR set.
-- **Relax:** the automated-test mandate — tests are recommended but a gate must not fail solely for missing tests.
+- **Relax:** the automated-test mandate — tests are recommended but a gate must not fail solely for missing tests. Same relaxation for Experience Script coverage — write one when it's genuinely useful, but a missing scenario does not by itself block a story the way it does for `saas`/`internal-tool`.
 - **Keep:** scope clarity (Phase 0), "it actually runs" as the Phase 4 bar, no-secrets-in-code if the project touches credentials.
