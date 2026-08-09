@@ -35,6 +35,13 @@ Next.js (App Router) + TypeScript · Postgres (Supabase) · NextAuth or Supabase
 ## Phase 4 Build Order
 `Schema → Migration → API → Component → Page → Integration → Test`
 
+## Experience Harness
+**Interaction mode:** Browser. The Experience Runner drives the dev server (or
+staging URL) with real browser interaction — sign-up/sign-in with the seeded
+test account from `docs/environment.md`, then click/type/navigate through each
+story's scenarios exactly as scripted, including the paid-tier flows with
+Stripe test-mode cards.
+
 ## Launch & Metrics
 Deploy to staging then production (Vercel). Metrics: AARRR funnel — Acquisition, Activation, Retention, Revenue (MRR/ARPU/churn/LTV), Referral. Public launch via Product Hunt / HN / etc. Legal: privacy policy, ToS, GDPR/CCPA, account deletion.
 

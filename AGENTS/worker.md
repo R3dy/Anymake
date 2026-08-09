@@ -56,6 +56,7 @@ Each layer gets its own commit before the next layer starts.
 
 Pay special attention to:
 - Acceptance criteria — this is your contract. Every criterion must be satisfied.
+- §3a Experience Script — the literal walkthrough the **Experience Runner** will drive against your branch after the Validator passes it. Every expected result there (exact text, redirect target, exit code, response shape) must match what your implementation actually produces — this is not a second, looser version of the acceptance criteria, it is the precise, mechanical check of them. A story that satisfies the acceptance criteria in spirit but redirects to the wrong route or prints slightly different text will fail its experience check and bounce back to you.
 - Technical tasks — your ordered build list
 - Intent Constraints (§6a) — the ADRs and invariants this story must respect; implement within them, never around them
 - Constraints section — hard limits on what you can and cannot do

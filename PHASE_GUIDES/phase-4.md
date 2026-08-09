@@ -48,7 +48,7 @@ Build the complete foundation before writing a single feature line.
 
 **Environment documentation (`docs/environment.md`):**
 
-Document every required environment variable:
+Use `TEMPLATES/environment.md`. Document every required environment variable:
 ```
 DATABASE_URL           — Postgres connection string
 NEXTAUTH_SECRET        — Random 32+ character string
@@ -61,6 +61,17 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY — Stripe publishable key (pk_live_...)
 RESEND_API_KEY         — Resend API key for transactional email
 SENTRY_DSN             — Sentry project DSN (if using Sentry)
 ```
+
+**And, just as required, "How to Run It Locally"** — the exact install/seed/launch
+commands, the ready signal, the base URL or entry point, and a test account or
+seed fixture. This is not optional documentation: the **Experience Runner**
+(Step 4.3, and every `anymake-agile` build) reads this section verbatim to
+actually launch the app for every story's experience check. A vague or stale
+launch command here fails every story's experience check on environment
+grounds, not just the first one that hits it — verify it works from a clean
+checkout before moving on. Once the scaffold is up, run the
+**`anymake-experience-setup`** skill against it to validate this section for
+real rather than leaving it aspirational.
 
 **Scaffold complete when:**
 - [ ] `git push` to main triggers CI successfully
@@ -98,7 +109,7 @@ First real product code. Everything else depends on this being correct.
 
 ## Step 4.3 — Epic Build Loop (Agentic)
 
-Step 4.3 is executed by the **Anymake Orchestration System** — a four-stage agent loop that builds every story in the approved backlog autonomously, with your visibility into all progress via the agile board.
+Step 4.3 is executed by the **Anymake Orchestration System** — a five-stage agent loop (Orchestrator, Planner, Worker, Validator, Experience Runner) that builds every story in the approved backlog autonomously — and actually drives each one before calling it done — with your visibility into all progress via the agile board.
 
 > **Delegate to the `anymake-build-loop` skill** to run this step — it owns the Orchestrator → Planner → Worker → Validator engine over the backlog. Invoke it via the `Skill` tool. The detail below is its source spec.
 
@@ -140,8 +151,9 @@ Orchestrator
   ├── reads the backlog and board
   ├── selects the next ready story
   ├── spawns Planner agent
-  │     └── Planner: reads the story + ADRs + intent layer + CONVENTIONS.md,
-  │                  writes a self-contained task brief (never invents scope)
+  │     └── Planner: reads the story + ADRs + intent layer + CONVENTIONS.md
+  │                  + docs/environment.md, writes a self-contained task brief
+  │                  including §3a Experience Script (never invents scope)
   ├── checks the brief for completeness (not a rewrite), then
   ├── spawns Worker agent
   │     └── Worker: reads brief, builds schema→migration→API→frontend,
@@ -149,10 +161,16 @@ Orchestrator
   │                 pattern to CONVENTIONS.md
   ├── spawns Validator agent
   │     └── Validator: checks each acceptance criterion against the code,
-  │                    runs security checklist, writes verdict (PASS/FAIL/ESCALATE)
-  └── on PASS: merges PR (or pauses for your review), updates board, loops
-      on FAIL: retries the Worker once with specific failure notes (no Planner re-run)
-      on ESCALATE: pauses and notifies you
+  │                    runs security checklist, defers Human-Only criteria
+  │                    with §3a coverage to the Experience Runner, writes
+  │                    verdict (PASS/FAIL/ESCALATE)
+  ├── on Validator PASS (unless §3a is N/A): spawns Experience Runner agent
+  │     └── Experience Runner: launches the real app per docs/environment.md,
+  │                            drives every §3a scenario against it, compares
+  │                            actual to expected, writes verdict (PASS/FAIL/ESCALATE)
+  └── on both PASS: merges PR (or pauses for your review), updates board, loops
+      on either FAIL: retries the Worker once with specific failure notes (no Planner re-run)
+      on either ESCALATE: pauses and notifies you
 ```
 
 **Agent files:**
@@ -160,6 +178,7 @@ Orchestrator
 - `AGENTS/planner.md` — planner instructions (story → self-contained task brief)
 - `AGENTS/worker.md` — worker agent instructions (single story, single branch)
 - `AGENTS/validator.md` — validator agent instructions (contract enforcement)
+- `AGENTS/experience-runner.md` — experience runner instructions (launches and drives the real app against the story's §3a script)
 - `AGENTS/arbiter.md` — all retry, escalation, and PR review policies
 
 **You review:**
@@ -177,8 +196,10 @@ The orchestrator stops and notifies you in these cases:
 | PR #1, #2, #3 | `👁 Awaiting Review` | Review the PR, say `"approved"` |
 | Webhook PR | `👁 Awaiting Review` | Review the PR, say `"approved"` |
 | Validation failure (2nd attempt) | `🚫 Blocked` | Read the escalation, say `"changes needed: [notes]"` or `"skip story N.N"` |
+| Experience failure (2nd attempt) | `🚫 Blocked` | Read the experience report, say `"changes needed: [notes]"` or `"skip story N.N"` |
 | Security check failure | `🚫 Blocked` | Read the escalation, review the security issue, say `"fix and retry"` |
-| Human-only acceptance criterion | `🚫 Blocked` | Manually verify in staging, say `"resume"` when confirmed |
+| Human-only criterion with no §3a coverage | `🚫 Blocked` | Either add the missing scenario (preferred) or, only if it's genuinely unscriptable, manually verify and say `"resume"` |
+| Experience script unscriptable / environment failure | `🚫 Blocked` | Fix the §3a scenario or `docs/environment.md`, say `"retry story N.N"` |
 | Implementation failure | `🚫 Blocked` | Diagnose with Claude, say `"retry story N.N"` or `"skip story N.N"` |
 
 Full phrase lexicon is in `AGENTS/arbiter.md`.
@@ -193,7 +214,13 @@ Every story the worker builds is governed by a task brief (written by the Planne
 Every story the validator checks produces a report at:
 `PROJECTS/[name]/docs/04-implementation/validation-reports/story-N.N.md`
 
-These files are the audit trail. They document exactly what was built and why it passed validation.
+Every story the experience runner drives produces a report at:
+`PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md`
+(evidence — screenshots, transcripts — under `experience-evidence/story-N.N/`)
+
+These files are the audit trail. They document exactly what was built, why it
+passed validation, and — separately — that someone (an agent, driving the real
+app) actually confirmed it behaves as promised.
 
 ### Step 4.3 Complete When
 
@@ -247,6 +274,7 @@ After all epics are complete, before requesting launch approval.
 - [ ] Complete user journey: landing → signup → core value → payment → paid feature
 - [ ] All critical paths work in staging environment
 - [ ] Tested on mobile viewport (375px wide at minimum)
+- [ ] Review the per-story experience reports (`docs/04-implementation/experience-reports/`) as evidence each story was actually driven, not just this final pass — this smoke test is a cross-story journey check, not a replacement for the per-story Experience Runner passes
 
 **Security review:**
 - [ ] All routes requiring auth are protected (no auth bypass via direct URL)
@@ -273,9 +301,15 @@ After all epics are complete, before requesting launch approval.
 ## Step 4.6 — Staging Review
 
 > **Use the `anymake-deploy` skill** to stand up / refresh the staging environment (provisioning, env/secrets, migrations, smoke tests) before this review. Invoke it via the `Skill` tool.
+>
+> **Then use the `anymake-experience-check` skill** against the staging URL —
+> run the critical-path Experience Scripts (and any others worth re-checking
+> in the staging config specifically) for real before anyone signs off, human
+> or proxy. This is what narrows "end-to-end browser testing requires a human"
+> down to only what's genuinely unscriptable.
 
 You review the complete product on staging before launch approval:
-- Complete user flow works end-to-end
+- Complete user flow works end-to-end — backed by a passing `anymake-experience-check` run against the staging URL, not just a manual click-through
 - Monetization flow works with test-mode Stripe
 - Product looks and feels ready to ship
 
@@ -290,7 +324,7 @@ Agent({
 
 - `PHRASE: launch it` → proceed to Phase 5
 - `NEEDS CHANGES` → address the listed gaps and re-run the proxy
-- Note: End-to-end browser testing and payment flow verification require a real human. This is a documented limitation of autonomous mode — the proxy checks board completeness and environment documentation, not live staging behavior.
+- Note: run `anymake-experience-check` against the staging URL **before** spawning the proxy, and point it at the resulting experience report(s) as an artifact — the proxy reads that as real evidence the critical path was actually driven, not just documented. What's left as a genuine, documented limitation of autonomous mode is narrower now: live-mode payment edge cases and purely subjective polish judgments a script can't express — not the whole end-to-end journey.
 
 ## Output
 
@@ -308,4 +342,8 @@ You use the staging environment and approve. You say "launch it" → proceed to 
 
 ## Templates
 
-See `../TEMPLATES/commit-message.md`
+See `../TEMPLATES/commit-message.md`, `../TEMPLATES/environment.md`, `../TEMPLATES/experience-script.md`, `../TEMPLATES/experience-report.md`
+
+## Companion skills
+
+`anymake-build-loop` (Step 4.3), `anymake-security-review` (Step 4.5), `anymake-deploy` (staging), `anymake-experience-setup` (validating `docs/environment.md` in Step 4.1), `anymake-experience-check` (staging review, Step 4.6)

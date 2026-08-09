@@ -35,6 +35,12 @@ Next.js + TypeScript · Postgres · **company SSO** (Okta/Google Workspace/Entra
 ## Phase 4 Build Order
 `Schema → Migration → API → Component → Page → Integration → Test` (same as SaaS; no payment milestone).
 
+## Experience Harness
+**Interaction mode:** Browser. Same as `saas` — the Experience Runner drives
+the dev server with real browser interaction, authenticating with a seeded
+internal test account (company SSO stubbed or a test-mode identity, per
+`docs/environment.md`) rather than a public sign-up flow.
+
 ## Launch & Metrics
 Deploy to the internal environment. Roll out to the team with onboarding. Metrics: active users within the team, task completion / time saved vs. the old process, error reduction, feedback themes. No analytics-for-acquisition, no legal/SEO.
 

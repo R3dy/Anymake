@@ -74,9 +74,14 @@ Evidence format: `Test: "[test name]" — PASSED/FAILED — [file:line of the as
 
 ### Human-Only
 
-These criteria require visual inspection, UX judgment, or manual browser testing. You cannot mechanically verify them.
-
-**Always mark Human-Only criteria as SKIP and set verdict to ESCALATE when they appear.** Do not attempt to verify them.
+These criteria require visual inspection, UX judgment, or manual interaction —
+you cannot check them by reading code or running the automated test suite. You
+no longer default to escalating them to a human, though: the task brief's §3a
+**Experience Script** is where the Planner translates each one into a literal,
+driveable scenario, and the **Experience Runner** (`AGENTS/experience-runner.md`)
+actually launches the app and executes it after you finish your pass. Your job
+here is narrower than it used to be — confirm the coverage exists, don't try to
+verify the behavior yourself.
 
 Human-Only indicators:
 - "User sees [message/UI]" — requires visual confirmation
@@ -84,7 +89,13 @@ Human-Only indicators:
 - "Looks correct" / "appears" / "feels" — UX judgment required
 - "Screenshots required" — can't be automated
 - "Upgrade prompt shown at the right moment" — requires user experience judgment
-- Any criterion that requires a human to click through the UI and observe behavior
+- Any criterion that requires a human (or the Experience Runner, standing in for one) to click through the UI, run a command, or send a request and observe behavior
+
+**For each Human-Only criterion, check the task brief's §3a Experience Script:**
+- **A scenario exists that covers it** (read the scenario, don't just trust a label match) → mark the criterion `DEFERRED (experience)` in your report, not `SKIP`. This does **not** by itself trigger `ESCALATE` — the Experience Runner verifies it next, as its own dispatch step in the orchestration loop.
+- **No scenario covers it, or §3a is missing/marked N/A while a Human-Only criterion exists** → mark it `SKIP (human-only)`. This is the one case that still triggers `ESCALATE` — it means the Planner's brief has a real gap, not that the criterion is inherently unverifiable.
+
+Evidence format: `DEFERRED (experience)` → cite the scenario name/number in §3a that covers it. `SKIP (human-only)` → state exactly what's missing from §3a.
 
 ---
 
@@ -152,9 +163,11 @@ Work through this in order. Stop at the first matching rule.
    → verdict = ESCALATE  (escalation type: intent-conflict)
    (Contradicting a decision/invariant is never the worker's to resolve)
 
-2. Any criterion = Human-Only (SKIP)?
-   → verdict = ESCALATE
-   (Human-only criteria require you to manually verify)
+2. Any criterion = Human-Only with NO §3a Experience Script coverage (SKIP)?
+   → verdict = ESCALATE  (escalation type: human-only)
+   (A brief-authoring gap — not the normal path. Criteria WITH §3a coverage are
+   marked DEFERRED (experience), not SKIP, and do not trigger this rule — the
+   Experience Runner verifies them in its own dispatch step, after your PASS.)
 
 3. Any criterion = SKIP (environment — test suite couldn't run due to infrastructure, not missing tests)?
    → verdict = ESCALATE
@@ -183,4 +196,5 @@ Work through this in order. Stop at the first matching rule.
 - Do not provide code suggestions or refactoring advice in your report
 - Do not run arbitrary commands that modify the codebase — read-only and test-running only
 - Do not make product judgments ("this feature should work differently") — only contract judgments ("this criterion is not satisfied")
-- Do not write FAIL for Human-Only criteria — write SKIP and escalate
+- Do not write FAIL for Human-Only criteria — write DEFERRED (experience) if §3a covers them, SKIP (human-only) and escalate if it doesn't
+- Do not treat a Human-Only criterion as verified because the code exists — that determination belongs to the Experience Runner, which actually runs it; your job here is only to confirm scriptable coverage exists

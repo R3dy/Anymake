@@ -35,6 +35,12 @@ Node + TypeScript (`commander`/`yargs`, published as an npm bin) **or** Python (
 ## Phase 4 Build Order
 `Core logic → CLI layer (arg/flag parsing) → I/O & formatting → Tests → Packaging/Distribution → Docs (README + usage)`. No schema/migration/frontend unless the tool maintains local state.
 
+## Experience Harness
+**Interaction mode:** Terminal. The Experience Runner installs/links the built
+binary (per `docs/environment.md`) and runs each story's scenario as the exact
+command line from §3a, capturing stdout, stderr, and exit code verbatim —
+including `--help` output and error-path commands.
+
 ## Launch & Metrics
 Publish to the chosen registry (npm / PyPI / Homebrew tap / GitHub Releases binary). Verify clean install on a fresh machine. Metrics: download/install counts, open issues, time-to-first-successful-run.
 

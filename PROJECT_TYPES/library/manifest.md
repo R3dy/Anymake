@@ -35,6 +35,14 @@ Language matched to the consumer ecosystem (TypeScript→npm, Python→PyPI, Rus
 ## Phase 4 Build Order
 `Public API & types → Core implementation → Tests (high coverage — the contract) → Docs & examples → Packaging (build outputs, exports map) → CI (test matrix across supported versions)`. No schema/frontend.
 
+## Experience Harness
+**Interaction mode:** Snippet. The Experience Runner installs the package into
+a throwaway consumer project (per `docs/environment.md`), then runs a short
+script that imports the public API exactly as documented and calls it with
+each scenario's arguments, capturing the return value or thrown error/stack —
+proving the documented usage examples actually work, not just that the unit
+tests pass against internal calls.
+
 ## Launch & Metrics
 Publish to the registry with correct metadata, types, and a README. Verify install + import in a fresh consumer project. Metrics: downloads, GitHub stars, dependent repos, issue/PR volume.
 

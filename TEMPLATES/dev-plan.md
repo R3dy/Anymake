@@ -126,6 +126,13 @@ design-consistency criteria from §7.
 - [ ] *(bugs — always include:)* The original repro from issue #[N] no longer reproduces: [restate steps + now-expected behavior]
 - [ ] *(UI-touching:)* [element] uses [existing component / Design DNA token] per §7
 
+**Experience Script:** the issue's "Repro as Experience Script" (bugs) or the
+new flow's literal walkthrough (features), in `TEMPLATES/experience-script.md`
+format — carried into this story's task brief §3a unchanged. This is what the
+Experience Runner replays at build time and again at Verify (§10) — the bug's
+regression check and the reporter's manual click-through are the same scenario,
+not two different things that can drift apart.
+
 ### Story A[N].2 — [title] *(if needed — most fixes are 1–2 stories)*
 [...]
 
@@ -134,8 +141,9 @@ design-consistency criteria from §7.
 ## 10. Test & Verification Plan
 
 - **Automated:** [test file + name per runtime-verifiable criterion — the bug's repro becomes a permanent regression test]
+- **Experience:** [the §9 Experience Script scenario(s) — the Experience Runner drives the running app through the exact repro/flow and must return PASS before the story clears the build loop]
 - **Regression:** [tests protecting the §8 blast radius — run, not just written]
-- **Manual:** [what the reporter verifies before the issue closes — the original repro, on staging]
+- **Manual:** [what the reporter confirms before the issue closes — reviewing the passing experience report, and re-driving the original repro themselves if they want to; autonomous mode may waive the reporter's own re-click per the proxy's human-only rules, but never waives the Experience Runner pass itself]
 
 ---
 

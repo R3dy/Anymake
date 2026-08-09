@@ -14,7 +14,7 @@ plan exists, and everything is tagged so a bad change reverts in one command.
 
 The four promises this pipeline exists to keep:
 
-1. The shipped change **fixes the reported issue / delivers the requested feature** — not an adjacent guess
+1. The shipped change **fixes the reported issue / delivers the requested feature, actually driven and confirmed** — not an adjacent guess, and not "the code looks right" standing in for someone having run it
 2. It **breaks nothing else** — blast radius mapped and regression-tested before build
 3. New UI **looks designed-in from day one** — checked against the design system, never bolted on
 4. Everything is **traceable and revertible** — issue ↔ plan ↔ branch ↔ merge SHA ↔ revert command
@@ -43,7 +43,7 @@ The four promises this pipeline exists to keep:
 | **Solution Architect** | `AGENTS/solution-architect.md` | Full-project review + the Development Plan (`TEMPLATES/dev-plan.md`). Never touches code |
 | **Plan Reviewer** | `AGENTS/plan-reviewer.md` | Adversarial review of the plan (`TEMPLATES/plan-review.md`). Fresh context each round; never edits the plan |
 | Cartographer | `AGENTS/cartographer.md` | Refreshing the intent layer before design, and after merge |
-| Build engine | `anymake-build-loop` (Orchestrator → Planner → Worker → Validator) | Building the approved stories |
+| Build engine | `anymake-build-loop` (Orchestrator → Planner → Worker → Validator → Experience Runner) | Building the approved stories — and actually driving the fix/feature against the running app before it counts as built |
 
 Architect and Reviewer **must be separate sub-agents** — the thing that designs
 is never the thing that approves. Same law as Phase 4's Worker/Validator split;
@@ -97,7 +97,10 @@ First ensure the intent layer is fresh (spawn the **Cartographer** — registere
 agent `anymake-cartographer`, Tier 2 — if `SYSTEM_MAP.md` is missing or `Last
 mapped` predates recent merges). Then spawn the **Solution Architect**
 (`anymake-solution-architect`, Tier 2) with: issue link, project root, plan
-output path. It reviews the whole project and writes `issue-[N]/plan.md`.
+output path. It reviews the whole project and writes `issue-[N]/plan.md`,
+including the issue's "Repro as Experience Script" (bugs) or a new literal
+walkthrough (features) carried into plan §9's story breakdown — this is the
+same scenario the Experience Runner replays at build time and at Verify (§7).
 
 - If it reports an **intent conflict** (plan would contradict an ADR/invariant):
   run the intent conflict gate (`AGENTS/arbiter.md` → Intent Conflict Policy)
@@ -148,15 +151,26 @@ filled from plan §6–§7. Traceability rules (also in `AGENTS/arbiter.md`):
 - Validator runs as always — acceptance criteria, security, intent-consistency,
   and the plan's design-consistency criteria
 
-### 7. Verify & close — the reporter confirms
+### 7. Verify & close — driven live, then the reporter confirms
 
-- Run the plan §10 verification: the original repro against the built change
-  (on staging via `anymake-deploy` where applicable); for UI-touching changes,
-  run the `anymake-design-system` audit on the changed screens
-- Set `status:verifying` and ask the reporter to re-test their original repro —
-  the person who saw the bug confirms its death (autonomous mode: proxy may
-  waive per its human-only rules; note the waiver on the issue)
-- Close the issue with: what shipped, merge SHA, tag, revert command
+- Run the plan §10 verification: the build loop's own Experience Runner pass
+  already replayed the repro/flow scenario against the real running app as
+  part of Execute (step 6) — that experience report is the primary evidence,
+  not a separate manual pass. If verifying on staging rather than the branch
+  environment, invoke **`anymake-experience-check`** against the staging URL
+  (`anymake-deploy` provides it) — pass it the plan's Experience Script (the
+  same one used in Execute, not a fresh one) — before asking the reporter to
+  look at anything
+- For UI-touching changes, run the `anymake-design-system` audit on the changed screens
+- Set `status:verifying` and ask the reporter to confirm — point them at the
+  passing experience report first; they may still re-click through it
+  themselves if they want to. The person who saw the bug confirms its death,
+  but confirmation is no longer the *only* evidence it's dead (autonomous mode:
+  proxy may waive the reporter's own re-click per its human-only rules — see
+  `AGENTS/product-owner-proxy.md` `phase4-escalation-human-only` — but never
+  waives the Experience Runner pass itself; note any waiver on the issue)
+- Close the issue with: what shipped, merge SHA, tag, revert command, and the
+  experience report path
 - Spawn the **Cartographer** to refresh the intent layer; record the increment
   in `PHASE_STATE.md`
 

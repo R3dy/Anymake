@@ -174,16 +174,22 @@ cd PROJECTS/[name]/prototype && npm install --silent && npm run build 2>&1 | tai
 
 ## Gate: `phase4-pr-review`
 
-**Read:** Validation report at `PROJECTS/[name]/docs/04-implementation/validation-reports/story-N.N.md`
+**Read:** Validation report at `PROJECTS/[name]/docs/04-implementation/validation-reports/story-N.N.md`, the task brief's §3a Experience Script, and — unless §3a is explicitly `N/A` — the experience report at `PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md`.
 
-**Checks:**
+**Checks, in order — stop at the first that fails:**
 
-1. **Validation verdict is PASS** — if the top-level verdict in the report is FAIL or ESCALATE, do not approve. Act on the verdict:
+1. **Experience verification required (unless §3a is N/A)** — if the task brief's §3a Experience Script is not explicitly `N/A — no user-observable behavior`, an experience report must exist with `VERDICT: PASS`. This check runs regardless of what the validation report says — a Validator PASS never substitutes for an Experience Runner PASS.
+   - No experience report found → `PHRASE: changes needed: story [N.N] has no experience report — the Experience Runner must run before this PR can be reviewed.`
+   - Experience report `VERDICT: FAIL` → `PHRASE: changes needed: [copy the exact failed steps from the report's Scenario Results and Failure Diagnosis]`
+   - Experience report `VERDICT: ESCALATE` → do not approve; this gate type does not resolve experience escalations — those route to `phase4-escalation-experience-fail-2nd`, `-unscriptable`, or `-environment` instead. Return `ESCALATE TO USER: Story [N.N]'s experience report escalated ([type]) — see the report for detail.`
+   - **Never treat the code existing, or the validation report alone, as sufficient here** — an experience report is a record of the app actually being driven; nothing else stands in for it.
+
+2. **Validation verdict is PASS** — if the top-level verdict in the report is FAIL or ESCALATE, do not approve. Act on the verdict:
    - `FAIL` verdict → return `PHRASE: changes needed: [copy the exact failures from the Failures section of the report]`
    - `ESCALATE` with escalation type `security-failure` → return `ESCALATE TO USER: Security failure in story [N.N] PR requires human review. [Copy the escalation reason from the report.]`
-   - `ESCALATE` with escalation type `human-only-criterion` → return `PHRASE: approved` if all non-human-only criteria passed; note in reasoning that visual verification was waived in autonomous mode
+   - `ESCALATE` with escalation type `human-only-criterion` → this means the Validator found a Human-Only criterion with no §3a coverage at all (not merely one still pending its experience report — check 1 above already handled that case). Route this to gate `phase4-escalation-human-only` instead of resolving it here; do not approve past it.
 
-2. **Security checklist** — every security check in the report must be PASS or N/A. Any check marked FAIL → `PHRASE: changes needed: Security issue — [copy the failing check and its evidence from the report]`
+3. **Security checklist** — every security check in the report must be PASS or N/A. Any check marked FAIL → `PHRASE: changes needed: Security issue — [copy the failing check and its evidence from the report]`
 
 **Output format:**
 ```
@@ -200,13 +206,114 @@ Reasoning: [brief explanation]
 
 ## Gate: `phase4-escalation-human-only`
 
-**Read:** The validation report for this story. Identify the specific Human-Only criteria and their descriptions.
+This gate fires only when the Validator found a Human-Only criterion with **no
+corresponding §3a Experience Script scenario** — a brief-authoring gap. It is
+not the normal path for Human-Only criteria: the normal path is the Experience
+Runner actually driving the app against a §3a scenario, gated separately at
+`phase4-pr-review` (check 1) and the three experience-specific gates below. You
+are not being asked whether to waive visual verification — code existing on a
+branch is not evidence the feature behaves as specified, and this gate must
+never treat it as such. **Never return `PHRASE: resume` on the basis of code
+presence alone** — that is the exact autonomous-mode shortcut this system no
+longer permits.
+
+**Read:** The validation report for this story, and the task brief's §3a.
 
 **Evaluation:**
 
-1. For each Human-Only criterion, check at the code level — does the relevant component, route, or handler exist in the codebase on the story branch?
-2. If all Human-Only criteria have corresponding code present (the feature is implemented, just not visually verifiable) → return `PHRASE: resume` with a note that visual verification was waived in autonomous mode.
-3. If any Human-Only criterion has no corresponding code at all (the feature is not implemented, not just visually unverifiable) → return `PHRASE: changes needed: [describe the missing implementation based on what code is absent]`
+1. **Confirm the gap is real** — check whether §3a actually has no scenario
+   covering this criterion. If it does (the Validator mis-marked it, or a
+   scenario was added since), this gate was invoked in error:
+   `PHRASE: changes needed: story [N.N]'s §3a already covers "[criterion text]"
+   via Scenario [N] — re-run the Validator/Experience Runner rather than
+   escalating this criterion again.`
+2. **The default resolution — send it back for a real scenario:**
+   `PHRASE: changes needed: story [N.N] §3a is missing an Experience Script
+   scenario for: "[criterion text]". The Planner must add one (literal
+   action → checkable expected result) and the Experience Runner must verify
+   it with a PASS before this story can proceed.` This is the correct action in
+   nearly every case — the fix is writing the scenario, not skipping it.
+3. **The one legitimate waiver** — the criterion is not mechanically scriptable
+   even in principle (a genuinely subjective aesthetic judgment with no
+   checkable observable, e.g. "the color palette feels premium"). Confirm the
+   relevant component/route/handler exists and is actually wired up and
+   reachable (not merely present as dead code), then return `PHRASE: resume`
+   with an explicit, permanent note for the board: `"Waived — criterion is not
+   mechanically scriptable (subjective judgment: [why]). Code-level presence
+   and wiring confirmed; the described behavior was never actually driven or
+   observed."` That note must survive onto BOARD.md so a real human can see
+   exactly what was never verified, in plain language — this is a documented
+   limitation, not a pass.
+4. **No corresponding code exists at all** → `PHRASE: changes needed: [describe
+   the missing implementation based on what code is absent]`
+
+---
+
+## Gate: `phase4-escalation-experience-fail-2nd`
+
+**Read:** Both experience reports for this story — attempt 1 and attempt 2 — at
+`docs/04-implementation/experience-reports/story-N.N.md` (check the Run Log for
+both paths if only the latest is at the canonical filename).
+
+**Rules (apply in order — stop at first match):**
+
+1. **Same scenario step fails in both reports** → `ESCALATE TO USER: Persistent
+   experience failure on story [N.N] after two attempts. The step "[paste the
+   recurring failed step: action / expected / actual]" failed in both attempts
+   despite retry context. Likely a fundamental gap between the implementation
+   and the scripted expectation — review both experience reports.`
+2. **Changing failure pattern** (retry fixed some things, exposed others) →
+   `ESCALATE TO USER: Changing failure pattern on story [N.N]'s experience
+   checks across both attempts. Attempt 1 failed on [step]. Attempt 2 failed on
+   [step]. Suggests an architectural issue — human review required.`
+3. **Default** → `ESCALATE TO USER: Second experience failure on story [N.N].
+   Human review required. Experience reports: [paths].`
+
+Never resolve this by reading the code yourself and deciding it looks fine —
+the experience reports already ran it twice and it didn't work either time.
+
+---
+
+## Gate: `phase4-escalation-experience-unscriptable`
+
+The Experience Runner reports it cannot execute a §3a scenario as written —
+usually an action or expected result that isn't literal/checkable. This is a
+brief-authoring defect, not an implementation failure, and it always routes
+back to the Planner.
+
+**Read:** the experience report's Escalation Reason, and the task brief's §3a.
+
+**Always return:**
+```
+PHRASE: changes needed: story [N.N]'s §3a scenario is not executable as
+written — [paste the experience runner's specific complaint]. The Planner must
+rewrite it as a literal action + checkable expected result before this story
+can proceed.
+```
+Never interpret a vague scenario yourself and approve past it — the whole point
+of §3a is that nothing about it requires interpretation.
+
+---
+
+## Gate: `phase4-escalation-experience-environment`
+
+The app could not be launched, or a scenario step needs a real external
+dependency the harness cannot simulate (a live third-party sandbox, a real
+inbox), after 2 re-dispatch attempts.
+
+**Read:** the experience report(s), `docs/environment.md`.
+
+**Evaluation:**
+
+1. If `docs/environment.md`'s "How to Run It Locally" section is missing,
+   wrong, or incomplete — and that's the actual cause of the launch failure —
+   → `PHRASE: changes needed: docs/environment.md's launch instructions are
+   incomplete or incorrect — [specific gap, cited from the experience report's
+   Launch Log] — fix them before the experience runner can retry.`
+2. If the app launches fine but a scenario step genuinely needs a live external
+   dependency this environment can't provide → `ESCALATE TO USER: Story [N.N]'s
+   experience script needs [external dependency] which cannot be simulated
+   autonomously. Manual verification required.`
 
 ---
 
@@ -296,7 +403,7 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 
 ## Gate: `phase-4-staging-review`
 
-**Read:** `PROJECTS/[name]/BOARD.md`, `PROJECTS/[name]/docs/environment.md`
+**Read:** `PROJECTS/[name]/BOARD.md`, `PROJECTS/[name]/docs/environment.md`, and any experience report(s) from an `anymake-experience-check` run against the staging URL (path given in the message, if one was run — check `docs/04-implementation/experience-reports/` for a report whose Launch Log references the staging URL rather than a local launch command).
 
 **Checks:**
 
@@ -305,6 +412,8 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 2. **No active escalations** — the Escalations section of BOARD.md must show no unresolved escalations (either empty or all marked as resolved).
 
 3. **environment.md is present and populated** — `docs/environment.md` must exist and list at least the required environment variables for the stack.
+
+4. **Staging experience check** — if a staging experience report was provided or found, its `VERDICT` must be `PASS` for the critical-path scenarios; a `FAIL` or missing report where one was expected → `NEEDS CHANGES: run anymake-experience-check against the staging URL before this gate can approve.` If no staging experience report exists at all (the skill was never run), do not silently pass this — say so explicitly in the summary as the specific, narrower limitation it now is: this gate cannot itself drive a browser, but it can and should require evidence that something else did.
 
 **Output:**
 - All checks pass → `PHRASE: launch it`
@@ -393,6 +502,8 @@ Reasoning: [one sentence]
 - Never approve a gate where required content sections contain unfilled `[bracket placeholder]` text
 - Never return `PHRASE: approved` when the validation report verdict is anything other than PASS
 - Never return `PHRASE: approved` when any security check in a validation report is FAIL
+- Never return `PHRASE: approved` for `phase4-pr-review` when an experience report is required (§3a not `N/A`) but missing, FAIL, or ESCALATE — no amount of validation-report or code-level confidence substitutes for it
+- Never return `PHRASE: resume` at `phase4-escalation-human-only` on the strength of code existing alone — either send it back for a real §3a scenario, or, for the narrow subjective-judgment exception, say explicitly on the board that the behavior was never actually driven
 - Never attempt to resolve a `phase4-escalation-security-failure` gate type — always return `ESCALATE TO USER`
 - Never authorize a supersede (`intent-conflict` / `phase4-escalation-intent-conflict`) on a security-relevant decision — always `ESCALATE TO USER`; when in doubt on any intent conflict, escalate
 - Never return `APPROVED` for `agile-plan-approval` when the plan touches a security surface, or when the latest Plan Reviewer verdict is anything other than `APPROVED`

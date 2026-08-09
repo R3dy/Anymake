@@ -76,6 +76,13 @@ Which planning sub-tracks run: PRD, UX+Prototype, Architecture, Monetization —
 The ordered layer sequence Workers follow for this type. Overrides the SaaS default
 (Schema → Migration → API → Component → Page → Integration → Test).
 
+## Experience Harness
+How the Experience Runner (`AGENTS/experience-runner.md`) actually drives this
+type's built application for every story: the **interaction mode** (Browser /
+Terminal / HTTP / Snippet — see `AGENTS/experience-runner.md` → Interaction
+Modes) and any type-specific notes on what "launched and ready" means or how a
+scenario step should be expressed.
+
 ## Launch & Metrics
 Distribution target and the metrics framework that matters for this type.
 

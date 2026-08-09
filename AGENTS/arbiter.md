@@ -16,6 +16,7 @@ Every spawned agent runs at one of three importance tiers, so a project can use 
 | 2 | Capable | Planner | `planner.md` | Mechanical translation, but has to correctly read and synthesize ADRs, the intent layer, and established conventions — a misread here corrupts every downstream Worker. |
 | 2 | Capable | Solution Architect | `solution-architect.md` | Full-project design work for a tracked change — root cause, blast radius, alternatives. |
 | 2 | Capable | Validator | `validator.md` | The backstop that has to reliably catch a Tier 3 Worker's mistakes — cheapen the generator, not the checker. |
+| 2 | Capable | Experience Runner | `experience-runner.md` | Has to drive a real running app, correctly judge whether an observed result matches a literal expectation, and diagnose a divergence with a file:line pointer — needs enough capability to reliably tell "close" from "correct." |
 | 2 | Capable | Cartographer | `cartographer.md` | Maps code to intent; needs real comprehension of the codebase, not just pattern-matching. |
 | 3 | Economy | Worker | `worker.md` | Highest-volume role (every story), and the narrowest-scoped — it executes a detailed brief and escalates rather than guessing, which is what makes a cheaper model safe here. |
 
@@ -57,6 +58,12 @@ A per-agent `opencode.json` override always wins over the tier env var for that 
 
 PR count is cumulative across all Phase 4 stories. It is not reset per milestone.
 
+**Experience gate.** Regardless of the above, a story does not reach PR review at
+all until it clears Step 5a/5b — Validator `PASS` **and** (Experience Runner
+`PASS` or the task brief's §3a is explicitly `N/A`). A Validator `PASS` with an
+outstanding Experience Runner `FAIL`/`ESCALATE` is not eligible for merge under
+any PR-count or review rule above.
+
 ---
 
 ## Retry Policy Matrix
@@ -71,6 +78,10 @@ PR count is cumulative across all Phase 4 stories. It is not reset per milestone
 | Validation: FAIL (1st) | Re-dispatch worker with RETRY CONTEXT | 1 | After 2nd validation FAIL |
 | Validation: FAIL (2nd) | No | 0 | Immediate escalation |
 | Validation: ESCALATE | No | 0 | Immediate escalation — never retry |
+| Experience Runner: FAIL (1st) | Re-dispatch worker with RETRY CONTEXT (from the report's Failure Diagnosis) | 1 | After 2nd experience FAIL |
+| Experience Runner: FAIL (2nd) | No | 0 | Immediate escalation — type `experience-fail-2nd` |
+| Experience Runner: ESCALATE (unscriptable-criterion) | No | 0 | Immediate escalation — type `experience-unscriptable`, this is a brief gap, not a build failure |
+| Experience Runner: ESCALATE (environment-failure) | Re-dispatch experience runner directly (no worker) | 2 | After 2nd re-dispatch fails — type `experience-environment` |
 | Security check FAIL | No | 0 | Immediate escalation — security never retries |
 | Intent conflict (ADR/invariant contradicted, no superseding ADR) | No | 0 | Immediate escalation — superseding a decision needs a gate, never a retry |
 | PR merge conflict | Worker resolves rebase | 1 attempt | After rebase fails |
@@ -147,8 +158,10 @@ through a gate (the intent conflict gate — see Intent Conflict Policy below). 
 with type `intent-conflict`. If the conflict is security-related, it follows the
 security override (always the real user, in every mode).
 
-**Human-only criterion override:**
-Any acceptance criterion that requires visual inspection, browser testing, or UX judgment produces a verdict of ESCALATE. The validator must list the specific human-only criteria in the escalation reason. The orchestrator pauses and you manually verify before the orchestrator continues.
+**Human-only criterion override — verified, not waived:**
+An acceptance criterion that requires visual inspection, browser testing, terminal output inspection, or UX judgment cannot be checked by reading code or running the automated test suite — but that no longer means it defaults to a human. The Planner is required to translate every such criterion into a literal scenario in the task brief's §3a Experience Script; the Experience Runner then actually launches the app and drives it, and checks the real observed result against the scripted expectation (see Step 5a/5b in `AGENTS/orchestrator.md`). The Validator marks these criteria `DEFERRED (experience)` in its report — not `SKIP` — and does not escalate for them on that basis alone.
+
+The Validator only falls back to `SKIP (human-only)` → `ESCALATE` (gate type `phase4-escalation-human-only`) when a Human-Only criterion has **no** corresponding §3a scenario at all. That is a brief-authoring gap the Planner should have caught, not a category of criterion that is inherently unverifiable — and the Product Owner Proxy's evaluation of that gate (`AGENTS/product-owner-proxy.md`) must never resolve it by inspecting code and waiving the behavior; the correct action is almost always to send it back for the missing scenario. This is the specific mechanism that used to let "the agent said it's good to go" diverge from "I tested it and it wasn't": a human-only criterion could be waived on the strength of code merely existing, without anyone — human or agent — ever actually driving it. It cannot be waived on that basis anymore.
 
 ---
 
@@ -163,7 +176,7 @@ These are the exact phrases you use to unblock the orchestrator. The orchestrato
 | `"skip story N.N"` | Mark story N.N as Done with note "manually skipped by you", continue loop |
 | `"retry story N.N"` | Re-dispatch planner for a fresh task brief (no RETRY CONTEXT), then dispatch worker from that brief |
 | `"blocked — stop"` | Mark all in-progress stories as Blocked, halt orchestration, update PHASE_STATE.md |
-| `"resume"` | After you resolve a human-only validation escalation — mark story Done, continue |
+| `"resume"` | After you resolve a human-only or experience escalation (verified it yourself, or accepted the proxy's documented waiver for a genuinely unscriptable criterion) — mark story Done, continue |
 | `"fix and retry"` | After you provide a fix for an escalated failure — re-dispatch worker |
 | `"supersede ADR-N: [notes]"` | Approve overriding a contradicted decision — write the superseding ADR per `docs/DECISIONS.md`, then re-dispatch the worker with the change now buildable |
 | `"reject change"` | Decline the contradicting change — move it to `PARKING_LOT.md` (or reshape to fit intent), mark the story skipped, continue |
@@ -232,6 +245,7 @@ Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect a
 | `🟡` | Ready | Not started — all dependencies satisfied |
 | `🔵` | In Progress | Worker agent active |
 | `🟠` | In Validation | Validator agent active |
+| `🧪` | Experience Check | Experience Runner agent driving the app against the story's §3a script |
 | `👁` | Awaiting Review | PR open, waiting for you to approve |
 | `✅` | Done | Merged to main |
 | `🚫` | Blocked | Escalated — awaiting you decision |
@@ -251,15 +265,18 @@ When `autonomous_mode: true` is set in `PROJECTS/[name]/PHASE_STATE.md`, the Pro
 | Phase 2 final gate | Main agent | `phase-2-approval` |
 | Phase 3 gate | Main agent | `phase-3-approval` |
 | Phase 4 PR review pause | Orchestrator | `phase4-pr-review` |
-| Phase 4 human-only criterion | Orchestrator | `phase4-escalation-human-only` |
+| Phase 4 human-only criterion (no §3a coverage) | Orchestrator | `phase4-escalation-human-only` |
 | Phase 4 implementation failure | Orchestrator | `phase4-escalation-implementation-failure` |
 | Phase 4 2nd validation FAIL | Orchestrator | `phase4-escalation-validation-fail-2nd` |
 | Phase 4 intent conflict | Orchestrator | `phase4-escalation-intent-conflict` |
+| Phase 4 2nd experience FAIL | Orchestrator | `phase4-escalation-experience-fail-2nd` |
+| Phase 4 experience script unscriptable | Orchestrator | `phase4-escalation-experience-unscriptable` |
+| Phase 4 experience environment failure | Orchestrator | `phase4-escalation-experience-environment` |
 | Phase 4 all stories blocked | Orchestrator | `phase4-escalation-all-blocked` |
 | Phase 4.6 staging review | Main agent | `phase-4-staging-review` |
 | Intent conflict gate (pre-build) | `anymake-agile` skill (Solution stage) | `intent-conflict` |
 | Agile plan approval (post Reviewer APPROVED) | `anymake-agile` skill | `agile-plan-approval` |
-| Agile reporter verification (issue close) | `anymake-agile` skill | `phase4-escalation-human-only` (reuse — code-level check of the fix) |
+| Agile reporter verification (issue close) | `anymake-agile` skill | `phase4-escalation-human-only` (reuse — proxy checks that the plan's §10 repro was replayed as an Experience Script scenario with a PASS experience report, not a code-level check alone) |
 
 **Security failure override (absolute — cannot be bypassed):**
 Any escalation with escalation type `security-failure` is handled by the standard escalation protocol regardless of autonomous mode. The proxy is not spawned. The orchestrator halts and notifies the real user directly. This override applies in all modes and all circumstances.

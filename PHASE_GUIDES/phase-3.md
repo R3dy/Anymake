@@ -52,9 +52,11 @@ For each epic, define all user stories with complete acceptance criteria.
 - [ ] Error: [What happens when Y is invalid]
 - [ ] Edge: [What happens at limits or boundaries]
 
+**Experience Script:** [filled in Step 3.2b, right after — see below]
+
 **Definition of Done:**
 - [ ] All acceptance criteria passing
-- [ ] Manual smoke test completed
+- [ ] Experience Script scenarios all PASS (Experience Runner report)
 - [ ] Mobile/responsive check (if UI)
 - [ ] No console errors or warnings
 - [ ] Error states work
@@ -62,6 +64,23 @@ For each epic, define all user stories with complete acceptance criteria.
 ```
 
 Every acceptance criterion must be verifiable without ambiguity. "Works correctly" is not a criterion. "User sees [specific message] when [specific condition]" is a criterion.
+
+### Step 3.2b — Experience Harness Setup
+
+> **Delegate to the `anymake-experience-setup` skill** for this step — it owns
+> authoring the Experience Script for every story just written, auditing
+> coverage so no Human-Only criterion is left unscripted, and setting up
+> `docs/environment.md`. Invoke it via the `Skill` tool, then return here.
+
+For each story: one scenario per acceptance-criteria group, as a literal
+action → expected-result table (`TEMPLATES/experience-script.md`). Every
+criterion that needs visual/interactive verification ("user sees...", "looks
+right", mobile/responsive) MUST have a matching scenario — this is what the
+Experience Runner actually drives in Phase 4 instead of a human clicking
+through it, or an autonomous run waiving it because the code merely exists.
+"N/A — no user-observable behavior" only for stories with zero observable
+behavior change. Every expected result must be equally literal — a fact the
+Experience Runner can check by comparing, not a judgment it has to make.
 
 ### Step 3.3 — Technical Task Breakdown
 
@@ -165,6 +184,7 @@ You review epics and backlog. Key questions:
 - Are the epics in the right build order?
 - Is the backlog complete? Any obvious missing tasks?
 - Are acceptance criteria specific enough to verify?
+- Does every story with user-observable behavior have an Experience Script, and does every Human-Only-style criterion have a matching scenario in it?
 - Is Monetization in Milestone 4 or earlier?
 
 You say "solutioning complete, start building" → proceed to Phase 4.
@@ -184,4 +204,8 @@ Agent({
 
 ## Templates
 
-See `../TEMPLATES/epic.md`, `../TEMPLATES/story.md`
+See `../TEMPLATES/epic.md`, `../TEMPLATES/story.md`, `../TEMPLATES/experience-script.md`
+
+## Companion skill
+
+`anymake-experience-setup` (Step 3.2b) — see `skills/anymake-experience-setup/SKILL.md`

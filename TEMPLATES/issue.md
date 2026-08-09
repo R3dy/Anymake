@@ -37,6 +37,12 @@ capability, not the suspected cause or solution.
 **Reproduced by agent:** yes — [how] | no — [why not, and what evidence stands in for a repro]
 **Severity rationale:** [why this severity — who is blocked and how badly]
 
+**Repro as Experience Script:** the steps above, rewritten as a literal
+action/expected-result scenario (`TEMPLATES/experience-script.md` format) —
+this becomes the plan's §10 regression check and the thing the Experience
+Runner replays at Verify (§7 below) instead of only the reporter re-clicking
+through it by hand.
+
 ## Feature
 
 **Problem it solves:** [the underlying need, not the proposed mechanism]
@@ -68,3 +74,4 @@ this restatement.
 | Base SHA before merge | [recorded at execution] |
 | Merge SHA | [recorded at merge] |
 | Revert command | `git revert -m 1 [merge SHA]` [+ migration down steps if any] |
+| Experience report (Verify) | `docs/04-implementation/experience-reports/story-A[N].[N].md` — [PASS/FAIL, recorded at Verify] |
