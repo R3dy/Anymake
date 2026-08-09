@@ -139,8 +139,8 @@ Every session:
 | Phase 0: Foundation | `PHASE_GUIDES/phase-0.md` | `TEMPLATES/project.md` | `anymake-brownfield` (existing-code path) |
 | Phase 1: Discovery | `PHASE_GUIDES/phase-1.md` | `TEMPLATES/discovery.md` | — |
 | Phase 2: Planning | `PHASE_GUIDES/phase-2.md` | `TEMPLATES/prd.md`, `TEMPLATES/ux-design.md`, `TEMPLATES/adr.md`, `TEMPLATES/monetization.md` | `anymake-design-system` (Step 2.2b) |
-| Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md` | — |
-| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, planner, worker, validator, arbiter | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging) |
+| Phase 3: Solutioning | `PHASE_GUIDES/phase-3.md` | `TEMPLATES/epic.md`, `TEMPLATES/story.md`, `TEMPLATES/experience-script.md` | `anymake-experience-setup` (3.2b) |
+| Phase 4: Implementation | `PHASE_GUIDES/phase-4.md` | `AGENTS/` — orchestrator, planner, worker, validator, experience-runner, arbiter | `anymake-build-loop` (4.3), `anymake-security-review` (4.5), `anymake-deploy` (staging), `anymake-experience-check` (4.6) |
 | Phase 5: Launch | `PHASE_GUIDES/phase-5.md` | `TEMPLATES/launch-checklist.md`, `TEMPLATES/metrics-dashboard.md` | `anymake-deploy` (5.2), `anymake-iterate` (5.6) |
 
 ## Agent System (Phase 4)
@@ -173,6 +173,8 @@ so state and conventions never fork. See `skills/README.md` for the full map.
 | Companion skill | Owns | Hub invokes it at… |
 |-----------------|------|--------------------|
 | `anymake-build-loop` | The five-stage agentic build engine (Orchestrator → Planner → Worker → Validator → Experience Runner) over a backlog — the last stage actually launches and drives the built app before a story counts as done | **Phase 4, Step 4.3** |
+| `anymake-experience-setup` | Builds the testing harness: authors Experience Scripts across a backlog, audits coverage, sets up `docs/environment.md` | **Phase 3, Step 3.2b** (and retrofit mode inside `anymake-brownfield`) |
+| `anymake-experience-check` | Uses the testing harness on demand: launches and drives the app against a story, PR, or a staging/production URL, outside the automated loop | **Phase 4, Step 4.6** (staging review) and the `anymake-agile` Verify step |
 | `anymake-design-system` | The visual-quality bar: design system + Prototype Sprint + prototype-gate audit | **Phase 2, Step 2.2b** (UX-active types) |
 | `anymake-security-review` | The per-PR checklist, the full security pass, and the pre-launch security gate | **Phase 4, Step 4.5** (and inside the Validator; pre-launch) |
 | `anymake-deploy` | Deployment & infrastructure — staging, production, env/secrets, monitoring, rollback | **Phase 4** staging and **Phase 5, Step 5.2** (production) |

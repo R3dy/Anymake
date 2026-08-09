@@ -157,8 +157,10 @@ filled from plan §6–§7. Traceability rules (also in `AGENTS/arbiter.md`):
   already replayed the repro/flow scenario against the real running app as
   part of Execute (step 6) — that experience report is the primary evidence,
   not a separate manual pass. If verifying on staging rather than the branch
-  environment, re-run the Experience Runner against the staging URL
-  (`anymake-deploy` provides it) before asking the reporter to look at anything
+  environment, invoke **`anymake-experience-check`** against the staging URL
+  (`anymake-deploy` provides it) — pass it the plan's Experience Script (the
+  same one used in Execute, not a fresh one) — before asking the reporter to
+  look at anything
 - For UI-touching changes, run the `anymake-design-system` audit on the changed screens
 - Set `status:verifying` and ask the reporter to confirm — point them at the
   passing experience report first; they may still re-click through it

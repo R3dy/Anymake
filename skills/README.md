@@ -22,6 +22,8 @@ request matches a companion's description.
 | Skill | Owns | Hub calls it at… | Also triggers directly on… |
 |-------|------|------------------|----------------------------|
 | `anymake-build-loop` | The five-stage agentic build engine (Orchestrator → Planner → Worker → Validator → Experience Runner) over a backlog — the last stage actually launches and drives the built app against a literal interaction script before a story counts as done | Phase 4, Step 4.3 | "run the build loop", "implement my backlog", "build these stories" |
+| `anymake-experience-setup` | Building the testing harness: authoring Experience Scripts for a backlog, auditing coverage, setting up `docs/environment.md` | Phase 3, Step 3.2b; retrofit mode inside `anymake-brownfield` | "set up the testing harness", "write experience scripts for this backlog", "retrofit experience scripts", "audit experience script coverage" |
+| `anymake-experience-check` | Using the testing harness on demand: launch and drive the app against a story, PR, or a staging/production URL, outside the automated loop | Phase 4, Step 4.6 (staging review); `anymake-agile` Step 7 (Verify) | "test this for real", "actually verify this works", "prove this before I ship it", "does the login flow really work" |
 | `anymake-brownfield` | Onboarding an existing codebase: reverse-engineer PROJECT.md, discovery, and a backlog | Instead of Phase 0 when the user points at existing code | "adopt Anymake in this repo", "onboard an existing project", "reverse-engineer a PRD" |
 | `anymake-deploy` | Deployment & infrastructure (staging + production, env, rollback, smoke tests) | Phase 4 staging (Step 4.6 review), Phase 5 Step 5.2 (production) | "deploy", "set up staging", "ship to prod", "roll back" |
 | `anymake-design-system` | Visual-quality bar: design system + prototype sprint, prototype-gate audit | Phase 2, Step 2.2b (UX-active types) | "design system", "prototype sprint", "make it look polished", "audit the UI" |
@@ -57,6 +59,18 @@ Human-Only criterion defaulting to a manual check or — in autonomous mode —
 being waived because the code merely exists. It runs as the fifth stage of
 `anymake-build-loop` and is replayed again at the `anymake-agile` Verify step
 for bug fixes and features alike.
+
+The harness splits into a build half and a use half, the same author/execute
+separation as everywhere else in this suite:
+
+| Skill | Builds or uses the harness | Owns |
+|-------|------------------------------|------|
+| `anymake-experience-setup` | Builds | Authoring scripts across a backlog (Phase 3.2b), auditing coverage, retrofitting an existing project's backlog (`anymake-brownfield`), keeping `docs/environment.md` accurate |
+| `anymake-experience-check` | Uses | Running the Experience Runner on demand — a story, a PR, or a live staging/production URL — outside the automated build loop (staging review, agile Verify, or just "prove this works right now") |
+
+Neither skill fixes anything it finds — a failure is a diagnosis handed back
+to whichever flow triggered the check, the same rule `AGENTS/experience-runner.md`
+itself follows.
 
 ### The agile design/review pair
 

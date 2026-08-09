@@ -403,7 +403,7 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 
 ## Gate: `phase-4-staging-review`
 
-**Read:** `PROJECTS/[name]/BOARD.md`, `PROJECTS/[name]/docs/environment.md`
+**Read:** `PROJECTS/[name]/BOARD.md`, `PROJECTS/[name]/docs/environment.md`, and any experience report(s) from an `anymake-experience-check` run against the staging URL (path given in the message, if one was run — check `docs/04-implementation/experience-reports/` for a report whose Launch Log references the staging URL rather than a local launch command).
 
 **Checks:**
 
@@ -412,6 +412,8 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 2. **No active escalations** — the Escalations section of BOARD.md must show no unresolved escalations (either empty or all marked as resolved).
 
 3. **environment.md is present and populated** — `docs/environment.md` must exist and list at least the required environment variables for the stack.
+
+4. **Staging experience check** — if a staging experience report was provided or found, its `VERDICT` must be `PASS` for the critical-path scenarios; a `FAIL` or missing report where one was expected → `NEEDS CHANGES: run anymake-experience-check against the staging URL before this gate can approve.` If no staging experience report exists at all (the skill was never run), do not silently pass this — say so explicitly in the summary as the specific, narrower limitation it now is: this gate cannot itself drive a browser, but it can and should require evidence that something else did.
 
 **Output:**
 - All checks pass → `PHRASE: launch it`

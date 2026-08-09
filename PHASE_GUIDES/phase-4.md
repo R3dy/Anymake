@@ -69,7 +69,9 @@ seed fixture. This is not optional documentation: the **Experience Runner**
 actually launch the app for every story's experience check. A vague or stale
 launch command here fails every story's experience check on environment
 grounds, not just the first one that hits it — verify it works from a clean
-checkout before moving on.
+checkout before moving on. Once the scaffold is up, run the
+**`anymake-experience-setup`** skill against it to validate this section for
+real rather than leaving it aspirational.
 
 **Scaffold complete when:**
 - [ ] `git push` to main triggers CI successfully
@@ -299,9 +301,15 @@ After all epics are complete, before requesting launch approval.
 ## Step 4.6 — Staging Review
 
 > **Use the `anymake-deploy` skill** to stand up / refresh the staging environment (provisioning, env/secrets, migrations, smoke tests) before this review. Invoke it via the `Skill` tool.
+>
+> **Then use the `anymake-experience-check` skill** against the staging URL —
+> run the critical-path Experience Scripts (and any others worth re-checking
+> in the staging config specifically) for real before anyone signs off, human
+> or proxy. This is what narrows "end-to-end browser testing requires a human"
+> down to only what's genuinely unscriptable.
 
 You review the complete product on staging before launch approval:
-- Complete user flow works end-to-end
+- Complete user flow works end-to-end — backed by a passing `anymake-experience-check` run against the staging URL, not just a manual click-through
 - Monetization flow works with test-mode Stripe
 - Product looks and feels ready to ship
 
@@ -316,7 +324,7 @@ Agent({
 
 - `PHRASE: launch it` → proceed to Phase 5
 - `NEEDS CHANGES` → address the listed gaps and re-run the proxy
-- Note: End-to-end browser testing and payment flow verification require a real human. This is a documented limitation of autonomous mode — the proxy checks board completeness and environment documentation, not live staging behavior.
+- Note: run `anymake-experience-check` against the staging URL **before** spawning the proxy, and point it at the resulting experience report(s) as an artifact — the proxy reads that as real evidence the critical path was actually driven, not just documented. What's left as a genuine, documented limitation of autonomous mode is narrower now: live-mode payment edge cases and purely subjective polish judgments a script can't express — not the whole end-to-end journey.
 
 ## Output
 
@@ -335,3 +343,7 @@ You use the staging environment and approve. You say "launch it" → proceed to 
 ## Templates
 
 See `../TEMPLATES/commit-message.md`, `../TEMPLATES/environment.md`, `../TEMPLATES/experience-script.md`, `../TEMPLATES/experience-report.md`
+
+## Companion skills
+
+`anymake-build-loop` (Step 4.3), `anymake-security-review` (Step 4.5), `anymake-deploy` (staging), `anymake-experience-setup` (validating `docs/environment.md` in Step 4.1), `anymake-experience-check` (staging review, Step 4.6)

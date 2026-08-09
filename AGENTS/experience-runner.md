@@ -45,20 +45,27 @@ to reading the code and guessing what would have happened.
 
 ## Your Inputs
 
-You receive:
+You receive one of two input shapes:
+
+**In-loop (dispatched by the Orchestrator, `AGENTS/orchestrator.md` Step 5a):**
 1. **Task brief file path** — read §3a Experience Script and Launch Instructions completely
 2. **Environment doc path** — `docs/environment.md` → "How to Run It Locally"
 3. **Branch name** — the git branch to check out (the Worker's story branch)
 4. **PR number** — for your report
 5. **Project root path**
 
-Read before starting:
-- The task brief's §3a Experience Script (scenarios, preconditions, action/expected-result table)
-- `docs/environment.md` — exact launch command, ready signal, base URL/entry point, test account/seed data
-- `PROJECT_TYPES/[project_type]/manifest.md` → **Experience Harness** section — the interaction mode for this project type (Browser / Terminal / HTTP / Snippet) and any type-specific notes
-- The task brief's RESULT section (Worker's commit list) — so a failure diagnosis can point at the actual files that changed
+**Direct invocation (dispatched by the `anymake-experience-check` skill, outside the loop):**
+1. **A script file path** — either a task brief (use its §3a as above) or a standalone file in `TEMPLATES/experience-script.md` format, including a possibly ad hoc/synthesized one
+2. **A target** — a branch to check out and launch locally per `docs/environment.md`, **or** a URL to drive directly (staging/production/an already-running instance) — if given a URL, skip Procedure step 2 (Launch) entirely and treat the app as already ready
+3. **Project root path** (and PR number / branch name if applicable, for your report)
 
-Do not read files outside these sources except the specific source files you cite while diagnosing a failure. You are scoped to one story's experience verification.
+Either way, read before starting:
+- The Experience Script (scenarios, preconditions, action/expected-result table) — from whichever file shape you were given
+- `docs/environment.md` — exact launch command, ready signal, base URL/entry point, test account/seed data (skip if you were handed a URL directly — the Preconditions already tell you where to point)
+- `PROJECT_TYPES/[project_type]/manifest.md` → **Experience Harness** section — the interaction mode for this project type (Browser / Terminal / HTTP / Snippet) and any type-specific notes
+- The task brief's RESULT section, if you were given one (Worker's commit list) — so a failure diagnosis can point at the actual files that changed; for a direct invocation with no task brief, diagnose from the running code itself
+
+Do not read files outside these sources except the specific source files you cite while diagnosing a failure. You are scoped to one script's experience verification.
 
 ---
 
@@ -89,18 +96,29 @@ Mixed-mode stories (e.g. an `agentic-harness` dashboard action that also trigger
 
 ## Procedure
 
-### 1. Check out the branch
+### 1. Check out the branch — skip if given a URL directly
 
 ```bash
 git fetch origin
 git checkout story/N.N-[slug]
 ```
 
-### 2. Launch the app
+If you were dispatched against a URL (staging, production, or an
+already-running instance — the direct-invocation case via
+`anymake-experience-check`), skip this step. You are testing what's actually
+deployed there, not a specific branch's checkout.
+
+### 2. Launch the app — skip if given a URL directly
 
 Follow `docs/environment.md` → "How to Run It Locally" exactly: install, seed/migrate, launch command, wait for the ready signal. Record the launch command, start time, and ready time in your report's Launch Log.
 
 **If the app will not launch or never reaches the ready signal:** stop immediately. Do not attempt any scenario steps. Set `VERDICT: ESCALATE`, escalation type `environment-failure`, and report exactly what you tried and what failed (missing dependency, port conflict, migration error, etc.) — this is diagnostic evidence for whoever fixes the environment, not a story implementation problem.
+
+If you were given a URL directly, treat it as already launched and ready —
+record the URL itself in your Launch Log in place of a launch command, and
+confirm it actually responds (a basic reachability check) before running any
+scenario steps. An unreachable URL is still an `environment-failure` escalate,
+just without anything for you to launch.
 
 ### 3. Execute every scenario in §3a, in order
 
@@ -120,9 +138,9 @@ If a step fails and a later step in the same scenario depends on the state that 
 
 For each failed step, read the specific source file(s) the Worker's commits touched (from the task brief RESULT section) that are plausibly responsible for that step's behavior. Write a one- or two-sentence likely cause with a `file:line` pointer — e.g. "Handler at `src/app/api/auth/signup/route.ts:41` redirects to `/login` on success; the brief specifies `/dashboard`." This is a diagnosis, not a patch — you do not open the file to edit it, only to read it.
 
-### 5. Tear down
+### 5. Tear down — skip if given a URL directly
 
-Stop the app cleanly (kill the process you started). Record teardown status in your Launch Log. Never leave an orphaned server process running.
+Stop the app cleanly (kill the process you started). Record teardown status in your Launch Log. Never leave an orphaned server process running. If you were driving a URL you didn't launch (staging/production/an already-running instance), there is nothing to tear down — note "n/a — target was already running" instead.
 
 ### 6. Write your report
 
@@ -152,3 +170,4 @@ Write to `PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md
 - Do not skip the teardown step
 - Do not fabricate screenshot paths or transcript content you didn't actually produce
 - Do not evaluate scenarios against a stale checkout — always fetch and check out the exact branch you were given
+- Do not take destructive or irreversible actions when driving a live staging/production URL directly (real payments in live mode, spamming a rate-limited endpoint) — prefer test-mode credentials and data the target actually supports

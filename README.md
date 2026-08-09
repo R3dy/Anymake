@@ -201,6 +201,21 @@ where a bug's reproduction steps become the Experience Script the fix is
 verified against — the same scenario the reporter would have manually replayed
 is what closes the issue.
 
+**Two companion skills split building the harness from using it**, the same
+author/execute separation the rest of the system enforces everywhere:
+
+- **`anymake-experience-setup`** — builds it: authors Experience Scripts for
+  every story in a backlog (Phase 3, Step 3.2b), audits an existing project for
+  coverage gaps, and keeps `docs/environment.md` accurate. Also what
+  `anymake-brownfield` runs to retrofit scripts onto a backlog reverse-engineered
+  from existing code, since those stories never went through Phase 3.
+- **`anymake-experience-check`** — uses it: runs the Experience Runner on
+  demand, outside the automated build loop, against a story, a PR, or a live
+  staging/production URL. This is the direct answer to "is this *actually*
+  done?" any time you want it — not just inside the loop — and it's what
+  narrows the Phase 4.6 staging review's old "requires a human" limitation down
+  to only what's genuinely unscriptable.
+
 ## Post-Launch Agile Workflow
 
 Once a product is built, "the save button isn't working" should never trigger an
@@ -241,6 +256,8 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 |-------|--------------|------------|
 | `anymake` | Methodology, state machine, gates, routing (auto-loaded) | Always |
 | `anymake-build-loop` | Five-stage Orchestrator → Planner → Worker → Validator → Experience Runner build engine | Phase 4.3 |
+| `anymake-experience-setup` | Builds the testing harness: Experience Scripts across a backlog, coverage audit, `docs/environment.md` | Phase 3.2b, brownfield retrofit |
+| `anymake-experience-check` | Uses the testing harness on demand: drive a story, PR, or staging/production URL outside the build loop | Phase 4.6, agile Verify, on demand |
 | `anymake-design-system` | Design system + Prototype Sprint + prototype gate | Phase 2.2b |
 | `anymake-security-review` | Per-PR + full + pre-launch security checklists | Phase 4.5, pre-launch |
 | `anymake-deploy` | Staging + production deploy, env/secrets, monitoring, rollback | Phase 4 staging, 5.2 |
@@ -272,6 +289,8 @@ skills/                     # The skill suite (registered with OpenCode)
 ├── anymake/SKILL.md        # Hub skill — methodology + router (auto-loaded)
 ├── anymake-build-loop/     # Phase 4.3 four-stage build engine
 ├── anymake-brownfield/     # Onboard an existing codebase
+├── anymake-experience-setup/ # Builds the testing harness: Experience Scripts + docs/environment.md (3.2b)
+├── anymake-experience-check/ # Uses the testing harness on demand: drives a story/PR/staging URL
 ├── anymake-design-system/  # Phase 2.2b design system + prototype
 ├── anymake-security-review/ # Security checklists + gate (4.5, pre-launch)
 ├── anymake-deploy/         # Staging + production deployment

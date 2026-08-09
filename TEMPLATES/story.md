@@ -68,7 +68,9 @@ judgment call, not a default — most stories have at least one scenario.
 
 This is authored here, at the same time as the acceptance criteria, so the
 Planner has it to copy into the task brief's §3a rather than reconstructing it
-from scratch per story.
+from scratch per story. The `anymake-experience-setup` skill owns writing
+these (and auditing coverage) across a whole backlog — see `PHASE_GUIDES/phase-3.md`
+Step 3.2b.
 
 ---
 

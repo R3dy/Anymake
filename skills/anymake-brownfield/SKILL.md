@@ -28,6 +28,8 @@ Reuses the same templates and locations as the hub — no parallel formats.
 | `PROJECTS/[name]/docs/01-discovery.md` (lite) | `TEMPLATES/discovery.md` | What the product clearly is + obvious competitors/risks (mark assumptions) |
 | `PROJECTS/[name]/docs/architecture-map.md` | `TEMPLATES/adr.md` (one ADR per significant existing decision, marked "as-built") | Actual stack, structure, data model, integrations |
 | `PROJECTS/[name]/BACKLOG` (epics + stories) | `TEMPLATES/epic.md`, `TEMPLATES/story.md` | Gaps, TODOs, requested features, tech debt |
+| Experience Scripts for the backlog above | `TEMPLATES/experience-script.md` (via `anymake-experience-setup`, retrofit mode) | The reverse-engineered stories have acceptance criteria but never went through Phase 3, so they have no Experience Script yet — this closes that gap before the build loop runs |
+| `docs/environment.md` | `TEMPLATES/environment.md` (via `anymake-experience-setup`) | How the existing app actually starts locally — not aspirational, verified against what's really there |
 | `PROJECTS/[name]/PHASE_STATE.md` | `TEMPLATES/phase-state.md` | Set `project_type`, `autonomous_mode`, and the resume point |
 
 > **Brownfield's map *is* the first run of the engineering-intent layer.** The
@@ -59,6 +61,12 @@ Reuses the same templates and locations as the hub — no parallel formats.
 6. **Forward backlog.** Turn gaps, TODOs, known bugs, and requested features into
    epics → stories with acceptance criteria, ordered with a dependency graph —
    the same format `anymake-build-loop` consumes.
+6a. **Retrofit the Experience Harness.** Run `anymake-experience-setup` in
+   retrofit mode against the backlog just written: it authors an Experience
+   Script for every story (or an explicit N/A) and writes `docs/environment.md`
+   from how the app actually starts today. Skipping this step means the build
+   loop's Experience Runner has nothing to drive later, and every Human-Only
+   criterion in the new backlog escalates instead of getting verified.
 7. **Write PHASE_STATE.md** and set the resume point (usually Phase 3 approval →
    Phase 4, or Phase 2 if planning gaps are large). Hand back to the hub.
 
