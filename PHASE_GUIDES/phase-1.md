@@ -137,10 +137,13 @@ You say "discovery complete, start planning" → proceed to Phase 2.
 **Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase-1-approval. Project root: [absolute path]. Artifacts: [absolute path to PROJECTS/[name]/docs/01-discovery.md]."
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: { gate_type: "phase-1-approval", artifacts: ["<absolute path to PROJECTS/[name]/docs/01-discovery.md>"] },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  board_ref: "Phase gate 1"
+}
 ```
 
 - `VERDICT: APPROVED` → proceed to Phase 2

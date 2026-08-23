@@ -243,6 +243,11 @@ for (const f of proseFiles) {
   } else {
     bad(`${f.name} does NOT reference anymake-dispatch (INV-018 violation — dispatch sites still use raw 'spawn' verbs)`);
   }
+  // (k) no raw Agent({ calls remain in any phase guide or skill file (INV-018 proof)
+  const rawCalls = body.match(/Agent\(\{/g);
+  if (rawCalls && rawCalls.length > 0) {
+    bad(`${f.name} still has ${rawCalls.length} raw Agent({ calls (INV-018 violation — must route through anymake-dispatch)`);
+  }
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);

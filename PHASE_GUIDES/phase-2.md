@@ -143,10 +143,16 @@ Both must be Yes before proceeding. If No on either: revise the prototype, do no
 **Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of a human visual review:
 
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase-2-prototype-review. Project root: [absolute path]. Prototype directory: [absolute path to PROJECTS/[name]/prototype/]. UX design: [absolute path to PROJECTS/[name]/docs/02-planning/ux-design.md]."
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: {
+    gate_type: "phase-2-prototype-review",
+    artifacts: ["<absolute path to PROJECTS/[name]/prototype/>", "<absolute path to PROJECTS/[name]/docs/02-planning/ux-design.md>"]
+  },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  board_ref: "Phase gate 2 (prototype)"
+}
 ```
 
 - `VERDICT: APPROVED` → proceed to Step 2.3
@@ -273,10 +279,16 @@ You say "planning complete, start solutioning" → proceed to Phase 3.
 **Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase-2-approval. Project root: [absolute path]. Artifacts: [absolute paths to PROJECTS/[name]/docs/02-planning/prd.md, ux-design.md, architecture/ADR-001.md through ADR-007.md, monetization.md, MVP_SCOPE.md]."
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: {
+    gate_type: "phase-2-approval",
+    artifacts: ["<absolute paths to PROJECTS/[name]/docs/02-planning/prd.md, ux-design.md, architecture/ADR-001.md through ADR-007.md, monetization.md, MVP_SCOPE.md>"]
+  },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  board_ref: "Phase gate 2"
+}
 ```
 
 - `VERDICT: APPROVED` → proceed to Phase 3
