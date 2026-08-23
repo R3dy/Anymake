@@ -313,18 +313,24 @@ You review the complete product on staging before launch approval:
 - Monetization flow works with test-mode Stripe
 - Product looks and feels ready to ship
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy for a code-level staging check instead of waiting:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill for a code-level staging check instead of waiting:
 
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase-4-staging-review. Project root: [absolute path]. Artifacts: [absolute paths to PROJECTS/[name]/BOARD.md, PROJECTS/[name]/docs/environment.md]."
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: {
+    gate_type: "phase-4-staging-review",
+    artifacts: ["<absolute path to PROJECTS/[name]/BOARD.md>", "<absolute path to PROJECTS/[name]/docs/environment.md>"]
+  },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  board_ref: "Phase gate 4 (staging)"
+}
 ```
 
 - `PHRASE: launch it` → proceed to Phase 5
 - `NEEDS CHANGES` → address the listed gaps and re-run the proxy
-- Note: run `anymake-experience-check` against the staging URL **before** spawning the proxy, and point it at the resulting experience report(s) as an artifact — the proxy reads that as real evidence the critical path was actually driven, not just documented. What's left as a genuine, documented limitation of autonomous mode is narrower now: live-mode payment edge cases and purely subjective polish judgments a script can't express — not the whole end-to-end journey.
+- Note: run `anymake-experience-check` against the staging URL **before** dispatching the proxy via `anymake-dispatch`, and point it at the resulting experience report(s) as an artifact — the proxy reads that as real evidence the critical path was actually driven, not just documented. What's left as a genuine, documented limitation of autonomous mode is narrower now: live-mode payment edge cases and purely subjective polish judgments a script can't express — not the whole end-to-end journey.
 
 ## Output
 

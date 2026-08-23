@@ -91,16 +91,9 @@ Advance the status label at every stage transition; mirror a one-line entry in
 `docs/06-agile/ISSUES.md`. No GitHub remote → the ledger is the tracker and
 "issue #N" is its row number; everything else is identical.
 
-### 3. Solution — spawn the Solution Architect
+### 3. Solution — dispatch the Solution Architect via `anymake-dispatch`
 
-First ensure the intent layer is fresh (spawn the **Cartographer** — registered
-agent `anymake-cartographer`, Tier 2 — if `SYSTEM_MAP.md` is missing or `Last
-mapped` predates recent merges). Then spawn the **Solution Architect**
-(`anymake-solution-architect`, Tier 2) with: issue link, project root, plan
-output path. It reviews the whole project and writes `issue-[N]/plan.md`,
-including the issue's "Repro as Experience Script" (bugs) or a new literal
-walkthrough (features) carried into plan §9's story breakdown — this is the
-same scenario the Experience Runner replays at build time and at Verify (§7).
+First ensure the intent layer is fresh (dispatch the **Cartographer** via `anymake-dispatch` — registered agent `anymake-cartographer`, Tier 2 — if `SYSTEM_MAP.md` is missing or `Last mapped` predates recent merges). Then dispatch the **Solution Architect** (`anymake-solution-architect`, Tier 2) via `anymake-dispatch` with: issue link, project root, plan output path. It reviews the whole project and writes `issue-[N]/plan.md`, including the issue's "Repro as Experience Script" (bugs) or a new literal walkthrough (features) carried into plan §9's story breakdown — this is the same scenario the Experience Runner replays at build time and at Verify (§7).
 
 - If it reports an **intent conflict** (plan would contradict an ADR/invariant):
   run the intent conflict gate (`AGENTS/arbiter.md` → Intent Conflict Policy)
@@ -111,12 +104,9 @@ same scenario the Experience Runner replays at build time and at Verify (§7).
 
 ### 4. Review loop — independent approval or specific objections
 
-Spawn a **fresh Plan Reviewer** (`anymake-plan-reviewer`, Tier 1 — see
-`AGENTS/arbiter.md` → Model Tier Policy); it writes `review-round-K.md` and returns:
+Dispatch a **fresh Plan Reviewer** (`anymake-plan-reviewer`, Tier 1 — see `AGENTS/arbiter.md` → Model Tier Policy) via `anymake-dispatch`; it writes `review-round-K.md` and returns:
 
-- `NEEDS CHANGES` → re-spawn the Architect with the review report; it resolves
-  every numbered comment (fix or reasoned push-back in the plan's Review Log)
-  and resubmits; spawn a fresh Reviewer for the next round
+- `NEEDS CHANGES` → re-dispatch the Architect via `anymake-dispatch` with the review report as RETRY CONTEXT; it resolves every numbered comment (fix or reasoned push-back in the plan's Review Log) and resubmits; dispatch a fresh Reviewer via `anymake-dispatch` for the next round
 - `ESCALATE` → straight to the user, always
 - `APPROVED` → proceed to the gate
 
@@ -131,8 +121,7 @@ Reviewer approval is engineering sign-off; the gate is product sign-off:
 - **Normal mode:** present the user a tight summary — issue, root cause, chosen
   design, stories, risk, rollback — and wait for `"approve plan"` /
   `"revise plan: [notes]"` / `"reject issue"`
-- **Autonomous mode:** spawn the Product Owner Proxy with gate type
-  `agile-plan-approval`. **Security-relevant plans always go to the real user**
+- **Autonomous mode:** dispatch the Product Owner Proxy via `anymake-dispatch` with gate type `agile-plan-approval`. **Security-relevant plans always go to the real user**
 - On approval: set `status:approved`, plan `Status: Approved`, comment the
   verdict on the issue
 
@@ -171,7 +160,7 @@ filled from plan §6–§7. Traceability rules (also in `AGENTS/arbiter.md`):
   waives the Experience Runner pass itself; note any waiver on the issue)
 - Close the issue with: what shipped, merge SHA, tag, revert command, and the
   experience report path
-- Spawn the **Cartographer** to refresh the intent layer; record the increment
+- Dispatch the **Cartographer** via `anymake-dispatch` to refresh the intent layer; record the increment
   in `PHASE_STATE.md`
 
 ## Guardrails

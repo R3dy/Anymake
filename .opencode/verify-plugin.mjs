@@ -154,5 +154,101 @@ delete process.env.ANYMAKE_MODEL_TIER1;
 delete process.env.ANYMAKE_MODEL_TIER2;
 delete process.env.ANYMAKE_MODEL_TIER3;
 
+// 7. anymake-dispatch skill exists, is referenced from the hub + orchestrator,
+//    and contains the canonical DISPATCH shape + WRITE THE FILE FIRST marker
+//    (INV-018: all dispatch goes through the seam)
+console.log('\n[7] anymake-dispatch skill: exists, referenced, canonical shape present');
+const dispatchSkillPath = path.join(SKILLS_DIR, 'anymake-dispatch', 'SKILL.md');
+if (!fs.existsSync(dispatchSkillPath)) {
+  bad('skills/anymake-dispatch/SKILL.md does not exist');
+} else {
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  const dispatchParsed = parseFrontmatter(dispatchBody);
+  // (a) frontmatter valid
+  if (!dispatchParsed) { bad('anymake-dispatch/SKILL.md has no frontmatter'); }
+  else if (dispatchParsed.fm.name !== 'anymake-dispatch') { bad(`anymake-dispatch: name is '${dispatchParsed.fm.name}', expected 'anymake-dispatch'`); }
+  else if (!dispatchParsed.fm.description || dispatchParsed.fm.description.length < 40) { bad('anymake-dispatch: description missing or < 40 chars'); }
+  else ok('anymake-dispatch/SKILL.md: frontmatter valid');
+  // (b) canonical DISPATCH request shape present
+  if (dispatchBody.includes('DISPATCH {') && dispatchBody.includes('agent:') && dispatchBody.includes('output_artifact:') && dispatchBody.includes('output_check:')) {
+    ok('anymake-dispatch: canonical DISPATCH request shape present');
+  } else {
+    bad('anymake-dispatch: missing canonical DISPATCH request shape (expected DISPATCH { ... agent: ... output_artifact: ... output_check: ...)');
+  }
+  // (c) WRITE THE FILE FIRST pre-prompt marker present
+  if (dispatchBody.includes('WRITE THE FILE FIRST')) {
+    ok('anymake-dispatch: WRITE THE FILE FIRST pre-prompt marker present');
+  } else {
+    bad('anymake-dispatch: missing WRITE THE FILE FIRST marker');
+  }
+  // (d) RETRY CONTEXT canonical block present
+  if (dispatchBody.includes('RETRY CONTEXT') && dispatchBody.includes("Trigger:")) {
+    ok('anymake-dispatch: RETRY CONTEXT canonical block present');
+  } else {
+    bad('anymake-dispatch: missing RETRY CONTEXT canonical block');
+  }
+  // (e) Backend section present (host-portability seam)
+  if (dispatchBody.includes('Backend: OpenCode')) {
+    ok('anymake-dispatch: Backend adapter section present (host-portability seam)');
+  } else {
+    bad('anymake-dispatch: missing Backend adapter section');
+  }
+}
+// (f) hub references anymake-dispatch
+const hubBody = fs.readFileSync(path.join(SKILLS_DIR, 'anymake', 'SKILL.md'), 'utf8');
+if (hubBody.includes('anymake-dispatch')) {
+  ok('hub skills/anymake/SKILL.md references anymake-dispatch');
+} else {
+  bad('hub skills/anymake/SKILL.md does NOT reference anymake-dispatch (companion table missing the row)');
+}
+// (g) skills/README.md references anymake-dispatch
+const readmeBody = fs.readFileSync(path.join(SKILLS_DIR, 'README.md'), 'utf8');
+if (readmeBody.includes('anymake-dispatch')) {
+  ok('skills/README.md companion map references anymake-dispatch');
+} else {
+  bad('skills/README.md companion map does NOT reference anymake-dispatch');
+}
+// (h) orchestrator references anymake-dispatch (the contract that rewiring happened — Story 27.2a)
+const orchestratorPath = path.join(ROOT, 'AGENTS', 'orchestrator.md');
+if (fs.existsSync(orchestratorPath)) {
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  if (orchBody.includes('anymake-dispatch')) {
+    ok('AGENTS/orchestrator.md references anymake-dispatch (rewiring done)');
+  } else {
+    bad('AGENTS/orchestrator.md does NOT reference anymake-dispatch (INV-018 violation — dispatch sites still use raw Agent calls)');
+  }
+  // (i) no raw Agent({ calls remain in orchestrator (INV-018 proof)
+  const rawAgentCalls = orchBody.match(/Agent\(\{/g);
+  if (rawAgentCalls && rawAgentCalls.length > 0) {
+    bad(`AGENTS/orchestrator.md still has ${rawAgentCalls.length} raw Agent({ calls (INV-018 violation — must route through anymake-dispatch)`);
+  } else {
+    ok('AGENTS/orchestrator.md has zero raw Agent({ calls (all dispatch routed through anymake-dispatch)');
+  }
+}
+// (j) prose-verb dispatch sites reference anymake-dispatch (Story 27.2b rewire)
+const proseFiles = [
+  { path: path.join(SKILLS_DIR, 'anymake-agile', 'SKILL.md'), name: 'skills/anymake-agile/SKILL.md' },
+  { path: path.join(SKILLS_DIR, 'anymake', 'SKILL.md'), name: 'skills/anymake/SKILL.md (hub)' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-0.md'), name: 'PHASE_GUIDES/phase-0.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-1.md'), name: 'PHASE_GUIDES/phase-1.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-2.md'), name: 'PHASE_GUIDES/phase-2.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-3.md'), name: 'PHASE_GUIDES/phase-3.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-4.md'), name: 'PHASE_GUIDES/phase-4.md' },
+];
+for (const f of proseFiles) {
+  if (!fs.existsSync(f.path)) { bad(`${f.name}: file not found`); continue; }
+  const body = fs.readFileSync(f.path, 'utf8');
+  if (body.includes('anymake-dispatch')) {
+    ok(`${f.name} references anymake-dispatch (prose-verb rewire done)`);
+  } else {
+    bad(`${f.name} does NOT reference anymake-dispatch (INV-018 violation — dispatch sites still use raw 'spawn' verbs)`);
+  }
+  // (k) no raw Agent({ calls remain in any phase guide or skill file (INV-018 proof)
+  const rawCalls = body.match(/Agent\(\{/g);
+  if (rawCalls && rawCalls.length > 0) {
+    bad(`${f.name} still has ${rawCalls.length} raw Agent({ calls (INV-018 violation — must route through anymake-dispatch)`);
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

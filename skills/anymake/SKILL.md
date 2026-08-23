@@ -102,7 +102,7 @@ Every session:
 4. **Scope is a hard boundary** — nothing gets built outside approved scope
 5. **Clean exits** — every session ends with PHASE_STATE.md updated and next step named
 6. **Success model is first-class** — defined in Phase 0 per the project type. For commercial types, monetization is designed in Phase 2 and built in Phase 4; other types optimize for their own success axis (adoption, reliability, personal use)
-7. **Autonomous mode gates** — when `autonomous_mode: true`, spawn the Product Owner Proxy (`AGENTS/product-owner-proxy.md`) at every phase gate instead of waiting for user input. The proxy is strict: it returns specific required changes when artifacts are incomplete, not approvals for weak work. Security failures in Phase 4 always escalate to the real user regardless of mode — that override is absolute.
+7. **Autonomous mode gates** — when `autonomous_mode: true`, dispatch the Product Owner Proxy (`AGENTS/product-owner-proxy.md`) via the `anymake-dispatch` skill at every phase gate instead of waiting for user input. The proxy is strict: it returns specific required changes when artifacts are incomplete, not approvals for weak work. Security failures in Phase 4 always escalate to the real user regardless of mode — that override is absolute.
 
 ## Autonomous Mode (Yolo)
 
@@ -110,7 +110,7 @@ Every session:
 
 **When activated:**
 1. Set `autonomous_mode: true` in `PROJECTS/[name]/PHASE_STATE.md` — note this prominently at the start of the session
-2. Proceed through all phases without stopping at user approval gates — spawn the Product Owner Proxy to evaluate each gate
+2. Proceed through all phases without stopping at user approval gates — dispatch the Product Owner Proxy via `anymake-dispatch` to evaluate each gate
 3. The proxy approves clean artifacts and returns specific required changes for incomplete ones — it does not rubber-stamp
 4. Continue to the next phase only when the proxy returns `APPROVED`; if it returns `NEEDS CHANGES`, address each item and re-run the proxy review
 5. The only gate that still pauses for human input: `ESCALATE TO USER` from the proxy (which always happens on security failures)
@@ -128,7 +128,7 @@ Every session:
 - **Ignoring the project type** — running the SaaS defaults (monetization, prototype gate, AARRR) on a type whose manifest skips them, or vice versa
 - Pushing unreviewed code (first 3 PRs always require your review)
 - Producing multiple artifacts in one session
-- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + planner + worker + validator + experience runner into one context. The Agent tool must be used to spawn sub-agents — doing it all yourself defeats the five-stage architecture.
+- **Orchestrator-as-worker:** Collapsing Phase 4 orchestrator + planner + worker + validator + experience runner into one context. Sub-agents must be dispatched via the `anymake-dispatch` skill (INV-018) — doing it all yourself defeats the five-stage architecture.
 - **"No test suite" as a result:** Every story with runtime-verifiable acceptance criteria must have automated tests. "Works on my machine" is not a validation strategy.
 - **"Validator PASS" as the finish line:** A story is not done until it also has an Experience Runner PASS (or an explicit §3a: N/A) — someone, human or agent, has to have actually driven it.
 
@@ -182,6 +182,7 @@ so state and conventions never fork. See `skills/README.md` for the full map.
 | `anymake-iterate` | The post-launch loop ("Phase 6") — triage, metrics→epics, release planning | **Phase 5, Step 5.6** onward, or on "Continue" when already launched |
 | `anymake-agile` | The single post-launch pipeline for changing a built product — confirmed intake, labeled GitHub issue, Solution Architect development plan (intent-layer checked, contradictions gated behind a superseding decision), independent Plan Reviewer approval loop, traceable build via `anymake-build-loop`, reporter verification | When the **user reports a bug or requests any add/change/remove** on a built project, or when **`anymake-iterate` picks an increment to build** |
 | `anymake-new-type` | Authoring a new project type (`manifest.md` + `guide.md`) | When **extending the type system** |
+| `anymake-dispatch` | Hardened, host-agnostic sub-agent dispatch — the single chokepoint for spawning any agent (Planner, Worker, Validator, Experience Runner, Proxy, Cartographer, Architect, Reviewer). Wraps the host's `Agent`/`Task` primitive with pre-dispatch prompt assembly (WRITE THE FILE FIRST), mandatory post-dispatch deliverable verification, structured RETRY CONTEXT, and a dispatch log to `BOARD.md`. Never call the host's dispatch primitive directly | Whenever **any agent needs to spawn another** — Phase 4 build loop, agile flow, phase-gate proxy spawns |
 
 **How to delegate:** at a delegating step, invoke the named companion via the
 `Skill` tool, let it complete its one job (it reads/updates the same project

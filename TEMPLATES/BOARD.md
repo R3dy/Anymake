@@ -140,6 +140,11 @@
 | [time] | Orchestrator started — run-001 |
 | [time] | Board initialized — [N] stories across [N] milestones (Milestones 1-2 pre-complete) |
 
+<!-- Run Log entries follow the structured format from anymake-dispatch:
+     [time] DISPATCH <OK|FAIL|RETRY> — <agent> — <board_ref> — purpose: <purpose> — artifact: <path> — attempt: <N>
+     Non-dispatch events (board state changes, pauses, escalations) use free-text.
+--> |
+
 ---
 
 ## Completed This Run

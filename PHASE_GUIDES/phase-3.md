@@ -189,13 +189,16 @@ You review epics and backlog. Key questions:
 
 You say "solutioning complete, start building" → proceed to Phase 4.
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy instead of waiting:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase-3-approval. Project root: [absolute path]. Artifacts: [absolute paths to PROJECTS/[name]/docs/03-solutioning/epics.md, backlog.md, dependency-graph.md]."
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: { gate_type: "phase-3-approval", artifacts: ["<absolute paths to PROJECTS/[name]/docs/03-solutioning/epics.md, backlog.md, dependency-graph.md>"] },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  board_ref: "Phase gate 3"
+}
 ```
 
 - `VERDICT: APPROVED` → proceed to Phase 4
