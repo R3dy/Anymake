@@ -208,8 +208,23 @@ if (readmeBody.includes('anymake-dispatch')) {
 } else {
   bad('skills/README.md companion map does NOT reference anymake-dispatch');
 }
-// (h) orchestrator references anymake-dispatch — this check is added in Story 27.2a
-//     (the rewire contract). 27.1 only asserts the skill exists + hub/README reference it.
+// (h) orchestrator references anymake-dispatch (the contract that rewiring happened — Story 27.2a)
+const orchestratorPath = path.join(ROOT, 'AGENTS', 'orchestrator.md');
+if (fs.existsSync(orchestratorPath)) {
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  if (orchBody.includes('anymake-dispatch')) {
+    ok('AGENTS/orchestrator.md references anymake-dispatch (rewiring done)');
+  } else {
+    bad('AGENTS/orchestrator.md does NOT reference anymake-dispatch (INV-018 violation — dispatch sites still use raw Agent calls)');
+  }
+  // (i) no raw Agent({ calls remain in orchestrator (INV-018 proof)
+  const rawAgentCalls = orchBody.match(/Agent\(\{/g);
+  if (rawAgentCalls && rawAgentCalls.length > 0) {
+    bad(`AGENTS/orchestrator.md still has ${rawAgentCalls.length} raw Agent({ calls (INV-018 violation — must route through anymake-dispatch)`);
+  } else {
+    ok('AGENTS/orchestrator.md has zero raw Agent({ calls (all dispatch routed through anymake-dispatch)');
+  }
+}
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

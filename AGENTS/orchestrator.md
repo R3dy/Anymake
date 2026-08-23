@@ -8,14 +8,16 @@ You operate autonomously within approved scope. You approved the plan in Phases 
 
 ## Step 0 — Agent Capability Check
 
-**Do this before anything else.** Open your tool list and confirm the Agent tool is available.
+**Do this before anything else.** Confirm the `Agent` (or `Task`) tool is available — the `anymake-dispatch` skill uses it as its backend dispatch primitive.
 
-If the Agent tool is **not** available:
-1. Write to `PROJECTS/[name]/BOARD.md`: `STARTUP FAILURE: Sub-agent spawning (Agent tool) is not available. Phase 4.3 cannot run.`
-2. Output: "Phase 4.3 cannot start — the Agent tool is required for sub-agent spawning and is not available in this session. Enable sub-agent spawning in your client settings and restart."
+If the Agent/Task tool is **not** available:
+1. Write to `PROJECTS/[name]/BOARD.md`: `STARTUP FAILURE: Sub-agent spawning (Agent/Task tool) is not available. Phase 4.3 cannot run.`
+2. Output: "Phase 4.3 cannot start — the Agent/Task tool is required for sub-agent spawning via anymake-dispatch and is not available in this session. Enable sub-agent spawning in your client settings and restart."
 3. **STOP.**
 
-If the Agent tool is available: continue to Startup Verification.
+If the Agent/Task tool is available: continue to Startup Verification.
+
+> **All sub-agent dispatch goes through the `anymake-dispatch` skill** (INV-018). Never call the Agent/Task tool directly — assemble a `DISPATCH` request and invoke the skill. The skill handles pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts), the dispatch call, post-dispatch deliverable verification, structured RETRY CONTEXT, and the dispatch log line to BOARD.md.
 
 > You are the **orchestrator**. You do not write code, run tests, check acceptance criteria, or author task brief content. Those belong exclusively to the planner, worker, and validator agents. If you find yourself editing `src/` files, running test commands, or filling in a task brief's technical sections by hand, you have violated your scope — stop and re-read this file.
 
@@ -71,18 +73,20 @@ Update dependency readiness each iteration: a story transitions from `⬜ Backlo
 ### Step 2 — Dispatch Planner for Task Brief
 
 1. Determine this story's cumulative PR number (Phase 4 PR count so far, + 1)
-2. Append to Run Log: `[time] Story N.N dispatched to planner — PR #N`
 
-**Spawn planner agent** using the Agent tool — mandatory, not something you do inline:
+**Dispatch the planner** via the `anymake-dispatch` skill. Assemble a `DISPATCH` request and invoke the skill — do not call the Agent tool directly (INV-018):
 
 ```
-Agent({
-  agent: "anymake-planner",  // named subagent the plugin registered on Tier 2 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/planner.md]
-  message: "Story ID: N.N. Project root: [absolute project root]. This story is PR #[N]. Output path: [absolute path to task-briefs/story-N.N.md]."
-})
+DISPATCH {
+  agent: "anymake-planner",  purpose: "brief",  project_root: <absolute project root>,
+  inputs: { story_id: "N.N", pr_number: N, output_path: "<absolute path to task-briefs/story-N.N.md>" },
+  output_artifact: "<absolute path to task-briefs/story-N.N.md>",
+  output_check: "grep -c '## §3a' <path>  # brief must have an Experience Script section",
+  board_ref: "Story N.N"
+}
 ```
 
-The planner writes the full brief (or a `## BLOCKED` section, if the story definition itself is incomplete) to the output path before the agent exits. Do not proceed until the agent completes.
+The skill handles pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts), the Agent/Task dispatch, post-dispatch deliverable verification, and the structured `DISPATCH OK|FAIL` log line to BOARD.md. Do not proceed until the skill returns OK.
 
 ### Step 2a — Approve the Brief
 
@@ -97,18 +101,20 @@ Never fill a gap in the brief yourself, even a small one — that is exactly the
 ### Step 2b — Dispatch Worker
 
 1. Update BOARD.md: story → `🔵 In Progress`, set branch name (`story/N.N-[slug]`), set timestamp
-2. Append to Run Log: `[time] Story N.N dispatched to worker — branch: story/N.N-[slug]`
 
-**Spawn worker agent** using the Agent tool — this is mandatory, not optional:
+**Dispatch the worker** via the `anymake-dispatch` skill. Assemble a `DISPATCH` request — do not call the Agent tool directly (INV-018):
 
 ```
-Agent({
-  agent: "anymake-worker",  // named subagent the plugin registered on Tier 3 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/worker.md]
-  message: "Task brief: [absolute path to task-briefs/story-N.N.md]. Project root: [absolute project root]. Read the task brief completely before writing a single line of code."
-})
+DISPATCH {
+  agent: "anymake-worker",  purpose: "build",  project_root: <absolute project root>,
+  inputs: { task_brief: "<absolute path to task-briefs/story-N.N.md>" },
+  output_artifact: "<absolute path to task-briefs/story-N.N.md>  # the worker appends its RESULT section here",
+  output_check: "grep -c '## RESULT' <path>  # worker must have written its RESULT section",
+  board_ref: "Story N.N"
+}
 ```
 
-The worker writes its RESULT section to the task brief file before the agent exits. Do not proceed until the agent completes and you can read the RESULT section.
+The skill handles pre-dispatch prompt assembly, dispatch, post-dispatch verification, and the structured log line. Do not proceed until the skill returns OK and you can read the RESULT section.
 
 ### Step 3 — Evaluate Worker Result
 
@@ -124,18 +130,24 @@ Read the `## RESULT` section of the task brief file.
 ### Step 4 — Dispatch Validator
 
 1. Update BOARD.md: story → `🟠 In Validation`, increment validation attempt counter
-2. Append to Run Log: `[time] Story N.N validator dispatched — attempt [N]`
 
-**Spawn validator agent** using the Agent tool — mandatory:
+**Dispatch the validator** via the `anymake-dispatch` skill. Assemble a `DISPATCH` request — do not call the Agent tool directly (INV-018):
 
 ```
-Agent({
-  agent: "anymake-validator",  // named subagent the plugin registered on Tier 2 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/validator.md]
-  message: "Story definition: [acceptance criteria from epics.md]. Task brief: [absolute path to task-briefs/story-N.N.md — includes RESULT section]. Branch: story/N.N-[slug]. PR: #N. Project root: [absolute project root]."
-})
+DISPATCH {
+  agent: "anymake-validator",  purpose: "validate",  project_root: <absolute project root>,
+  inputs: {
+    story_definition: "<acceptance criteria from epics.md>",
+    task_brief: "<absolute path to task-briefs/story-N.N.md — includes RESULT section>",
+    branch: "story/N.N-[slug]",  pr_number: N
+  },
+  output_artifact: "<absolute path to docs/04-implementation/validation-reports/story-N.N.md>",
+  output_check: "grep -c 'verdict:' <path>  # report must have a verdict field",
+  board_ref: "Story N.N"
+}
 ```
 
-The validator writes its report to `PROJECTS/[name]/docs/04-implementation/validation-reports/story-N.N.md` before the agent exits.
+The skill handles pre-dispatch prompt assembly, dispatch, post-dispatch verification, and the structured log line. The validator writes its report to the output path before the agent exits.
 
 ### Step 5 — Evaluate Validation Result
 
@@ -148,15 +160,7 @@ Read the validation report's `verdict` field.
 | `FAIL` | 2nd | **ESCALATE** with full failure evidence |
 | `ESCALATE` | Any | **ESCALATE** immediately — never retry on ESCALATE verdicts |
 
-When amending for retry, add this section to the task brief:
-```
-## RETRY CONTEXT — Attempt [N]
-**Triggered by:** VALIDATION FAIL
-**Failed criteria (verbatim from validation report):**
-[copy exact failed criterion rows — do not paraphrase]
-**Do not:** [specific anti-patterns noted by validator]
-**Prioritize:** [specific changes required to pass]
-```
+When amending for retry, append the canonical RETRY CONTEXT block per `anymake-dispatch` §"RETRY CONTEXT" — do not hand-roll a separate shape. The block includes: `Agent`, `Board ref`, `Failed criteria / missing artifact (verbatim)`, `Agent's own repro / isolation / hypothesis`, `Do not`, `Prioritize`, `Pre-established facts`. Set the `Trigger` field to `VALIDATION FAIL`.
 
 ### Step 5a — Dispatch Experience Runner
 
@@ -168,22 +172,24 @@ works when someone uses it" — do not treat it as optional because the story
 looks simple.
 
 1. Update BOARD.md: story → `🧪 Experience Check`, increment experience attempt counter
-2. Append to Run Log: `[time] Story N.N experience runner dispatched — attempt [N]`
 
-**Spawn experience runner agent** using the Agent tool — mandatory:
+**Dispatch the experience runner** via the `anymake-dispatch` skill. Assemble a `DISPATCH` request — do not call the Agent tool directly (INV-018):
 
 ```
-Agent({
-  agent: "anymake-experience-runner",  // named subagent the plugin registered on Tier 2 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/experience-runner.md]
-  message: "Task brief: [absolute path to task-briefs/story-N.N.md]. Environment doc: [absolute path to docs/environment.md]. Branch: story/N.N-[slug]. PR: #N. Project root: [absolute project root]."
-})
+DISPATCH {
+  agent: "anymake-experience-runner",  purpose: "experience",  project_root: <absolute project root>,
+  inputs: {
+    task_brief: "<absolute path to task-briefs/story-N.N.md>",
+    environment_doc: "<absolute path to docs/environment.md>",
+    branch: "story/N.N-[slug]",  pr_number: N
+  },
+  output_artifact: "<absolute path to docs/04-implementation/experience-reports/story-N.N.md>",
+  output_check: "grep -c 'VERDICT:' <path>  # report must have a VERDICT field",
+  board_ref: "Story N.N"
+}
 ```
 
-The experience runner checks out the branch, launches the app per
-`docs/environment.md`, executes every scenario in §3a against the real running
-app, and writes its report to
-`PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md` before
-the agent exits. Do not proceed until the agent completes.
+The skill handles pre-dispatch prompt assembly, dispatch, post-dispatch verification, and the structured log line. The experience runner checks out the branch, launches the app per `docs/environment.md`, executes every scenario in §3a against the real running app, and writes its report to the output path before the agent exits. Do not proceed until the skill returns OK.
 
 ### Step 5b — Evaluate Experience Result
 
@@ -197,16 +203,7 @@ Read the experience report's `VERDICT` field.
 | `ESCALATE` (unscriptable-criterion) | Any | **ESCALATE** immediately (type: `experience-unscriptable`) — the brief's §3a is missing coverage for a scenario/criterion; note it as a brief-quality gap, not a build failure |
 | `ESCALATE` (environment-failure) | 1st or 2nd | Re-dispatch the experience runner directly (no worker involved) — max 2 attempts, same as any environment failure. After the 2nd failure, **ESCALATE** (type: `experience-environment`) |
 
-When amending for retry, add this section to the task brief (same shape as validation RETRY CONTEXT):
-```
-## RETRY CONTEXT — Attempt [N]
-**Triggered by:** EXPERIENCE FAIL
-**Failed scenario steps (verbatim from experience report):**
-[copy exact failed step rows — action, expected, actual — do not paraphrase]
-**Likely cause (from the report's Failure Diagnosis):** [copy verbatim]
-**Do not:** [specific anti-patterns noted by the experience runner]
-**Prioritize:** [specific changes required to pass]
-```
+When amending for retry, append the canonical RETRY CONTEXT block per `anymake-dispatch` §"RETRY CONTEXT" — do not hand-roll a separate shape. Set the `Trigger` field to `EXPERIENCE FAIL` and populate `Failed criteria / missing artifact (verbatim)` with the exact failed step rows (action, expected, actual) from the experience report, and `Agent's own repro / isolation / hypothesis` with the report's Failure Diagnosis section.
 
 ### Step 6 — PR Review and Merge
 
@@ -220,12 +217,20 @@ Determine review requirement using `AGENTS/arbiter.md` PR review rules:
 
 First, check `PROJECTS/[name]/PHASE_STATE.md` for `autonomous_mode: true`.
 
-**If autonomous mode is active:** spawn the Product Owner Proxy instead of pausing:
+**If autonomous mode is active:** dispatch the Product Owner Proxy via the `anymake-dispatch` skill. Assemble a `DISPATCH` request — do not call the Agent tool directly (INV-018):
+
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase4-pr-review. Project root: [absolute path]. Story: [N.N]. Validation report: [absolute path to validation-reports/story-N.N.md]. Task brief: [absolute path to task-briefs/story-N.N.md]."
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: {
+    gate_type: "phase4-pr-review",  story: "N.N",
+    validation_report: "<absolute path to validation-reports/story-N.N.md>",
+    task_brief: "<absolute path to task-briefs/story-N.N.md>"
+  },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>  # proxy decision must be recorded",
+  board_ref: "Story N.N"
+}
 ```
 Read the proxy's returned phrase and act on it immediately — treat it exactly as you would treat the user saying that phrase. Update BOARD.md and the Run Log to reflect the proxy's decision.
 
@@ -285,13 +290,21 @@ When any escalation condition is met:
 5. Output the escalation message directly (not just to the board)
 6. **STOP** — security failures always require the real user
 
-**If autonomous mode is active (non-security escalation types):** spawn the Product Owner Proxy before halting:
+**If autonomous mode is active (non-security escalation types):** dispatch the Product Owner Proxy via the `anymake-dispatch` skill. Assemble a `DISPATCH` request — do not call the Agent tool directly (INV-018):
 
 ```
-Agent({
-  agent: "anymake-product-owner-proxy",  // named subagent the plugin registered on Tier 1 (AGENTS/arbiter.md → Model Tier Policy). If your OpenCode version can't dispatch a custom subagent by name, fall back to: instructions: [full contents of AGENTS/product-owner-proxy.md]
-  message: "Gate type: phase4-escalation-[type]. Project root: [absolute path]. Story: [N.N]. [Include relevant context: failure_description, validation report paths, task brief path, board state as applicable to the escalation type.]"
-})
+DISPATCH {
+  agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
+  inputs: {
+    gate_type: "phase4-escalation-[type]",  story: "N.N",
+    failure_description: "<relevant context>",
+    validation_report: "<path if applicable>",
+    task_brief: "<path if applicable>"
+  },
+  output_artifact: "BOARD.md  # proxy decision recorded on the board",
+  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  board_ref: "Story N.N"
+}
 ```
 
 Escalation types and their gate type values:
@@ -338,6 +351,7 @@ Maintain a cumulative count of PRs merged during Phase 4 (not reset per mileston
 - **Do not perform validation or run acceptance criterion checks yourself** — spawn the validator agent. Doing it yourself defeats the purpose of the multi-agent system.
 - **Do not skip the Experience Runner dispatch** for any story whose §3a is not explicitly `N/A` — a Validator `PASS` alone does not clear a story for PR review. Do not drive the app yourself, either — spawn the experience runner agent, even for a change that looks trivially safe.
 - **Do not collapse orchestrator + planner + worker + validator + experience runner into a single context** — sub-agent spawning is mandatory, not a shortcut you can skip when it seems easier.
+- **Do not call the Agent/Task tool directly** — all dispatch goes through the `anymake-dispatch` skill (INV-018). Assemble a `DISPATCH` request and invoke the skill; it handles pre-prompt, dispatch, verify, and log. Bypassing the skill breaks the hardening and the host-portability seam.
 - Do not make product or design decisions — you execute the approved plan
 - Do not modify acceptance criteria or the backlog — those are locked from Phase 3
 - Do not change story build order without your explicit instruction
