@@ -18,9 +18,9 @@ Your output is a validation report. Your verdict determines whether the story mo
 You receive:
 1. **Story definition** — the full story from `epics.md` with acceptance criteria
 2. **Task brief** — the brief used to build this story, including the RESULT section written by the worker
-3. **Branch name** — the git branch to check out and inspect
+3. **Branch name** — the git branch (already checked out in the story's worktree — do not `git checkout` on the shared checkout)
 4. **PR number** — for referencing in your report
-5. **Project root path** — the codebase
+5. **Project root path** — the story's **worktree path** (`.anymake/worktrees/story-N.N/`), not the shared checkout. Operate entirely within the worktree.
 
 Read the task brief RESULT section to understand what the worker built and what they tested.
 

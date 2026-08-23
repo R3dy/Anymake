@@ -250,5 +250,51 @@ for (const f of proseFiles) {
   }
 }
 
+// 8. Worktree isolation (B1 / #16 / Story 29.1) — dispatch skill has populated
+//    workspace-setup section; worker.md references the worktree convention
+console.log('\n[8] Worktree isolation (B1 / #16)');
+{
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  // (a) workspace-setup section is populated (no longer "future extension point")
+  if (dispatchBody.includes('git worktree add') && dispatchBody.includes('.anymake/worktrees/story-N.N')) {
+    ok('anymake-dispatch: workspace-setup section documents worktree add + path convention');
+  } else {
+    bad('anymake-dispatch: workspace-setup section missing worktree add command or path convention');
+  }
+  if (dispatchBody.includes('DISPATCH.project_root') && dispatchBody.includes('worktree path')) {
+    ok('anymake-dispatch: workspace-setup states DISPATCH.project_root is the worktree path');
+  } else {
+    bad('anymake-dispatch: workspace-setup does not reassign DISPATCH.project_root to worktree path');
+  }
+  if (!dispatchBody.includes('future extension point')) {
+    ok('anymake-dispatch: workspace-setup no longer a no-op "future extension point"');
+  } else {
+    bad('anymake-dispatch: workspace-setup still says "future extension point" (slot not filled)');
+  }
+  // (b) worker.md references worktree convention, no git checkout -b on shared checkout
+  const workerBody = fs.readFileSync(path.join(AGENTS_DIR, 'worker.md'), 'utf8');
+  if (workerBody.includes('worktree') && workerBody.includes('.anymake/worktrees/story-N.N')) {
+    ok('AGENTS/worker.md references worktree convention');
+  } else {
+    bad('AGENTS/worker.md does not reference worktree convention');
+  }
+  // The instruction "Do not run git checkout -b" is a prohibition, not an
+  // instruction to run it. Check for the instruction form only (bash code
+  // block with git checkout -b as a command, not a prohibition in prose).
+  const checkoutInstr = workerBody.match(/```bash\n[^]*git checkout -b/m) || workerBody.match(/^\s*git checkout -b/m);
+  if (!checkoutInstr) {
+    ok('AGENTS/worker.md: no git checkout -b instruction (branch created by worktree add)');
+  } else {
+    bad('AGENTS/worker.md still instructs git checkout -b on shared checkout');
+  }
+  // (c) orchestrator.md documents worktree creation + removal
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  if (orchBody.includes('git worktree add') && orchBody.includes('git worktree remove')) {
+    ok('AGENTS/orchestrator.md: worktree creation + removal documented');
+  } else {
+    bad('AGENTS/orchestrator.md: missing worktree creation or removal lifecycle');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

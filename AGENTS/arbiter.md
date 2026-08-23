@@ -88,6 +88,14 @@ any PR-count or review rule above.
 | CI failing on merge | No | 0 | Immediate escalation |
 | All stories blocked | No | 0 | Immediate escalation |
 
+**Worktree lifecycle (B1 / #16):**
+Each story's Worker (and its Validator / Experience Runner) operates in a
+dedicated git worktree (`.anymake/worktrees/story-N.N/`), created by the
+orchestrator before Worker dispatch and removed after `done` or `skip`. Retry
+re-dispatches **reuse the existing worktree** — do not re-create it. The
+worktree is cleaned up only on `done` or `skip`. A per-story escalation does
+not trigger worktree cleanup until the story reaches a terminal state.
+
 ---
 
 ## Environment vs. Implementation Classification

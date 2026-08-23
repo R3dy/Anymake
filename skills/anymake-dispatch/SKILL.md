@@ -183,18 +183,52 @@ previously hand-written per call site and extends logging to every dispatch
 [time] DISPATCH <OK|FAIL|RETRY> — <agent> — <board_ref> — purpose: <purpose> — artifact: <output_artifact or "none"> — attempt: <N>
 ```
 
-## Workspace setup (future extension point)
+## Workspace setup (worktree isolation — B1 / #16)
 
-This skill leaves a named slot for workspace setup (backlog B1/#16, git worktree
-isolation). Today the slot is a no-op — agents operate against the shared
-checkout. When B1 lands, this section will define the worktree-creation step
-that runs before the dispatch call. The `DISPATCH` interface does not need to
-change — the worktree path is an implementation detail of the workspace setup,
-not a field on the request.
+Each dispatched Worker (and its downstream Validator / Experience Runner)
+operates in a **dedicated git worktree** so concurrent stories never collide on
+the shared checkout's index, branch, or uncommitted state. The orchestrator
+creates the worktree before Worker dispatch and removes it after the story
+reaches `done` or `skip`.
 
-Similarly, parallel dispatch (backlog B2/#17) is a future extension: a
-`dispatch_parallel([DISPATCH, DISPATCH, ...])` mode can be added without
-changing the per-dispatch contract. This skill does not implement it today.
+**Worktree creation** (orchestrator runs this before dispatching the Worker):
+
+```bash
+git worktree add .anymake/worktrees/story-N.N -b story/N.N-[slug] main
+```
+
+- Path convention: `.anymake/worktrees/story-N.N/` (relative to the consuming
+  project root; gitignored per INV-015)
+- Branch: `story/N.N-[slug]` (created by `worktree add -b`, not `git checkout -b`)
+- Base: `main` (the latest merged state)
+
+**Worktree removal** (orchestrator runs this after `done` or `skip`):
+
+```bash
+git worktree remove --force .anymake/worktrees/story-N.N
+git branch -d story/N.N-[slug]
+```
+
+**DISPATCH.project_root reassignment:** for the Worker, Validator, and
+Experience Runner of a given story, `DISPATCH.project_root` is set to the
+**worktree path** (`<project_root>/.anymake/worktrees/story-N.N/`), not the
+shared checkout. The agent operates entirely within the worktree — it never
+checks out a branch on the shared checkout.
+
+**Retry re-dispatches reuse the existing worktree** (no re-create). The worktree
+is cleaned up only on `done` or `skip` — a retry picks up where the prior
+attempt left off, in the same worktree.
+
+**Single-story mode** (`concurrency.max = 1`): one worktree at a time —
+behavior is identical to today's sequential loop, just with the worktree as
+the project root instead of the shared checkout.
+
+Similarly, parallel dispatch (backlog B2/#17, shipped as `dispatch_parallel` in
+issue #29) extends the per-dispatch contract: a `dispatch_parallel([DISPATCH,
+DISPATCH, ...])` mode loops over the list, running the full per-dispatch
+procedure (workspace setup, pre-prompt, dispatch, verify, log) for each entry.
+The per-dispatch contract does not change — `dispatch_parallel` is a loop over
+`DISPATCH` requests, not a new dispatch primitive.
 
 ## What this skill does NOT do
 

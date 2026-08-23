@@ -101,6 +101,14 @@ Never fill a gap in the brief yourself, even a small one — that is exactly the
 ### Step 2b — Dispatch Worker
 
 1. Update BOARD.md: story → `🔵 In Progress`, set branch name (`story/N.N-[slug]`), set timestamp
+2. **Create the worktree** (worktree isolation, B1/#16):
+   ```bash
+   git worktree add .anymake/worktrees/story-N.N -b story/N.N-[slug] main
+   ```
+   The worktree path (`<project_root>/.anymake/worktrees/story-N.N/`) is passed
+   as `DISPATCH.project_root` to the Worker, Validator, and Experience Runner
+   for this story. They operate entirely within the worktree — never on the
+   shared checkout. See `skills/anymake-dispatch/SKILL.md` → "Workspace setup".
 
 **Dispatch the worker** via the `anymake-dispatch` skill. Assemble a `DISPATCH` request — do not call the Agent tool directly (INV-018):
 
@@ -243,8 +251,18 @@ Read the proxy's returned phrase and act on it immediately — treat it exactly 
 **If autonomous merge:**
 1. Merge the PR (confirm CI is green first — if CI failing, treat as environment failure)
 2. Update BOARD.md: story → `✅ Done`, set merged timestamp
-3. Append to Run Log: `[time] Story N.N — PR #N merged autonomously`
-4. Continue to next loop iteration
+3. **Remove the worktree** (worktree isolation, B1/#16):
+   ```bash
+   git worktree remove --force .anymake/worktrees/story-N.N
+   git branch -d story/N.N-[slug]
+   ```
+4. Append to Run Log: `[time] Story N.N — PR #N merged autonomously — worktree removed`
+5. Continue to next loop iteration
+
+**Worktree lifecycle:** created at Step 2b (before Worker dispatch), removed at
+`done` or `skip`. Retry re-dispatches reuse the existing worktree (no
+re-create). If a story is skipped (`skip story N.N`), clean up the worktree the
+same way as `done`.
 
 **you notification format** (write to BOARD.md Escalations section AND output directly):
 ```

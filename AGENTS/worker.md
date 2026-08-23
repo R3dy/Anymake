@@ -63,15 +63,14 @@ Pay special attention to:
 - RETRY CONTEXT section (if present) — read this first, it overrides everything else
 - Security requirements — these are not optional
 
-### 2. Set up your branch
+### 2. Operate in your worktree
 
-```bash
-git checkout main
-git pull origin main
-git checkout -b story/N.N-[slug]
-```
-
-Where `[slug]` is a 2-4 word kebab-case summary of the story (e.g., `story/3.1-user-profile-page`).
+You do NOT create a branch on the shared checkout. The orchestrator has already
+created a git worktree for your story at `<project_root>/.anymake/worktrees/story-N.N/`
+— this IS your project root. The branch `story/N.N-[slug]` is already checked out
+in the worktree. Operate entirely within the worktree path you received as
+`DISPATCH.project_root`. Do not run `git checkout -b` — the branch exists. Do not
+operate on the shared checkout.
 
 ### 3. Implement each technical task
 
