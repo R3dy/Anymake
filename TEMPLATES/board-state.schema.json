@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Anymake board-state.json",
+  "description": "The structured spine of the Anymake agile board. Agents append events to events[]; the orchestrator is the sole writer of the snapshot (stories[], in_flight, concurrency, updated). BOARD.md is a rendered projection of this file. The kanban UI reads it directly. One source of truth (INV-004).",
+  "type": "object",
+  "required": ["project", "run_id", "updated", "concurrency", "in_flight", "stories", "events"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Project name (matches PROJECTS/[name]/)"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Orchestrator run identifier (e.g. 'run-001')"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of the last orchestrator reconciliation"
+    },
+    "concurrency": {
+      "type": "object",
+      "required": ["max", "current"],
+      "properties": {
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Maximum concurrent in-flight stories. max=1 reproduces today's sequential behavior."
+        },
+        "current": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Current count of in-flight stories (maintained by the orchestrator)"
+        }
+      }
+    },
+    "in_flight": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Story IDs currently in progress (maintained by the orchestrator)"
+    },
+    "stories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "milestone", "status"],
+        "properties": {
+          "id": { "type": "string", "description": "Story ID (e.g. '3.1')" },
+          "title": { "type": "string" },
+          "milestone": { "type": "integer" },
+          "status": {
+            "type": "string",
+            "enum": ["backlog", "ready", "in_progress", "in_validation", "experience", "awaiting_review", "done", "blocked"]
+          },
+          "branch": { "type": ["string", "null"] },
+          "worktree": { "type": ["string", "null"] },
+          "pr": { "type": ["integer", "null"] },
+          "retries": {
+            "type": "object",
+            "properties": {
+              "planner": { "type": "integer", "default": 0 },
+              "worker": { "type": "integer", "default": 0 },
+              "validation": { "type": "integer", "default": 0 },
+              "experience": { "type": "integer", "default": 0 }
+            }
+          },
+          "touches_files": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "File paths the story's technical tasks will modify (emitted by the Planner for conflict detection)"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "started": { "type": ["string", "null"], "format": "date-time" },
+          "last_event": { "type": ["string", "null"], "format": "date-time" },
+          "merged": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "Append-only event log. Agents append; the orchestrator reconciles the snapshot from this log. Lost appends are acceptable — the dispatch log line in BOARD.md's Run Log is the durable belt-and-suspenders record.",
+      "items": {
+        "type": "object",
+        "required": ["ts", "story", "agent", "type"],
+        "properties": {
+          "ts": { "type": "string", "format": "date-time" },
+          "story": { "type": "string", "description": "Story ID this event pertains to" },
+          "agent": { "type": "string", "description": "Agent that emitted the event (worker, validator, experience-runner, orchestrator, planner, dispatch)" },
+          "type": {
+            "type": "string",
+            "enum": ["status_change", "dispatch", "dispatch_ok", "dispatch_fail", "retry", "escalate", "heartbeat", "log", "worktree_create", "worktree_cleanup"]
+          },
+          "from": { "type": ["string", "null"] },
+          "to": { "type": ["string", "null"] },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

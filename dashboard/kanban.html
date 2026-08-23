@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anymake Kanban</title>
+<style>
+:root {
+  --bg: #0b0d10;
+  --surface: #14171c;
+  --border: #1f2328;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --text-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-sans: system-ui, -apple-system, sans-serif;
+  --backlog: #6e7681;
+  --ready: #facc15;
+  --in_progress: #3b82f6;
+  --in_validation: #f97316;
+  --experience: #a855f7;
+  --done: #22c55e;
+  --blocked: #ef4444;
+  --awaiting: #8b949e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--text-sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+header .meta {
+  font-family: var(--text-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+header .meta span b { color: var(--text); font-weight: 500; }
+header .badge {
+  font-family: var(--text-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+header .badge.live { color: var(--done); border-color: var(--done); }
+header .badge.offline { color: var(--ready); border-color: var(--ready); }
+
+#board {
+  display: flex;
+  gap: 1px;
+  flex: 1;
+  overflow-x: auto;
+  background: var(--border);
+}
+.column {
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.column-header {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 2px solid var(--border);
+}
+.column-header .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.column-header .count {
+  margin-left: auto;
+  font-family: var(--text-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--surface);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.column-body {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  cursor: default;
+  transition: border-color 0.15s;
+}
+.card:hover { border-color: var(--text-dim); }
+.card .id {
+  font-family: var(--text-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.card .title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.card .info {
+  font-family: var(--text-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.card .info span { white-space: nowrap; }
+.card .info .pr { color: var(--in_progress); }
+.card .info .retries { color: var(--in_validation); }
+.card .info .age { color: var(--text-dim); }
+.card .conflict {
+  font-family: var(--text-mono);
+  font-size: 10px;
+  color: var(--blocked);
+  margin-top: 4px;
+}
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 24px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+footer h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+#run-log {
+  font-family: var(--text-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+#run-log .log-line { white-space: pre-wrap; word-break: break-all; }
+#run-log .log-line .ts { color: var(--text-dim); }
+#run-log .log-line .ok { color: var(--done); }
+#run-log .log-line .fail { color: var(--blocked); }
+#run-log .log-line .retry { color: var(--ready); }
+
+#drop-zone {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(11,13,16,0.9);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+#drop-zone.active { display: flex; }
+#drop-zone .drop-msg {
+  font-size: 20px;
+  color: var(--ready);
+  border: 2px dashed var(--ready);
+  border-radius: 8px;
+  padding: 40px 60px;
+}
+#file-input { display: none; }
+
+.empty-msg {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 20px 8px;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  #board { flex-direction: column; }
+  .column { max-width: none; min-height: 120px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Anymake Kanban</h1>
+  <div class="meta" id="meta"></div>
+  <div class="badge" id="mode-badge">--</div>
+</header>
+
+<div id="board"></div>
+
+<footer>
+  <h3>Run Log (last 15 events)</h3>
+  <div id="run-log"></div>
+</footer>
+
+<div id="drop-zone"><div class="drop-msg">Drop board-state.json here</div></div>
+<input type="file" id="file-input" accept=".json,application/json">
+
+<script>
+var COLUMNS = [
+  { key: 'backlog',          label: 'Backlog',          color: '#6e7681' },
+  { key: 'ready',            label: 'Ready',            color: '#facc15' },
+  { key: 'in_progress',      label: 'In Progress',      color: '#3b82f6' },
+  { key: 'in_validation',    label: 'In Validation',    color: '#f97316' },
+  { key: 'experience',       label: 'Experience',       color: '#a855f7' },
+  { key: 'done',             label: 'Done',             color: '#22c55e' },
+  { key: 'blocked',          label: 'Escalated',        color: '#ef4444' }
+];
+var POLL_MS = 2000;
+var boardUrl = null;
+var lastUpdated = null;
+var pollTimer = null;
+
+function init() {
+  var params = new URLSearchParams(location.search);
+  boardUrl = params.get('board');
+  if (boardUrl) {
+    setBadge('live', 'LIVE');
+    startPolling();
+  } else {
+    setBadge('offline', 'OFFLINE');
+    setupDragDrop();
+  }
+  renderColumns();
+}
+
+function setBadge(cls, text) {
+  var b = document.getElementById('mode-badge');
+  b.className = 'badge ' + cls;
+  b.textContent = text;
+}
+
+function startPolling() {
+  fetchBoard();
+  pollTimer = setInterval(fetchBoard, POLL_MS);
+}
+
+function fetchBoard() {
+  fetch(boardUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.updated !== lastUpdated) {
+        lastUpdated = data.updated;
+        render(data);
+      }
+    })
+    .catch(function(e) {
+      document.getElementById('meta').textContent = 'Fetch error: ' + e.message;
+    });
+}
+
+function setupDragDrop() {
+  var dz = document.getElementById('drop-zone');
+  var fi = document.getElementById('file-input');
+
+  document.body.addEventListener('dragover', function(e) {
+    e.preventDefault(); dz.classList.add('active');
+  });
+  document.body.addEventListener('dragleave', function(e) {
+    if (e.relatedTarget === null) dz.classList.remove('active');
+  });
+  document.body.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dz.classList.remove('active');
+    if (e.dataTransfer.files.length > 0) {
+      loadFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fi.addEventListener('change', function() {
+    if (fi.files.length > 0) loadFile(fi.files[0]);
+  });
+
+  document.getElementById('meta').innerHTML =
+    '<span>Drag-drop a <b>board-state.json</b> file, or</span>' +
+    '<a href="#" onclick="document.getElementById(\'file-input\').click();return false;" style="color:var(--in_progress);cursor:pointer">click to select</a>';
+}
+
+function loadFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      lastUpdated = data.updated || 'unknown';
+      render(data);
+    } catch (err) {
+      document.getElementById('meta').textContent = 'Parse error: ' + err.message;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderColumns() {
+  var board = document.getElementById('board');
+  board.innerHTML = '';
+  COLUMNS.forEach(function(col) {
+    var div = document.createElement('div');
+    div.className = 'column';
+    div.id = 'col-' + col.key;
+    var header = document.createElement('div');
+    header.className = 'column-header';
+    header.style.borderTopColor = col.color;
+    header.innerHTML = '<div class="dot" style="background:' + col.color + '"></div>' +
+      col.label + '<span class="count" id="count-' + col.key + '">0</span>';
+    var body = document.createElement('div');
+    body.className = 'column-body';
+    body.id = 'body-' + col.key;
+    div.appendChild(header);
+    div.appendChild(body);
+    board.appendChild(div);
+  });
+}
+
+function render(data) {
+  var stories = data.stories || [];
+  var events = data.events || [];
+
+  COLUMNS.forEach(function(col) {
+    var body = document.getElementById('body-' + col.key);
+    body.innerHTML = '';
+    var matches = stories.filter(function(s) {
+      return s.status === col.key ||
+        (col.key === 'blocked' && s.status === 'blocked') ||
+        (col.key === 'done' && s.status === 'done');
+    });
+    document.getElementById('count-' + col.key).textContent = matches.length;
+    if (matches.length === 0) {
+      body.innerHTML = '<div class="empty-msg">No stories</div>';
+    }
+    matches.forEach(function(s) {
+      body.appendChild(createCard(s, events));
+    });
+  });
+
+  var meta = document.getElementById('meta');
+  var concurrency = data.concurrency || {};
+  meta.innerHTML =
+    '<span>Run: <b>' + esc(data.run_id || '--') + '</b></span>' +
+    '<span>Concurrency: <b>' + (concurrency.current || 0) + '/' + (concurrency.max || 3) + '</b></span>' +
+    '<span>Updated: <b>' + esc(data.updated || '--') + '</b></span>' +
+    '<span>Stories: <b>' + stories.length + '</b></span>';
+
+  var logEl = document.getElementById('run-log');
+  var tail = events.slice(-15).reverse();
+  logEl.innerHTML = tail.map(function(ev) {
+    var cls = ev.type.includes('ok') ? 'ok' : ev.type.includes('fail') ? 'fail' :
+              ev.type.includes('retry') ? 'retry' : '';
+    return '<div class="log-line"><span class="ts">' + esc(ev.ts || '') + '</span> ' +
+      '<span class="' + cls + '">' + esc(ev.type || '') + '</span> ' +
+      esc(ev.story || '') + ' — ' + esc(ev.detail || '') + '</div>';
+  }).join('');
+}
+
+function createCard(s, events) {
+  var card = document.createElement('div');
+  card.className = 'card';
+
+  var id = document.createElement('div');
+  id.className = 'id';
+  id.textContent = s.id;
+  card.appendChild(id);
+
+  var title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = s.title || '(untitled)';
+  card.appendChild(title);
+
+  var info = document.createElement('div');
+  info.className = 'info';
+
+  if (s.branch) {
+    var br = document.createElement('span');
+    br.textContent = s.branch;
+    info.appendChild(br);
+  }
+  if (s.pr) {
+    var pr = document.createElement('span');
+    pr.className = 'pr';
+    pr.textContent = '#' + s.pr;
+    info.appendChild(pr);
+  }
+  var retries = s.retries || {};
+  var totalR = (retries.worker||0) + (retries.validation||0) + (retries.experience||0);
+  if (totalR > 0) {
+    var rt = document.createElement('span');
+    rt.className = 'retries';
+    rt.textContent = 'retries:' + totalR;
+    info.appendChild(rt);
+  }
+  if (s.last_event) {
+    var age = document.createElement('span');
+    age.className = 'age';
+    age.textContent = relativeTime(s.last_event);
+    info.appendChild(age);
+  }
+  card.appendChild(info);
+
+  return card;
+}
+
+function relativeTime(iso) {
+  if (!iso) return '';
+  var then = new Date(iso);
+  var now = new Date();
+  var sec = Math.floor((now - then) / 1000);
+  if (sec < 60) return sec + 's ago';
+  if (sec < 3600) return Math.floor(sec/60) + 'm ago';
+  if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
+  return Math.floor(sec/86400) + 'd ago';
+}
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>

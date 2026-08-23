@@ -172,29 +172,106 @@ isolation / hypothesis" field is exactly that protocol's required structure).
 - Implementation failures: max 1 retry, then escalate
 - Empty deliverable: max 1 retry (treat as implementation failure)
 
-## Dispatch log (hardening #4 — structured log line to BOARD.md)
+## Dispatch log (hardening #4 — structured log line to BOARD.md + board-state.json)
 
 Every dispatch — success, failure, or retry — appends one structured line to
-`PROJECTS/[name]/BOARD.md`'s Run Log. This replaces the free-text log lines
-previously hand-written per call site and extends logging to every dispatch
-(including agile-flow and phase-gate dispatches that previously logged nothing).
+`PROJECTS/[name]/BOARD.md`'s Run Log AND appends an event to
+`PROJECTS/[name]/.anymake/board-state.json`'s `events[]`. The dual write is
+belt-and-suspenders: the markdown log is the human-readable surface; the JSON
+event is the structured spine the kanban UI and orchestrator read. Lost JSON
+appends are acceptable (the markdown log is the durable record); lost markdown
+writes are not.
 
+**BOARD.md Run Log line:**
 ```
 [time] DISPATCH <OK|FAIL|RETRY> — <agent> — <board_ref> — purpose: <purpose> — artifact: <output_artifact or "none"> — attempt: <N>
 ```
 
-## Workspace setup (future extension point)
+**board-state.json event** (appended to `events[]`):
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID from board_ref>", "agent": "<agent>",
+  "type": "dispatch_ok|dispatch_fail|retry", "detail": "<purpose> — <artifact or 'none'> — attempt <N>" }
+```
 
-This skill leaves a named slot for workspace setup (backlog B1/#16, git worktree
-isolation). Today the slot is a no-op — agents operate against the shared
-checkout. When B1 lands, this section will define the worktree-creation step
-that runs before the dispatch call. The `DISPATCH` interface does not need to
-change — the worktree path is an implementation detail of the workspace setup,
-not a field on the request.
+## Workspace setup (worktree isolation — B1 / #16)
 
-Similarly, parallel dispatch (backlog B2/#17) is a future extension: a
-`dispatch_parallel([DISPATCH, DISPATCH, ...])` mode can be added without
-changing the per-dispatch contract. This skill does not implement it today.
+Each dispatched Worker (and its downstream Validator / Experience Runner)
+operates in a **dedicated git worktree** so concurrent stories never collide on
+the shared checkout's index, branch, or uncommitted state. The orchestrator
+creates the worktree before Worker dispatch and removes it after the story
+reaches `done` or `skip`.
+
+**Worktree creation** (orchestrator runs this before dispatching the Worker):
+
+```bash
+git worktree add .anymake/worktrees/story-N.N -b story/N.N-[slug] main
+```
+
+- Path convention: `.anymake/worktrees/story-N.N/` (relative to the consuming
+  project root; gitignored per INV-015)
+- Branch: `story/N.N-[slug]` (created by `worktree add -b`, not `git checkout -b`)
+- Base: `main` (the latest merged state)
+
+**Worktree removal** (orchestrator runs this after `done` or `skip`):
+
+```bash
+git worktree remove --force .anymake/worktrees/story-N.N
+git branch -d story/N.N-[slug]
+```
+
+**DISPATCH.project_root reassignment:** for the Worker, Validator, and
+Experience Runner of a given story, `DISPATCH.project_root` is set to the
+**worktree path** (`<project_root>/.anymake/worktrees/story-N.N/`), not the
+shared checkout. The agent operates entirely within the worktree — it never
+checks out a branch on the shared checkout.
+
+**Retry re-dispatches reuse the existing worktree** (no re-create). The worktree
+is cleaned up only on `done` or `skip` — a retry picks up where the prior
+attempt left off, in the same worktree.
+
+**Single-story mode** (`concurrency.max = 1`): one worktree at a time —
+behavior is identical to today's sequential loop, just with the worktree as
+the project root instead of the shared checkout.
+
+Similarly, parallel dispatch (backlog B2/#17, shipped as `dispatch_parallel` in
+issue #29) extends the per-dispatch contract: a `dispatch_parallel([DISPATCH,
+DISPATCH, ...])` mode loops over the list, running the full per-dispatch
+procedure (workspace setup, pre-prompt, dispatch, verify, log) for each entry.
+The per-dispatch contract does not change — `dispatch_parallel` is a loop over
+`DISPATCH` requests, not a new dispatch primitive.
+
+## dispatch_parallel mode (B2 / #17 / Story 29.3)
+
+The parallel dispatch mode. Per this skill's own original promise, the
+per-dispatch contract does not change — `dispatch_parallel` is a loop over a
+list of `DISPATCH` requests, running the full per-dispatch procedure for each.
+
+```
+dispatch_parallel([DISPATCH_1, DISPATCH_2, ...]) {
+  for each DISPATCH in the list (concurrently, up to concurrency.max):
+    1. workspace_setup(worktree for this story)        # §"Workspace setup"
+    2. pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts)
+    3. dispatch via the host backend (Agent/Task tool, one call per dispatch)
+    4. post-dispatch verify (MANDATORY — output_check per dispatch)
+    5. append dispatch log line to board-state.json events[] + BOARD.md Run Log
+  collect results; return one summary per dispatch
+}
+```
+
+**Every parallel dispatch still gets:**
+- Pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts)
+- Post-dispatch verification (mandatory, per-dispatch)
+- A dispatch log line (dual-written to `board-state.json` events[] + `BOARD.md` Run Log)
+
+This preserves INV-018 — `dispatch_parallel` is a new mode OF the skill, not a
+bypass. The host-portability seam (the "Backend: OpenCode" section) is the only
+place the host primitive is named; `dispatch_parallel` maps to N concurrent
+Agent/Task tool calls.
+
+**Conflict detection is the orchestrator's job, not the skill's.** The skill
+dispatches what it's told; the orchestrator decides which stories are
+non-conflicting before assembling the `dispatch_parallel` call. See
+`AGENTS/orchestrator.md` → "Concurrency policy".
 
 ## What this skill does NOT do
 

@@ -250,5 +250,253 @@ for (const f of proseFiles) {
   }
 }
 
+// 8. Worktree isolation (B1 / #16 / Story 29.1) — dispatch skill has populated
+//    workspace-setup section; worker.md references the worktree convention
+console.log('\n[8] Worktree isolation (B1 / #16)');
+{
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  // (a) workspace-setup section is populated (no longer "future extension point")
+  if (dispatchBody.includes('git worktree add') && dispatchBody.includes('.anymake/worktrees/story-N.N')) {
+    ok('anymake-dispatch: workspace-setup section documents worktree add + path convention');
+  } else {
+    bad('anymake-dispatch: workspace-setup section missing worktree add command or path convention');
+  }
+  if (dispatchBody.includes('DISPATCH.project_root') && dispatchBody.includes('worktree path')) {
+    ok('anymake-dispatch: workspace-setup states DISPATCH.project_root is the worktree path');
+  } else {
+    bad('anymake-dispatch: workspace-setup does not reassign DISPATCH.project_root to worktree path');
+  }
+  if (!dispatchBody.includes('future extension point')) {
+    ok('anymake-dispatch: workspace-setup no longer a no-op "future extension point"');
+  } else {
+    bad('anymake-dispatch: workspace-setup still says "future extension point" (slot not filled)');
+  }
+  // (b) worker.md references worktree convention, no git checkout -b on shared checkout
+  const workerBody = fs.readFileSync(path.join(AGENTS_DIR, 'worker.md'), 'utf8');
+  if (workerBody.includes('worktree') && workerBody.includes('.anymake/worktrees/story-N.N')) {
+    ok('AGENTS/worker.md references worktree convention');
+  } else {
+    bad('AGENTS/worker.md does not reference worktree convention');
+  }
+  // The instruction "Do not run git checkout -b" is a prohibition, not an
+  // instruction to run it. Check for the instruction form only (bash code
+  // block with git checkout -b as a command, not a prohibition in prose).
+  const checkoutInstr = workerBody.match(/```bash\n[^]*git checkout -b/m) || workerBody.match(/^\s*git checkout -b/m);
+  if (!checkoutInstr) {
+    ok('AGENTS/worker.md: no git checkout -b instruction (branch created by worktree add)');
+  } else {
+    bad('AGENTS/worker.md still instructs git checkout -b on shared checkout');
+  }
+  // (c) orchestrator.md documents worktree creation + removal
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  if (orchBody.includes('git worktree add') && orchBody.includes('git worktree remove')) {
+    ok('AGENTS/orchestrator.md: worktree creation + removal documented');
+  } else {
+    bad('AGENTS/orchestrator.md: missing worktree creation or removal lifecycle');
+  }
+}
+
+// 9. Shared taskboard JSON (Story 29.2) — board-state.schema.json exists and
+//    parses; BOARD.md + orchestrator.md reference board-state.json; agents
+//    document event appending; dispatch skill dual-writes
+console.log('\n[9] Shared taskboard JSON (the spine)');
+{
+  const schemaPath = path.join(ROOT, 'TEMPLATES', 'board-state.schema.json');
+  if (!fs.existsSync(schemaPath)) {
+    bad('TEMPLATES/board-state.schema.json does not exist');
+  } else {
+    try {
+      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+      if (schema.title && schema.type === 'object' && schema.properties) {
+        ok('TEMPLATES/board-state.schema.json: valid JSON Schema');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: not a valid JSON Schema object');
+      }
+      // Check required fields exist in schema
+      const req = schema.required || [];
+      const needed = ['project', 'run_id', 'updated', 'concurrency', 'in_flight', 'stories', 'events'];
+      const missing = needed.filter((f) => !req.includes(f));
+      if (missing.length === 0) {
+        ok('TEMPLATES/board-state.schema.json: all required fields present (' + needed.join(', ') + ')');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: missing required fields: ' + missing.join(', '));
+      }
+      // Check stories[] has the expected fields
+      const storyProps = schema.properties?.stories?.items?.properties || {};
+      const storyFields = ['id', 'title', 'milestone', 'status', 'branch', 'worktree', 'pr', 'retries', 'touches_files', 'depends_on'];
+      const missingStory = storyFields.filter((f) => !storyProps[f]);
+      if (missingStory.length === 0) {
+        ok('TEMPLATES/board-state.schema.json: stories[] has all expected fields');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: stories[] missing fields: ' + missingStory.join(', '));
+      }
+      // Check events[] has the expected fields
+      const eventProps = schema.properties?.events?.items?.properties || {};
+      const eventFields = ['ts', 'story', 'agent', 'type', 'from', 'to', 'detail'];
+      const missingEvent = eventFields.filter((f) => !eventProps[f]);
+      if (missingEvent.length === 0) {
+        ok('TEMPLATES/board-state.schema.json: events[] has all expected fields');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: events[] missing fields: ' + missingEvent.join(', '));
+      }
+    } catch (e) {
+      bad('TEMPLATES/board-state.schema.json: not valid JSON (' + e.message + ')');
+    }
+  }
+  // BOARD.md references board-state.json
+  const boardBody = fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'BOARD.md'), 'utf8');
+  if (boardBody.includes('board-state.json')) {
+    ok('TEMPLATES/BOARD.md references board-state.json (reconciliation contract)');
+  } else {
+    bad('TEMPLATES/BOARD.md does not reference board-state.json');
+  }
+  // Orchestrator references board-state.json
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  if (orchBody.includes('board-state.json')) {
+    ok('AGENTS/orchestrator.md references board-state.json (reconcile step)');
+  } else {
+    bad('AGENTS/orchestrator.md does not reference board-state.json');
+  }
+  // Workers, validators, experience runners document event appending
+  const workerBody = fs.readFileSync(path.join(AGENTS_DIR, 'worker.md'), 'utf8');
+  const validatorBody = fs.readFileSync(path.join(AGENTS_DIR, 'validator.md'), 'utf8');
+  const expRunnerBody = fs.readFileSync(path.join(AGENTS_DIR, 'experience-runner.md'), 'utf8');
+  for (const [name, body] of [['worker.md', workerBody], ['validator.md', validatorBody], ['experience-runner.md', expRunnerBody]]) {
+    if (body.includes('board-state.json') && body.includes('events[]')) {
+      ok(`AGENTS/${name} documents appending to board-state.json events[]`);
+    } else {
+      bad(`AGENTS/${name} does not document appending to board-state.json events[]`);
+    }
+  }
+  // Dispatch skill dual-writes
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  if (dispatchBody.includes('board-state.json') && dispatchBody.includes('dual write')) {
+    ok('anymake-dispatch: dual-writes dispatch log to BOARD.md + board-state.json');
+  } else {
+    bad('anymake-dispatch: does not dual-write to board-state.json');
+  }
+}
+
+// 10. Parallel dispatch + orchestrator-as-team-lead (B2 / #17 / Story 29.3)
+//     — dispatch_parallel documented, serialization rule deleted, concurrency
+//     policy present, planner documents touches_files
+console.log('\n[10] Parallel dispatch + orchestrator-as-team-lead (B2 / #17)');
+{
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  if (dispatchBody.includes('dispatch_parallel') && dispatchBody.includes('concurrently')) {
+    ok('anymake-dispatch: dispatch_parallel mode documented');
+  } else {
+    bad('anymake-dispatch: dispatch_parallel mode not documented');
+  }
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  // Negative check: serialization rule is GONE
+  if (!orchBody.includes('Do not spawn more than one planner, one worker, or one validator at a time')) {
+    ok('AGENTS/orchestrator.md: serialization rule deleted (parallel is default)');
+  } else {
+    bad('AGENTS/orchestrator.md: serialization rule still present (INV-018 / Story 29.3 violation)');
+  }
+  // Positive check: concurrency policy present
+  if (orchBody.includes('Concurrency policy') && orchBody.includes('concurrency.max') && orchBody.includes('touches_files')) {
+    ok('AGENTS/orchestrator.md: concurrency policy + conflict detection documented');
+  } else {
+    bad('AGENTS/orchestrator.md: missing concurrency policy or conflict detection');
+  }
+  // Team-lead loop present
+  if (orchBody.includes('team-lead loop') || orchBody.includes('Team-Lead Loop') || orchBody.includes('Team-lead loop')) {
+    ok('AGENTS/orchestrator.md: team-lead loop documented');
+  } else {
+    bad('AGENTS/orchestrator.md: team-lead loop not documented');
+  }
+  // max=1 fallback documented
+  if (orchBody.includes('max=1') || orchBody.includes('max = 1')) {
+    ok('AGENTS/orchestrator.md: max=1 fallback documented (reproduces sequential behavior)');
+  } else {
+    bad('AGENTS/orchestrator.md: max=1 fallback not documented');
+  }
+  // Arbiter: concurrency-aware retry note
+  const arbBody = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8');
+  if (arbBody.includes('Concurrency-aware retry') && arbBody.includes('per-story')) {
+    ok('AGENTS/arbiter.md: concurrency-aware retry note present');
+  } else {
+    bad('AGENTS/arbiter.md: concurrency-aware retry note missing');
+  }
+  // Planner: touches_files documented
+  const plannerBody = fs.readFileSync(path.join(AGENTS_DIR, 'planner.md'), 'utf8');
+  if (plannerBody.includes('touches_files')) {
+    ok('AGENTS/planner.md: touches_files emission documented');
+  } else {
+    bad('AGENTS/planner.md: touches_files emission not documented');
+  }
+  // Build-loop skill: parallel awareness
+  const buildLoopBody = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-build-loop', 'SKILL.md'), 'utf8');
+  if (buildLoopBody.includes('concurrency') && buildLoopBody.includes('non-conflicting')) {
+    ok('skills/anymake-build-loop/SKILL.md: parallel dispatch awareness present');
+  } else {
+    bad('skills/anymake-build-loop/SKILL.md: parallel dispatch awareness missing');
+  }
+}
+
+// 11. Zero-build kanban monitor (Story 29.4) — dashboard/kanban.html exists,
+//     is single-file (no external src/href), has 7 columns + polling fetch
+console.log('\n[11] Zero-build kanban monitor');
+{
+  const kanbanPath = path.join(ROOT, 'dashboard', 'kanban.html');
+  if (!fs.existsSync(kanbanPath)) {
+    bad('dashboard/kanban.html does not exist');
+  } else {
+    const kb = fs.readFileSync(kanbanPath, 'utf8');
+    // (a) single-file: no external <script src=> or <link href=>
+    const extScript = kb.match(/<script\s+[^>]*src=/i);
+    const extLink = kb.match(/<link\s+[^>]*href=/i);
+    const extImport = kb.match(/import\s+["']/);
+    if (!extScript && !extLink && !extImport) {
+      ok('dashboard/kanban.html: single-file (no external src/href/import)');
+    } else {
+      if (extScript) bad('dashboard/kanban.html: has external <script src=> (violates ADR-008)');
+      if (extLink) bad('dashboard/kanban.html: has external <link href=> (violates ADR-008)');
+      if (extImport) bad('dashboard/kanban.html: has bare import (violates ADR-008)');
+    }
+    // (b) 7 column keys present
+    const colKeys = ['backlog', 'ready', 'in_progress', 'in_validation', 'experience', 'done', 'blocked'];
+    const missingCols = colKeys.filter((k) => !kb.includes(k));
+    if (missingCols.length === 0) {
+      ok('dashboard/kanban.html: all 7 column keys present');
+    } else {
+      bad('dashboard/kanban.html: missing columns: ' + missingCols.join(', '));
+    }
+    // (c) polling fetch present
+    if (kb.includes('fetch(') && kb.includes('setInterval')) {
+      ok('dashboard/kanban.html: polling fetch present');
+    } else {
+      bad('dashboard/kanban.html: missing polling fetch or setInterval');
+    }
+    // (d) read-only (no write controls — no POST, no PUT, no fetch with method: 'POST')
+    if (!/method:\s*['"](?:POST|PUT|PATCH|DELETE)/.test(kb)) {
+      ok('dashboard/kanban.html: read-only (no write methods)');
+    } else {
+      bad('dashboard/kanban.html: has write methods (must be read-only)');
+    }
+    // (e) dark aesthetic
+    if (kb.includes('#0b0d10')) {
+      ok('dashboard/kanban.html: dark aesthetic (#0b0d10 background)');
+    } else {
+      bad('dashboard/kanban.html: missing dark background (#0b0d10)');
+    }
+    // (f) drag-drop offline fallback
+    if (kb.includes('dragover') && kb.includes('drop')) {
+      ok('dashboard/kanban.html: drag-drop offline fallback present');
+    } else {
+      bad('dashboard/kanban.html: missing drag-drop offline fallback');
+    }
+  }
+  // README exists
+  const readmePath = path.join(ROOT, 'dashboard', 'README.md');
+  if (fs.existsSync(readmePath)) {
+    ok('dashboard/README.md exists (launch instructions)');
+  } else {
+    bad('dashboard/README.md does not exist');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

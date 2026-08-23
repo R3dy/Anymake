@@ -63,15 +63,14 @@ Pay special attention to:
 - RETRY CONTEXT section (if present) — read this first, it overrides everything else
 - Security requirements — these are not optional
 
-### 2. Set up your branch
+### 2. Operate in your worktree
 
-```bash
-git checkout main
-git pull origin main
-git checkout -b story/N.N-[slug]
-```
-
-Where `[slug]` is a 2-4 word kebab-case summary of the story (e.g., `story/3.1-user-profile-page`).
+You do NOT create a branch on the shared checkout. The orchestrator has already
+created a git worktree for your story at `<project_root>/.anymake/worktrees/story-N.N/`
+— this IS your project root. The branch `story/N.N-[slug]` is already checked out
+in the worktree. Operate entirely within the worktree path you received as
+`DISPATCH.project_root`. Do not run `git checkout -b` — the branch exists. Do not
+operate on the shared checkout.
 
 ### 3. Implement each technical task
 
@@ -114,6 +113,21 @@ Record the output — pass count, fail count, and any failure lines.
 If this story established a reusable pattern that isn't already captured in `PROJECTS/[name]/docs/04-implementation/CONVENTIONS.md` — a new integration type, a new component pattern, an approach to something the codebase hadn't needed before — append one short entry using the format at the top of that file (`TEMPLATES/conventions.md` if it doesn't exist yet; create it from the template). This is how the next story's planner gets the pattern without re-deriving it from your code.
 
 Do not restate a pattern that's already there, and do not turn this into a design document — one entry, a sentence or two, a file:line pointer. This step is additive, not a gate: skipping it is not a validation failure, but doing it saves the next few stories real work.
+
+### 4c. Append taskboard events
+
+At each state transition (started, layer committed, tests run, PR opened),
+append a `status_change` or `heartbeat` event to
+`PROJECTS/[name]/.anymake/board-state.json`'s `events[]`:
+
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID>", "agent": "worker",
+  "type": "status_change", "from": "<prev>", "to": "<next>", "detail": "<what happened>" }
+```
+
+You only append to `events[]` — never edit `stories[]`, `in_flight`, or
+`concurrency` directly (the orchestrator is the sole writer of the snapshot).
+See `TEMPLATES/board-state.schema.json` for the schema.
 
 ### 5. Open the PR
 

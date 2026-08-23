@@ -41,7 +41,7 @@ Fill every section of `TEMPLATES/task-brief.md` completely for the one story you
 
 **What you author (translation, not invention):**
 - §3a Experience Script — see below, its own section
-- §4 Technical Tasks — ordered per the project type's Build Order
+- §4 Technical Tasks — ordered per the project type's Build Order. **Emit `touches_files`** — a list of file paths the story's technical tasks will modify (e.g. `["src/auth/route.ts", "src/auth/schema.ts"]`). The orchestrator uses this for parallel-dispatch conflict detection: two stories conflict iff their `touches_files` sets intersect OR one `depends_on` the other. Derive it from the technical tasks — you already read the codebase to write them. If you can't predict the exact paths, list the directories the story will touch.
 - §5 Build Order Constraint — which prior stories must be `✅ Done` first, from the dependency graph
 - §6 Technical Context — stack, and **existing patterns pulled from `CONVENTIONS.md`** (file:line pointers, not re-derived from scratch — that's the whole point of the conventions file existing)
 - §6a Intent Constraints — the specific ADR/INV IDs this story touches, from `DECISIONS.md`/`INVARIANTS.md`

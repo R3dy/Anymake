@@ -96,12 +96,14 @@ Mixed-mode stories (e.g. an `agentic-harness` dashboard action that also trigger
 
 ## Procedure
 
-### 1. Check out the branch — skip if given a URL directly
+### 1. Operate in the story's worktree — skip if given a URL directly
 
-```bash
-git fetch origin
-git checkout story/N.N-[slug]
-```
+The orchestrator has already created a git worktree for the story at
+`<project_root>/.anymake/worktrees/story-N.N/` with the branch
+`story/N.N-[slug]` checked out. Your `DISPATCH.project_root` IS the worktree
+path — operate entirely within it. Do not `git checkout` on the shared
+checkout. Do not `git fetch` + `git checkout` — the worktree already has the
+branch.
 
 If you were dispatched against a URL (staging, production, or an
 already-running instance — the direct-invocation case via
@@ -145,6 +147,18 @@ Stop the app cleanly (kill the process you started). Record teardown status in y
 ### 6. Write your report
 
 Write to `PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md` using `TEMPLATES/experience-report.md`. Save any screenshots/evidence files under `docs/04-implementation/experience-evidence/story-N.N/`.
+
+**Append a taskboard event** to `PROJECTS/[name]/.anymake/board-state.json`'s
+`events[]` after writing your report:
+
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID>", "agent": "experience-runner",
+  "type": "status_change", "from": "experience", "to": "<verdict-lowercase>",
+  "detail": "Experience <verdict> — <one-line summary>" }
+```
+
+You only append to `events[]` — never edit the snapshot (the orchestrator
+reconciles). See `TEMPLATES/board-state.schema.json`.
 
 ---
 

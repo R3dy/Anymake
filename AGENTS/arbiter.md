@@ -88,6 +88,14 @@ any PR-count or review rule above.
 | CI failing on merge | No | 0 | Immediate escalation |
 | All stories blocked | No | 0 | Immediate escalation |
 
+**Worktree lifecycle (B1 / #16):**
+Each story's Worker (and its Validator / Experience Runner) operates in a
+dedicated git worktree (`.anymake/worktrees/story-N.N/`), created by the
+orchestrator before Worker dispatch and removed after `done` or `skip`. Retry
+re-dispatches **reuse the existing worktree** — do not re-create it. The
+worktree is cleaned up only on `done` or `skip`. A per-story escalation does
+not trigger worktree cleanup until the story reaches a terminal state.
+
 ---
 
 ## Environment vs. Implementation Classification
@@ -234,6 +242,15 @@ Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect a
 - Branch `issue/[N]-[slug]`; every commit footer references `#[N]`; PR body `Closes #[N]`
 - Base `main` SHA recorded on the issue before merge; merge SHA + tag `issue-[N]` + exact revert command recorded after
 - An agile change with no issue reference in its commits fails validation
+
+**Concurrency-aware retry (B2 / #17 / Story 29.3):**
+When the orchestrator runs parallel stories (the default — see
+`AGENTS/orchestrator.md` → "Concurrency policy"), the retry matrix applies
+**per-story**. A FAIL on story N does not pause story M. A per-story
+escalation halts only that story, not its siblings — **except** security-failure
+and intent-conflict escalations, which always halt the whole run (the override
+is absolute — INV-008). The orchestrator monitors in-flight stories via
+`board-state.json` and applies the retry matrix to each independently.
 
 ---
 

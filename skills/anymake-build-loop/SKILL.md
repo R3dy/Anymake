@@ -51,26 +51,37 @@ defeats the architecture — this is the cardinal anti-pattern.
 ## How to run it
 
 1. **Set up the board.** Copy `TEMPLATES/BOARD.md` to `PROJECTS/[name]/BOARD.md`
-   with every story as a card in `Backlog`. (Skip if it already exists.)
+   with every story as a card in `Backlog`. Initialize
+   `PROJECTS/[name]/.anymake/board-state.json` from the backlog (see
+   `TEMPLATES/board-state.schema.json`). (Skip if both already exist.)
 2. **Become the Orchestrator.** Load `AGENTS/orchestrator.md` and follow it.
-3. **Per ready story:** spawn a Planner sub-agent to write the task brief
-   (`TEMPLATES/task-brief.md` — story + acceptance criteria + the type's build
-   order + patterns from `CONVENTIONS.md` + §3a Experience Script from
-   `docs/environment.md`); check the brief for completeness, then spawn a
-   Worker sub-agent from it.
+3. **Per iteration (team-lead loop):** the orchestrator reconciles
+   `board-state.json`, monitors in-flight stories for stalls/fails, and
+   dispatches ready non-conflicting stories up to `concurrency.max` (default 3)
+   concurrently. Each ready story gets: a Planner sub-agent to write the task
+   brief (`TEMPLATES/task-brief.md` — story + acceptance criteria + the type's
+   build order + patterns from `CONVENTIONS.md` + §3a Experience Script from
+   `docs/environment.md` + `touches_files` for conflict detection); a
+   completeness check; then a Worker sub-agent in its own git worktree.
 4. **Per PR:** spawn a Validator sub-agent; it returns PASS / FAIL / ESCALATE
    using `TEMPLATES/validation-report.md`.
 5. **Per Validator PASS (unless §3a is `N/A`):** spawn an Experience Runner
    sub-agent; it launches the app and drives it through every §3a scenario,
    returning PASS / FAIL / ESCALATE using `TEMPLATES/experience-report.md`. A
    story is not done on a Validator PASS alone.
-6. **Apply policies** (`AGENTS/arbiter.md`): retry matrix (max 2 environment
-   re-dispatches; a validation or experience FAIL retries once — straight back
-   to the Worker, no Planner re-run — then escalate; implementation failures
-   escalate immediately); PR review rules (PRs #1–3, any webhook PR, and any PR
+6. **Apply policies** (`AGENTS/arbiter.md`): retry matrix (per-story — a FAIL
+   on one story does not pause its siblings; max 2 environment re-dispatches;
+   a validation or experience FAIL retries once — straight back to the Worker,
+   no Planner re-run — then escalate; implementation failures escalate
+   immediately); PR review rules (PRs #1–3, any webhook PR, and any PR
    touching an ADR always require human review; others merge on Validator PASS
-   **and** Experience Runner PASS); escalation lexicon.
-7. **Update `BOARD.md` after every agent action.** It is the single visibility surface.
+   **and** Experience Runner PASS); escalation lexicon. Parallel dispatch goes
+   through `anymake-dispatch`'s `dispatch_parallel` mode (INV-018 — every
+   parallel dispatch still gets pre-prompt, verify, and a log line).
+7. **Update `BOARD.md` and `board-state.json` after every agent action.**
+   `BOARD.md` is the human-readable projection; `board-state.json` is the
+   structured spine (INV-004). For a live kanban view, see
+   `dashboard/README.md`.
 8. **Loop** until the backlog is empty or an `ESCALATE TO USER` blocks progress.
 
 ## Escalation & autonomous mode
@@ -92,8 +103,10 @@ Step 4.5 (security review) and 4.6 (staging review).
 
 - Orchestrator-as-worker (one context doing all five stages, including authoring the task brief itself).
 - Skipping layers in the build order (creates hidden dependencies).
-- Merging a PR on a Validator PASS alone, without a matching Experience Runner PASS (or an explicit §3a: N/A) — a passing test suite is not the same claim as "a person clicked through it and it worked."
+- Merging a PR on a Validator PASS alone, without a matching Experience Runner PASS (or an explicit §3a: N/A) — a passing test suite is not the same claim as "a person clicked through it and it actually worked."
 - Waiving a Human-Only criterion because the relevant code exists, without an Experience Runner (or, for the narrow genuinely-unscriptable case, a documented human waiver) ever actually driving it.
 - Merging a PR without a Validator PASS, or merging PRs #1–3 (or any ADR-touching PR) without human review.
 - Letting the board drift from reality.
 - "No test suite" — every story with runtime-verifiable criteria gets automated tests.
+- Parallelizing stages within a story — each story's Planner → Worker → Validator → Experience Runner pipeline is strictly sequential. Parallelism is at the story level only (ADR-003 / INV-002).
+- Bypassing `anymake-dispatch` for parallel dispatch — `dispatch_parallel` is a mode OF the skill, not a raw Agent/Task call (INV-018).
