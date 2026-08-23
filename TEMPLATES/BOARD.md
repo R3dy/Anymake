@@ -5,6 +5,14 @@
 **Orchestrator run:** run-001
 **Total progress:** 0 / [N] stories complete
 
+> **Taskboard reconciliation contract (INV-004):** This file is a **rendered
+> projection** of `PROJECTS/[name]/.anymake/board-state.json` — the structured
+> spine. Agents append events to `board-state.json`'s `events[]` (append-only;
+> never edit the snapshot directly). The orchestrator is the sole writer of the
+> snapshot (`stories[]`, `in_flight`, `concurrency`, `updated`) and renders this
+> markdown from it. One source of truth, two views. The kanban UI reads the
+> JSON directly. See `TEMPLATES/board-state.schema.json` for the schema.
+
 ---
 
 ## Status Legend

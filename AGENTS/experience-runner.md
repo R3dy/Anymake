@@ -148,6 +148,18 @@ Stop the app cleanly (kill the process you started). Record teardown status in y
 
 Write to `PROJECTS/[name]/docs/04-implementation/experience-reports/story-N.N.md` using `TEMPLATES/experience-report.md`. Save any screenshots/evidence files under `docs/04-implementation/experience-evidence/story-N.N/`.
 
+**Append a taskboard event** to `PROJECTS/[name]/.anymake/board-state.json`'s
+`events[]` after writing your report:
+
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID>", "agent": "experience-runner",
+  "type": "status_change", "from": "experience", "to": "<verdict-lowercase>",
+  "detail": "Experience <verdict> — <one-line summary>" }
+```
+
+You only append to `events[]` — never edit the snapshot (the orchestrator
+reconciles). See `TEMPLATES/board-state.schema.json`.
+
 ---
 
 ## Verdict Decision Tree

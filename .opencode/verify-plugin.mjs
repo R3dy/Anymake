@@ -296,5 +296,86 @@ console.log('\n[8] Worktree isolation (B1 / #16)');
   }
 }
 
+// 9. Shared taskboard JSON (Story 29.2) — board-state.schema.json exists and
+//    parses; BOARD.md + orchestrator.md reference board-state.json; agents
+//    document event appending; dispatch skill dual-writes
+console.log('\n[9] Shared taskboard JSON (the spine)');
+{
+  const schemaPath = path.join(ROOT, 'TEMPLATES', 'board-state.schema.json');
+  if (!fs.existsSync(schemaPath)) {
+    bad('TEMPLATES/board-state.schema.json does not exist');
+  } else {
+    try {
+      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+      if (schema.title && schema.type === 'object' && schema.properties) {
+        ok('TEMPLATES/board-state.schema.json: valid JSON Schema');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: not a valid JSON Schema object');
+      }
+      // Check required fields exist in schema
+      const req = schema.required || [];
+      const needed = ['project', 'run_id', 'updated', 'concurrency', 'in_flight', 'stories', 'events'];
+      const missing = needed.filter((f) => !req.includes(f));
+      if (missing.length === 0) {
+        ok('TEMPLATES/board-state.schema.json: all required fields present (' + needed.join(', ') + ')');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: missing required fields: ' + missing.join(', '));
+      }
+      // Check stories[] has the expected fields
+      const storyProps = schema.properties?.stories?.items?.properties || {};
+      const storyFields = ['id', 'title', 'milestone', 'status', 'branch', 'worktree', 'pr', 'retries', 'touches_files', 'depends_on'];
+      const missingStory = storyFields.filter((f) => !storyProps[f]);
+      if (missingStory.length === 0) {
+        ok('TEMPLATES/board-state.schema.json: stories[] has all expected fields');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: stories[] missing fields: ' + missingStory.join(', '));
+      }
+      // Check events[] has the expected fields
+      const eventProps = schema.properties?.events?.items?.properties || {};
+      const eventFields = ['ts', 'story', 'agent', 'type', 'from', 'to', 'detail'];
+      const missingEvent = eventFields.filter((f) => !eventProps[f]);
+      if (missingEvent.length === 0) {
+        ok('TEMPLATES/board-state.schema.json: events[] has all expected fields');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: events[] missing fields: ' + missingEvent.join(', '));
+      }
+    } catch (e) {
+      bad('TEMPLATES/board-state.schema.json: not valid JSON (' + e.message + ')');
+    }
+  }
+  // BOARD.md references board-state.json
+  const boardBody = fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'BOARD.md'), 'utf8');
+  if (boardBody.includes('board-state.json')) {
+    ok('TEMPLATES/BOARD.md references board-state.json (reconciliation contract)');
+  } else {
+    bad('TEMPLATES/BOARD.md does not reference board-state.json');
+  }
+  // Orchestrator references board-state.json
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  if (orchBody.includes('board-state.json')) {
+    ok('AGENTS/orchestrator.md references board-state.json (reconcile step)');
+  } else {
+    bad('AGENTS/orchestrator.md does not reference board-state.json');
+  }
+  // Workers, validators, experience runners document event appending
+  const workerBody = fs.readFileSync(path.join(AGENTS_DIR, 'worker.md'), 'utf8');
+  const validatorBody = fs.readFileSync(path.join(AGENTS_DIR, 'validator.md'), 'utf8');
+  const expRunnerBody = fs.readFileSync(path.join(AGENTS_DIR, 'experience-runner.md'), 'utf8');
+  for (const [name, body] of [['worker.md', workerBody], ['validator.md', validatorBody], ['experience-runner.md', expRunnerBody]]) {
+    if (body.includes('board-state.json') && body.includes('events[]')) {
+      ok(`AGENTS/${name} documents appending to board-state.json events[]`);
+    } else {
+      bad(`AGENTS/${name} does not document appending to board-state.json events[]`);
+    }
+  }
+  // Dispatch skill dual-writes
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  if (dispatchBody.includes('board-state.json') && dispatchBody.includes('dual write')) {
+    ok('anymake-dispatch: dual-writes dispatch log to BOARD.md + board-state.json');
+  } else {
+    bad('anymake-dispatch: does not dual-write to board-state.json');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

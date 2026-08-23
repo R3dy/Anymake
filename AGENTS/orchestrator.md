@@ -58,6 +58,26 @@ If all prerequisites pass:
 
 Run this loop continuously until all stories are Done or an escalation is required.
 
+### Step 0 — Reconcile board-state.json (the taskboard spine)
+
+Before each loop iteration, reconcile the structured taskboard:
+
+1. Read `PROJECTS/[name]/.anymake/board-state.json` (create it from the backlog
+   if it doesn't exist — initialize `stories[]` from `docs/03-solutioning/backlog.md`)
+2. Process any new `events[]` since the last reconciliation — update `stories[]`
+   statuses, `retries`, `last_event` timestamps from the event log
+3. Update `in_flight` (stories with status `in_progress`, `in_validation`, or
+   `experience`)
+4. Update `concurrency.current` = `len(in_flight)`
+5. Update `updated` to the current ISO-8601 timestamp
+6. Write the reconciled `board-state.json` back
+7. Render `BOARD.md` from the snapshot (the markdown is a projection — INV-004)
+
+The orchestrator is the **sole writer** of the snapshot (`stories[]`,
+`in_flight`, `concurrency`, `updated`). Agents append to `events[]` only — they
+never edit the snapshot directly. See `TEMPLATES/board-state.schema.json` for
+the schema.
+
 ### Step 1 — Select the Next Story
 
 Scan BOARD.md for the first story where:

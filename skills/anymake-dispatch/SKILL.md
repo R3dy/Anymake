@@ -172,15 +172,25 @@ isolation / hypothesis" field is exactly that protocol's required structure).
 - Implementation failures: max 1 retry, then escalate
 - Empty deliverable: max 1 retry (treat as implementation failure)
 
-## Dispatch log (hardening #4 — structured log line to BOARD.md)
+## Dispatch log (hardening #4 — structured log line to BOARD.md + board-state.json)
 
 Every dispatch — success, failure, or retry — appends one structured line to
-`PROJECTS/[name]/BOARD.md`'s Run Log. This replaces the free-text log lines
-previously hand-written per call site and extends logging to every dispatch
-(including agile-flow and phase-gate dispatches that previously logged nothing).
+`PROJECTS/[name]/BOARD.md`'s Run Log AND appends an event to
+`PROJECTS/[name]/.anymake/board-state.json`'s `events[]`. The dual write is
+belt-and-suspenders: the markdown log is the human-readable surface; the JSON
+event is the structured spine the kanban UI and orchestrator read. Lost JSON
+appends are acceptable (the markdown log is the durable record); lost markdown
+writes are not.
 
+**BOARD.md Run Log line:**
 ```
 [time] DISPATCH <OK|FAIL|RETRY> — <agent> — <board_ref> — purpose: <purpose> — artifact: <output_artifact or "none"> — attempt: <N>
+```
+
+**board-state.json event** (appended to `events[]`):
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID from board_ref>", "agent": "<agent>",
+  "type": "dispatch_ok|dispatch_fail|retry", "detail": "<purpose> — <artifact or 'none'> — attempt <N>" }
 ```
 
 ## Workspace setup (worktree isolation — B1 / #16)

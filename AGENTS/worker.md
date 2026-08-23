@@ -114,6 +114,21 @@ If this story established a reusable pattern that isn't already captured in `PRO
 
 Do not restate a pattern that's already there, and do not turn this into a design document — one entry, a sentence or two, a file:line pointer. This step is additive, not a gate: skipping it is not a validation failure, but doing it saves the next few stories real work.
 
+### 4c. Append taskboard events
+
+At each state transition (started, layer committed, tests run, PR opened),
+append a `status_change` or `heartbeat` event to
+`PROJECTS/[name]/.anymake/board-state.json`'s `events[]`:
+
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID>", "agent": "worker",
+  "type": "status_change", "from": "<prev>", "to": "<next>", "detail": "<what happened>" }
+```
+
+You only append to `events[]` — never edit `stories[]`, `in_flight`, or
+`concurrency` directly (the orchestrator is the sole writer of the snapshot).
+See `TEMPLATES/board-state.schema.json` for the schema.
+
 ### 5. Open the PR
 
 Use the PR description format from `TEMPLATES/commit-message.md`.

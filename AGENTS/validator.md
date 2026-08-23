@@ -148,6 +148,18 @@ Use `TEMPLATES/validation-report.md` as your structure. Every field must be fill
 
 **Evidence strings must be specific and falsifiable.** Not "auth is broken" but "GET /api/users returns 200 with no Authorization header — line 42 of src/app/api/users/route.ts has no auth middleware call."
 
+**Append a taskboard event** to `PROJECTS/[name]/.anymake/board-state.json`'s
+`events[]` after writing your report:
+
+```json
+{ "ts": "<ISO-8601>", "story": "<story ID>", "agent": "validator",
+  "type": "status_change", "from": "in_validation", "to": "<verdict-lowercase>",
+  "detail": "Validation <verdict> — <one-line summary>" }
+```
+
+You only append to `events[]` — never edit the snapshot (the orchestrator
+reconciles). See `TEMPLATES/board-state.schema.json`.
+
 ---
 
 ## Verdict Decision Tree
