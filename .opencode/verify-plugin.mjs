@@ -436,5 +436,67 @@ console.log('\n[10] Parallel dispatch + orchestrator-as-team-lead (B2 / #17)');
   }
 }
 
+// 11. Zero-build kanban monitor (Story 29.4) — dashboard/kanban.html exists,
+//     is single-file (no external src/href), has 7 columns + polling fetch
+console.log('\n[11] Zero-build kanban monitor');
+{
+  const kanbanPath = path.join(ROOT, 'dashboard', 'kanban.html');
+  if (!fs.existsSync(kanbanPath)) {
+    bad('dashboard/kanban.html does not exist');
+  } else {
+    const kb = fs.readFileSync(kanbanPath, 'utf8');
+    // (a) single-file: no external <script src=> or <link href=>
+    const extScript = kb.match(/<script\s+[^>]*src=/i);
+    const extLink = kb.match(/<link\s+[^>]*href=/i);
+    const extImport = kb.match(/import\s+["']/);
+    if (!extScript && !extLink && !extImport) {
+      ok('dashboard/kanban.html: single-file (no external src/href/import)');
+    } else {
+      if (extScript) bad('dashboard/kanban.html: has external <script src=> (violates ADR-008)');
+      if (extLink) bad('dashboard/kanban.html: has external <link href=> (violates ADR-008)');
+      if (extImport) bad('dashboard/kanban.html: has bare import (violates ADR-008)');
+    }
+    // (b) 7 column keys present
+    const colKeys = ['backlog', 'ready', 'in_progress', 'in_validation', 'experience', 'done', 'blocked'];
+    const missingCols = colKeys.filter((k) => !kb.includes(k));
+    if (missingCols.length === 0) {
+      ok('dashboard/kanban.html: all 7 column keys present');
+    } else {
+      bad('dashboard/kanban.html: missing columns: ' + missingCols.join(', '));
+    }
+    // (c) polling fetch present
+    if (kb.includes('fetch(') && kb.includes('setInterval')) {
+      ok('dashboard/kanban.html: polling fetch present');
+    } else {
+      bad('dashboard/kanban.html: missing polling fetch or setInterval');
+    }
+    // (d) read-only (no write controls — no POST, no PUT, no fetch with method: 'POST')
+    if (!/method:\s*['"](?:POST|PUT|PATCH|DELETE)/.test(kb)) {
+      ok('dashboard/kanban.html: read-only (no write methods)');
+    } else {
+      bad('dashboard/kanban.html: has write methods (must be read-only)');
+    }
+    // (e) dark aesthetic
+    if (kb.includes('#0b0d10')) {
+      ok('dashboard/kanban.html: dark aesthetic (#0b0d10 background)');
+    } else {
+      bad('dashboard/kanban.html: missing dark background (#0b0d10)');
+    }
+    // (f) drag-drop offline fallback
+    if (kb.includes('dragover') && kb.includes('drop')) {
+      ok('dashboard/kanban.html: drag-drop offline fallback present');
+    } else {
+      bad('dashboard/kanban.html: missing drag-drop offline fallback');
+    }
+  }
+  // README exists
+  const readmePath = path.join(ROOT, 'dashboard', 'README.md');
+  if (fs.existsSync(readmePath)) {
+    ok('dashboard/README.md exists (launch instructions)');
+  } else {
+    bad('dashboard/README.md does not exist');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);
