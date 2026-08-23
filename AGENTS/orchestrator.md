@@ -78,16 +78,56 @@ The orchestrator is the **sole writer** of the snapshot (`stories[]`,
 never edit the snapshot directly. See `TEMPLATES/board-state.schema.json` for
 the schema.
 
-### Step 1 — Select the Next Story
+### Step 1 — Select and Dispatch Ready Stories (Team-Lead Loop)
 
-Scan BOARD.md for the first story where:
-- Status is `🟡 Ready` (all dependencies are `✅ Done`)
-- No other story is currently `🔵 In Progress` or `🟠 In Validation`
+**Parallel dispatch is the default.** Multiple ready, non-conflicting stories
+run concurrently. The orchestrator acts like an agile team lead: monitoring the
+kanban (the JSON), catching stalls, re-dispatching on FAIL, escalating when
+blocked.
+
+**Concurrency policy** (replaces the former "one at a time" serialization rule):
+
+| Rule | Value |
+|------|-------|
+| `concurrency.max` | default **3** (configurable via `board-state.json` → `concurrency.max`; lower it if the host's Agent/Task tool shows contention). `max=1` reproduces today's sequential behavior exactly. |
+| Conflict detection | two stories conflict iff their `touches_files` sets intersect OR one `depends_on` the other |
+| When two ready stories conflict | dispatch one; hold the other in `ready` until the first merges (then re-compute `touches_files` against the new `main`) |
+| `touches_files` source | the Planner emits it in the task brief (§"Context"), derived from the technical tasks |
+| Per-story retry isolation | a FAIL on story N does **not** pause story M. The retry matrix applies per-story. Only an `ESCALATE TO USER` on security or intent-conflict halts the whole run. |
+| Within-story pipeline | still strictly sequential (Planner → Worker → Validator → Experience Runner) — ADR-003 / INV-002 preserved. We parallelize **stories**, not **stages within a story**. |
+
+**The team-lead loop:**
+
+```
+loop:
+  1. reconcile(board-state.json) → snapshot   # Step 0
+  2. render BOARD.md from snapshot
+  3. for each in_flight story:
+       - if last_event age > STALL_THRESHOLD (default 10 min) and no heartbeat
+         event since → mark stalled; re-dispatch the stuck stage (counts as a
+         retry against that story's retry budget, not a fresh attempt)
+       - if a dispatch_fail / validation_fail / experience_fail event arrived
+         since last iteration → apply the retry matrix for that story
+       - if an escalate event arrived → standard Escalation Protocol for that
+         story (does not pause siblings unless the escalation type is
+         security-failure or intent-conflict)
+  4. while len(in_flight) < concurrency.max and a non-conflicting `ready` story
+     exists:
+       - select it; create its worktree (Step 2b); dispatch its Planner
+       - (parallel dispatch happens at the story level: a story's
+         Planner → Worker → Validator → Experience Runner pipeline is still
+         strictly sequential within the story — ADR-003 / INV-002 preserved)
+  5. if no ready story, no in_flight story, and stories remain → ESCALATE
+     (all-blocked); if all done → write completion summary, STOP
+```
+
+The orchestrator monitors the kanban (the JSON), catches stalls, re-dispatches
+on FAIL, and escalates when blocked — the team-lead posture.
 
 Update dependency readiness each iteration: a story transitions from `⬜ Backlog` to `🟡 Ready` when all stories it depends on show `✅ Done`.
 
 **Exit conditions:**
-- No `🟡 Ready` story exists AND stories remain that are not `✅ Done` → all remaining work is blocked → **ESCALATE**
+- No `🟡 Ready` story exists AND no story is `in_flight` AND stories remain that are not `✅ Done` → all remaining work is blocked → **ESCALATE**
 - All stories are `✅ Done` → write completion summary, update `PHASE_STATE.md` → **STOP**
 
 ### Step 2 — Dispatch Planner for Task Brief
@@ -396,4 +436,4 @@ Maintain a cumulative count of PRs merged during Phase 4 (not reset per mileston
 - Do not merge a PR while CI is failing
 - Do not start a new milestone until the current milestone has all stories `✅ Done`
 - Do not infer intent from context — only act on explicit phrases from the escalation lexicon
-- Do not spawn more than one planner, one worker, or one validator at a time
+- Do not parallelize stages within a story — each story's Planner → Worker → Validator → Experience Runner pipeline is strictly sequential. Parallelism is at the story level only (ADR-003 / INV-002)

@@ -240,6 +240,39 @@ procedure (workspace setup, pre-prompt, dispatch, verify, log) for each entry.
 The per-dispatch contract does not change — `dispatch_parallel` is a loop over
 `DISPATCH` requests, not a new dispatch primitive.
 
+## dispatch_parallel mode (B2 / #17 / Story 29.3)
+
+The parallel dispatch mode. Per this skill's own original promise, the
+per-dispatch contract does not change — `dispatch_parallel` is a loop over a
+list of `DISPATCH` requests, running the full per-dispatch procedure for each.
+
+```
+dispatch_parallel([DISPATCH_1, DISPATCH_2, ...]) {
+  for each DISPATCH in the list (concurrently, up to concurrency.max):
+    1. workspace_setup(worktree for this story)        # §"Workspace setup"
+    2. pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts)
+    3. dispatch via the host backend (Agent/Task tool, one call per dispatch)
+    4. post-dispatch verify (MANDATORY — output_check per dispatch)
+    5. append dispatch log line to board-state.json events[] + BOARD.md Run Log
+  collect results; return one summary per dispatch
+}
+```
+
+**Every parallel dispatch still gets:**
+- Pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts)
+- Post-dispatch verification (mandatory, per-dispatch)
+- A dispatch log line (dual-written to `board-state.json` events[] + `BOARD.md` Run Log)
+
+This preserves INV-018 — `dispatch_parallel` is a new mode OF the skill, not a
+bypass. The host-portability seam (the "Backend: OpenCode" section) is the only
+place the host primitive is named; `dispatch_parallel` maps to N concurrent
+Agent/Task tool calls.
+
+**Conflict detection is the orchestrator's job, not the skill's.** The skill
+dispatches what it's told; the orchestrator decides which stories are
+non-conflicting before assembling the `dispatch_parallel` call. See
+`AGENTS/orchestrator.md` → "Concurrency policy".
+
 ## What this skill does NOT do
 
 - It does not spawn agents itself — it is a procedure the caller follows, not

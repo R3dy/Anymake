@@ -243,6 +243,15 @@ Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect a
 - Base `main` SHA recorded on the issue before merge; merge SHA + tag `issue-[N]` + exact revert command recorded after
 - An agile change with no issue reference in its commits fails validation
 
+**Concurrency-aware retry (B2 / #17 / Story 29.3):**
+When the orchestrator runs parallel stories (the default — see
+`AGENTS/orchestrator.md` → "Concurrency policy"), the retry matrix applies
+**per-story**. A FAIL on story N does not pause story M. A per-story
+escalation halts only that story, not its siblings — **except** security-failure
+and intent-conflict escalations, which always halt the whole run (the override
+is absolute — INV-008). The orchestrator monitors in-flight stories via
+`board-state.json` and applies the retry matrix to each independently.
+
 ---
 
 ## Board Status Symbols

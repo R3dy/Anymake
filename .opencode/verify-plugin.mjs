@@ -377,5 +377,64 @@ console.log('\n[9] Shared taskboard JSON (the spine)');
   }
 }
 
+// 10. Parallel dispatch + orchestrator-as-team-lead (B2 / #17 / Story 29.3)
+//     — dispatch_parallel documented, serialization rule deleted, concurrency
+//     policy present, planner documents touches_files
+console.log('\n[10] Parallel dispatch + orchestrator-as-team-lead (B2 / #17)');
+{
+  const dispatchBody = fs.readFileSync(dispatchSkillPath, 'utf8');
+  if (dispatchBody.includes('dispatch_parallel') && dispatchBody.includes('concurrently')) {
+    ok('anymake-dispatch: dispatch_parallel mode documented');
+  } else {
+    bad('anymake-dispatch: dispatch_parallel mode not documented');
+  }
+  const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+  // Negative check: serialization rule is GONE
+  if (!orchBody.includes('Do not spawn more than one planner, one worker, or one validator at a time')) {
+    ok('AGENTS/orchestrator.md: serialization rule deleted (parallel is default)');
+  } else {
+    bad('AGENTS/orchestrator.md: serialization rule still present (INV-018 / Story 29.3 violation)');
+  }
+  // Positive check: concurrency policy present
+  if (orchBody.includes('Concurrency policy') && orchBody.includes('concurrency.max') && orchBody.includes('touches_files')) {
+    ok('AGENTS/orchestrator.md: concurrency policy + conflict detection documented');
+  } else {
+    bad('AGENTS/orchestrator.md: missing concurrency policy or conflict detection');
+  }
+  // Team-lead loop present
+  if (orchBody.includes('team-lead loop') || orchBody.includes('Team-Lead Loop') || orchBody.includes('Team-lead loop')) {
+    ok('AGENTS/orchestrator.md: team-lead loop documented');
+  } else {
+    bad('AGENTS/orchestrator.md: team-lead loop not documented');
+  }
+  // max=1 fallback documented
+  if (orchBody.includes('max=1') || orchBody.includes('max = 1')) {
+    ok('AGENTS/orchestrator.md: max=1 fallback documented (reproduces sequential behavior)');
+  } else {
+    bad('AGENTS/orchestrator.md: max=1 fallback not documented');
+  }
+  // Arbiter: concurrency-aware retry note
+  const arbBody = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8');
+  if (arbBody.includes('Concurrency-aware retry') && arbBody.includes('per-story')) {
+    ok('AGENTS/arbiter.md: concurrency-aware retry note present');
+  } else {
+    bad('AGENTS/arbiter.md: concurrency-aware retry note missing');
+  }
+  // Planner: touches_files documented
+  const plannerBody = fs.readFileSync(path.join(AGENTS_DIR, 'planner.md'), 'utf8');
+  if (plannerBody.includes('touches_files')) {
+    ok('AGENTS/planner.md: touches_files emission documented');
+  } else {
+    bad('AGENTS/planner.md: touches_files emission not documented');
+  }
+  // Build-loop skill: parallel awareness
+  const buildLoopBody = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-build-loop', 'SKILL.md'), 'utf8');
+  if (buildLoopBody.includes('concurrency') && buildLoopBody.includes('non-conflicting')) {
+    ok('skills/anymake-build-loop/SKILL.md: parallel dispatch awareness present');
+  } else {
+    bad('skills/anymake-build-loop/SKILL.md: parallel dispatch awareness missing');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);
