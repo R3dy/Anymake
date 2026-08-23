@@ -313,7 +313,7 @@ You review the complete product on staging before launch approval:
 - Monetization flow works with test-mode Stripe
 - Product looks and feels ready to ship
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy for a code-level staging check instead of waiting:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill for a code-level staging check instead of waiting:
 
 ```
 Agent({

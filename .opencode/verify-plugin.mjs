@@ -225,6 +225,25 @@ if (fs.existsSync(orchestratorPath)) {
     ok('AGENTS/orchestrator.md has zero raw Agent({ calls (all dispatch routed through anymake-dispatch)');
   }
 }
+// (j) prose-verb dispatch sites reference anymake-dispatch (Story 27.2b rewire)
+const proseFiles = [
+  { path: path.join(SKILLS_DIR, 'anymake-agile', 'SKILL.md'), name: 'skills/anymake-agile/SKILL.md' },
+  { path: path.join(SKILLS_DIR, 'anymake', 'SKILL.md'), name: 'skills/anymake/SKILL.md (hub)' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-0.md'), name: 'PHASE_GUIDES/phase-0.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-1.md'), name: 'PHASE_GUIDES/phase-1.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-2.md'), name: 'PHASE_GUIDES/phase-2.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-3.md'), name: 'PHASE_GUIDES/phase-3.md' },
+  { path: path.join(ROOT, 'PHASE_GUIDES', 'phase-4.md'), name: 'PHASE_GUIDES/phase-4.md' },
+];
+for (const f of proseFiles) {
+  if (!fs.existsSync(f.path)) { bad(`${f.name}: file not found`); continue; }
+  const body = fs.readFileSync(f.path, 'utf8');
+  if (body.includes('anymake-dispatch')) {
+    ok(`${f.name} references anymake-dispatch (prose-verb rewire done)`);
+  } else {
+    bad(`${f.name} does NOT reference anymake-dispatch (INV-018 violation — dispatch sites still use raw 'spawn' verbs)`);
+  }
+}
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

@@ -189,7 +189,7 @@ You review epics and backlog. Key questions:
 
 You say "solutioning complete, start building" → proceed to Phase 4.
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy instead of waiting:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
 Agent({

@@ -140,7 +140,7 @@ Run the prototype locally and answer two questions:
 
 Both must be Yes before proceeding. If No on either: revise the prototype, do not proceed to 2.3.
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy instead of a human visual review:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of a human visual review:
 
 ```
 Agent({
@@ -270,7 +270,7 @@ You review all outputs together. Key questions:
 
 You say "planning complete, start solutioning" → proceed to Phase 3.
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy instead of waiting:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
 Agent({

@@ -134,7 +134,7 @@ You review `docs/01-discovery.md`. Key questions:
 
 You say "discovery complete, start planning" → proceed to Phase 2.
 
-**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, spawn the Product Owner Proxy instead of waiting:
+**Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
 Agent({
