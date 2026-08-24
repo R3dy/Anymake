@@ -65,7 +65,16 @@ Before each loop iteration, reconcile the structured taskboard:
 1. Read `PROJECTS/[name]/.anymake/board-state.json` (create it from the backlog
    if it doesn't exist — initialize `stories[]` from `docs/03-solutioning/backlog.md`)
 2. Process any new `events[]` since the last reconciliation — update `stories[]`
-   statuses, `retries`, `last_event` timestamps from the event log
+   statuses, `retries`, `last_event` timestamps from the event log.
+   **Reconcile allow-list (ADR-013):** when processing `events[]`, ignore event
+   types outside the build-loop set (`status_change`, `dispatch`, `dispatch_ok`,
+   `dispatch_fail`, `retry`, `escalate`, `worktree_create`, `worktree_cleanup`).
+   Session-lifecycle events (`session_start`, `session_end`, `phase_step`,
+   `artifact`, `checkpoint`, `escalation`) are never story-status transitions
+   and must not affect `stories[]` reconciliation. If an unknown event type is
+   encountered, log it and skip — never apply a status change. (In practice the
+   hub writes session events to `session-log.jsonl` only, not `events[]`; this
+   allow-list is defense-in-depth.)
 3. Update `in_flight` (stories with status `in_progress`, `in_validation`, or
    `experience`)
 4. Update `concurrency.current` = `len(in_flight)`
@@ -74,9 +83,10 @@ Before each loop iteration, reconcile the structured taskboard:
 7. Render `BOARD.md` from the snapshot (the markdown is a projection — INV-004)
 
 The orchestrator is the **sole writer** of the snapshot (`stories[]`,
-`in_flight`, `concurrency`, `updated`). Agents append to `events[]` only — they
-never edit the snapshot directly. See `TEMPLATES/board-state.schema.json` for
-the schema.
+`in_flight`, `concurrency`, `updated`) and of `events[]` (build-loop events
+only — agents append via `anymake-dispatch`'s dual-write; the hub does NOT
+write `events[]` per ADR-013's writer split). See
+`TEMPLATES/board-state.schema.json` for the schema.
 
 ### Step 1 — Select and Dispatch Ready Stories (Team-Lead Loop)
 

@@ -339,6 +339,58 @@ console.log('\n[9] Shared taskboard JSON (the spine)');
       } else {
         bad('TEMPLATES/board-state.schema.json: events[] missing fields: ' + missingEvent.join(', '));
       }
+      // §9 extension (ADR-013): session object + new enum values + nullable story + optional fields
+      const sessProps = schema.properties?.session?.properties || {};
+      if (schema.properties?.session && sessProps.id && sessProps.started && sessProps.phase && sessProps.step) {
+        ok('TEMPLATES/board-state.schema.json: top-level `session` object present (id/started/phase/step)');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: missing top-level `session` object or sub-properties (ADR-013)');
+      }
+      if (!schema.required?.includes('session')) {
+        ok('TEMPLATES/board-state.schema.json: `session` is optional (not in required — backward compat)');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: `session` should NOT be in required (backward compat)');
+      }
+      const evType = schema.properties?.events?.items?.properties?.type;
+      if (evType && evType.enum) {
+        const newTypes = ['session_start', 'session_end', 'phase_step', 'artifact', 'checkpoint', 'escalation'];
+        const missingTypes = newTypes.filter((t) => !evType.enum.includes(t));
+        if (missingTypes.length === 0) {
+          ok('TEMPLATES/board-state.schema.json: events[].type enum includes all 6 session-lifecycle types');
+        } else {
+          bad('TEMPLATES/board-state.schema.json: events[].type enum missing session types: ' + missingTypes.join(', '));
+        }
+        // verify existing 10 types untouched
+        const existingTypes = ['status_change', 'dispatch', 'dispatch_ok', 'dispatch_fail', 'retry', 'escalate', 'heartbeat', 'log', 'worktree_create', 'worktree_cleanup'];
+        const missingExisting = existingTypes.filter((t) => !evType.enum.includes(t));
+        if (missingExisting.length === 0) {
+          ok('TEMPLATES/board-state.schema.json: all 10 existing build-loop event types preserved');
+        } else {
+          bad('TEMPLATES/board-state.schema.json: existing event types missing: ' + missingExisting.join(', '));
+        }
+      } else {
+        bad('TEMPLATES/board-state.schema.json: events[].type has no enum');
+      }
+      // nullable story
+      const storyType = schema.properties?.events?.items?.properties?.story?.type;
+      if (Array.isArray(storyType) && storyType.includes('string') && storyType.includes('null')) {
+        ok('TEMPLATES/board-state.schema.json: events[].story allows null (session events have story: null)');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: events[].story should allow ["string","null"]');
+      }
+      // optional session + artifact on events
+      if (eventProps.session && eventProps.artifact) {
+        ok('TEMPLATES/board-state.schema.json: events[] has optional `session` + `artifact` fields');
+      } else {
+        bad('TEMPLATES/board-state.schema.json: events[] missing optional `session` or `artifact` field');
+      }
+      // orchestrator reconcile allow-list clause (ADR-013)
+      const orchBody = fs.readFileSync(orchestratorPath, 'utf8');
+      if (orchBody.includes('Reconcile allow-list') && orchBody.includes('Session-lifecycle events') && orchBody.includes('never story-status transitions')) {
+        ok('AGENTS/orchestrator.md: reconcile allow-list clause present (ADR-013 defense-in-depth)');
+      } else {
+        bad('AGENTS/orchestrator.md: missing reconcile allow-list clause (ADR-013)');
+      }
     } catch (e) {
       bad('TEMPLATES/board-state.schema.json: not valid JSON (' + e.message + ')');
     }
@@ -488,6 +540,17 @@ console.log('\n[11] Zero-build kanban monitor');
     } else {
       bad('dashboard/kanban.html: missing drag-drop offline fallback');
     }
+    // (g) §11 extension (ADR-013): Session Activity panel + ?log= param
+    if (kb.includes('session-log') && kb.includes('session-panel')) {
+      ok('dashboard/kanban.html: Session Activity panel present (ADR-013)');
+    } else {
+      bad('dashboard/kanban.html: missing Session Activity panel (ADR-013)');
+    }
+    if (kb.includes("params.get('log')")) {
+      ok('dashboard/kanban.html: reads ?log= URL param for session-log.jsonl path');
+    } else {
+      bad('dashboard/kanban.html: missing ?log= URL param reader');
+    }
   }
   // README exists
   const readmePath = path.join(ROOT, 'dashboard', 'README.md');
@@ -495,6 +558,94 @@ console.log('\n[11] Zero-build kanban monitor');
     ok('dashboard/README.md exists (launch instructions)');
   } else {
     bad('dashboard/README.md does not exist');
+  }
+}
+
+// 12. Per-project dashboard launcher (Story C.1 / #31) — kanban.sh exists,
+//     is executable, uses python3 http.server, binds 127.0.0.1, references
+//     board-state.json + session-log.jsonl
+console.log('\n[12] Per-project dashboard launcher (kanban.sh)');
+{
+  const kanbanShPath = path.join(ROOT, 'dashboard', 'kanban.sh');
+  if (!fs.existsSync(kanbanShPath)) {
+    bad('dashboard/kanban.sh does not exist');
+  } else {
+    const stat = fs.statSync(kanbanShPath);
+    const isExec = !!(stat.mode & 0o111);
+    if (isExec) {
+      ok('dashboard/kanban.sh: is executable');
+    } else {
+      bad('dashboard/kanban.sh: not executable (chmod +x)');
+    }
+    const body = fs.readFileSync(kanbanShPath, 'utf8');
+    if (body.includes('python3 -m http.server')) {
+      ok('dashboard/kanban.sh: uses python3 -m http.server');
+    } else {
+      bad('dashboard/kanban.sh: missing python3 -m http.server');
+    }
+    if (body.includes('--bind 127.0.0.1')) {
+      ok('dashboard/kanban.sh: binds 127.0.0.1 (localhost-only — no network exposure)');
+    } else {
+      bad('dashboard/kanban.sh: missing --bind 127.0.0.1 (security: would bind 0.0.0.0)');
+    }
+    if (body.includes('board-state.json') && body.includes('session-log.jsonl')) {
+      ok('dashboard/kanban.sh: references board-state.json + session-log.jsonl');
+    } else {
+      bad('dashboard/kanban.sh: missing board-state.json or session-log.jsonl reference');
+    }
+    if (body.includes('mktemp -d') && body.includes('symlink')) {
+      ok('dashboard/kanban.sh: uses temp root with symlinks (same-origin fetch solution)');
+    } else {
+      bad('dashboard/kanban.sh: missing temp-root-with-symlinks mechanism');
+    }
+  }
+}
+
+// 13. Hub session-event writer (Story B.2 / #31 / ADR-013) — SKILL.md
+//     documents session-log.jsonl appending + writer split
+console.log('\n[13] Hub session-event writer (ADR-013)');
+{
+  const hubBody = fs.readFileSync(path.join(SKILLS_DIR, 'anymake', 'SKILL.md'), 'utf8');
+  if (hubBody.includes('session-log.jsonl')) {
+    ok('skills/anymake/SKILL.md: documents session-log.jsonl');
+  } else {
+    bad('skills/anymake/SKILL.md: missing session-log.jsonl reference');
+  }
+  if (hubBody.includes('session_start') && hubBody.includes('phase_step')) {
+    ok('skills/anymake/SKILL.md: documents session_start + phase_step event types');
+  } else {
+    bad('skills/anymake/SKILL.md: missing session_start or phase_step event instructions');
+  }
+  if (hubBody.includes('NEVER') && hubBody.includes('events[]') && hubBody.includes('writer split')) {
+    ok('skills/anymake/SKILL.md: documents writer split (hub does NOT write events[])');
+  } else {
+    bad('skills/anymake/SKILL.md: missing writer-split statement (hub must NOT write events[])');
+  }
+}
+
+// 14. RELEASE.md (Story A.1 / #31) — cache-invalidation procedure documented
+console.log('\n[14] RELEASE.md (cache-invalidation procedure)');
+{
+  const releasePath = path.join(ROOT, 'RELEASE.md');
+  if (!fs.existsSync(releasePath)) {
+    bad('RELEASE.md does not exist at repo root');
+  } else {
+    const body = fs.readFileSync(releasePath, 'utf8');
+    if (body.includes('node_modules/anymake') && (body.includes('mv') || body.includes('rm -rf'))) {
+      ok('RELEASE.md: documents cache-invalidation (move-aside or rm -rf against cache path)');
+    } else {
+      bad('RELEASE.md: missing cache-invalidation procedure');
+    }
+    if (body.includes('verify-plugin.mjs')) {
+      ok('RELEASE.md: documents pre-release verify-plugin.mjs green check');
+    } else {
+      bad('RELEASE.md: missing verify-plugin.mjs pre-check');
+    }
+    if (body.includes('restart') || body.includes('Restart')) {
+      ok('RELEASE.md: documents OpenCode restart step');
+    } else {
+      bad('RELEASE.md: missing restart step');
+    }
   }
 }
 

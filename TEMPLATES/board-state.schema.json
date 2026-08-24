@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Anymake board-state.json",
-  "description": "The structured spine of the Anymake agile board. Agents append events to events[]; the orchestrator is the sole writer of the snapshot (stories[], in_flight, concurrency, updated). BOARD.md is a rendered projection of this file. The kanban UI reads it directly. One source of truth (INV-004).",
+  "description": "The structured spine of the Anymake agile board. Agents append events to events[]; the orchestrator is the sole writer of the snapshot (stories[], in_flight, concurrency, updated). The hub (main agent) writes the optional `session` object once at session start and appends session-lifecycle events to session-log.jsonl (NOT to events[]) — see ADR-013. BOARD.md is a rendered projection of this file. The kanban UI reads it directly. One source of truth (INV-004).",
   "type": "object",
   "required": ["project", "run_id", "updated", "concurrency", "in_flight", "stories", "events"],
   "properties": {
@@ -39,6 +39,16 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Story IDs currently in progress (maintained by the orchestrator)"
+    },
+    "session": {
+      "type": "object",
+      "description": "Current session context. Written by the hub skill (the main agent) ONCE at session start (single read-modify-write) and updated in place on phase/step advance. The orchestrator does not touch this object. Absent during pure build-loop runs that don't surface a session (backward compatible). See ADR-013.",
+      "properties": {
+        "id": { "type": "string", "description": "Session identifier (e.g. ISO timestamp + short random suffix)" },
+        "started": { "type": "string", "format": "date-time" },
+        "phase": { "type": ["string", "null"], "description": "Current phase (e.g. '2')" },
+        "step": { "type": ["string", "null"], "description": "Current step within the phase" }
+      }
     },
     "stories": {
       "type": "array",
@@ -88,15 +98,17 @@
         "required": ["ts", "story", "agent", "type"],
         "properties": {
           "ts": { "type": "string", "format": "date-time" },
-          "story": { "type": "string", "description": "Story ID this event pertains to" },
-          "agent": { "type": "string", "description": "Agent that emitted the event (worker, validator, experience-runner, orchestrator, planner, dispatch)" },
+          "story": { "type": ["string", "null"], "description": "Story ID this event pertains to (null for session-lifecycle events — see ADR-013)" },
+          "agent": { "type": "string", "description": "Agent that emitted the event (worker, validator, experience-runner, orchestrator, planner, dispatch, hub)" },
           "type": {
             "type": "string",
-            "enum": ["status_change", "dispatch", "dispatch_ok", "dispatch_fail", "retry", "escalate", "heartbeat", "log", "worktree_create", "worktree_cleanup"]
+            "enum": ["status_change", "dispatch", "dispatch_ok", "dispatch_fail", "retry", "escalate", "heartbeat", "log", "worktree_create", "worktree_cleanup", "session_start", "session_end", "phase_step", "artifact", "checkpoint", "escalation"]
           },
           "from": { "type": ["string", "null"] },
           "to": { "type": ["string", "null"] },
-          "detail": { "type": "string" }
+          "detail": { "type": "string" },
+          "session": { "type": "string", "description": "Session ID the event belongs to (present for session-lifecycle events, absent for build-loop events)" },
+          "artifact": { "type": "string", "description": "File path of the artifact produced (for artifact-type events)" }
         }
       }
     }

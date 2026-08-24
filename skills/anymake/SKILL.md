@@ -62,6 +62,38 @@ Full profiles in `PROJECT_TYPES/`. Each type has a `manifest.md` (structured rul
 Every session:
 
 ```
+0. BOARD-WRITE (ADR-013 — session-wide communication channel):
+   On session start, before step 1:
+   a. Generate a session ID (ISO timestamp + short random suffix, e.g.
+      "2026-08-24T14:32-s4k9").
+   b. Append a session_start event to PROJECTS/[name]/.anymake/session-log.jsonl
+      (create the file if absent — pure append, one JSON line, no
+      read-modify-write):
+      {"ts":"<ISO>","story":null,"agent":"hub","type":"session_start",
+       "session":"<id>","detail":"Session started on <project>"}
+   c. Read PROJECTS/[name]/.anymake/board-state.json (create it from
+      TEMPLATES/board-state.schema.json if absent — initialize project, run_id,
+      concurrency {max:3,current:0}, in_flight:[], stories:[], events:[]).
+      Perform a SINGLE read-modify-write to set the top-level `session` object:
+      {"id":"<id>","started":"<ISO>","phase":null,"step":null}
+      (The hub writes ONLY the `session` object on board-state.json — NEVER
+      appends to events[]. The orchestrator owns events[] exclusively during
+      Phase 4. See ADR-013 writer split — eliminates the concurrent-writer
+      race.)
+   After step 5 (execute one step): append a phase_step event to
+   session-log.jsonl:
+      {"ts":"<ISO>","story":null,"agent":"hub","type":"phase_step",
+       "session":"<id>","detail":"Phase N Step M — <step name>"}
+   Optionally update board-state.json's session.phase/session.step in place.
+   After step 6 (produce artifact): append an artifact event:
+      {"ts":"<ISO>","story":null,"agent":"hub","type":"artifact",
+       "session":"<id>","artifact":"<path>","detail":"<artifact name>"}
+   On checkpoint write (autonomous mode): append a checkpoint event.
+   On escalation: append an escalation event.
+   On session end (step 8 report): append a session_end event.
+   The hub NEVER writes board-state.json events[] — only session-log.jsonl
+   (append-only) + the session object (once at start, updated in place on
+   phase/step advance).
 1. Check PROJECTS/[name]/PHASE_STATE.md — if it doesn't exist, start Phase 0 (creating the project begins by choosing a project_type — see "How to Start")
    Note both project_type (which guide governs) and autonomous_mode (gate behavior).
 2. Read PROJECT_TYPES/[project_type]/manifest.md and guide.md — these govern this session's phases, tasks, and gates
