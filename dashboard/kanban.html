@@ -181,6 +181,51 @@ footer h3 {
 #run-log .log-line .fail { color: var(--blocked); }
 #run-log .log-line .retry { color: var(--ready); }
 
+/* Session Activity panel (ADR-013) */
+#session-panel {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+#session-panel.has-data { display: block; }
+#session-panel h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+#session-panel .session-empty {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+#session-timeline {
+  font-family: var(--text-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#session-timeline .sev {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+#session-timeline .sev .ts { color: var(--text-dim); flex-shrink: 0; }
+#session-timeline .sev .typ { font-weight: 600; flex-shrink: 0; min-width: 90px; }
+#session-timeline .sev .typ.session_start, #session-timeline .sev .typ.session_end { color: var(--done); }
+#session-timeline .sev .typ.phase_step { color: var(--in_progress); }
+#session-timeline .sev .typ.artifact { color: var(--experience); }
+#session-timeline .sev .typ.checkpoint { color: var(--ready); }
+#session-timeline .sev .typ.escalation { color: var(--blocked); }
+#session-timeline .sev .det { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+#session-timeline .sev .det a { color: var(--experience); }
+
 #drop-zone {
   display: none;
   position: fixed;
@@ -224,6 +269,11 @@ footer h3 {
 
 <div id="board"></div>
 
+<div id="session-panel">
+  <h3>Session Activity <span id="session-meta" style="font-weight:400;text-transform:none"></span></h3>
+  <div id="session-timeline"></div>
+</div>
+
 <footer>
   <h3>Run Log (last 15 events)</h3>
   <div id="run-log"></div>
@@ -244,12 +294,16 @@ var COLUMNS = [
 ];
 var POLL_MS = 2000;
 var boardUrl = null;
+var logUrl = null;
 var lastUpdated = null;
+var lastLogSize = -1;
 var pollTimer = null;
+var logPollTimer = null;
 
 function init() {
   var params = new URLSearchParams(location.search);
   boardUrl = params.get('board');
+  logUrl = params.get('log') || (boardUrl ? boardUrl.replace(/board-state\.json$/, 'session-log.jsonl') : null);
   if (boardUrl) {
     setBadge('live', 'LIVE');
     startPolling();
@@ -269,6 +323,10 @@ function setBadge(cls, text) {
 function startPolling() {
   fetchBoard();
   pollTimer = setInterval(fetchBoard, POLL_MS);
+  if (logUrl) {
+    fetchSessionLog();
+    logPollTimer = setInterval(fetchSessionLog, POLL_MS);
+  }
 }
 
 function fetchBoard() {
@@ -370,11 +428,27 @@ function render(data) {
 
   var meta = document.getElementById('meta');
   var concurrency = data.concurrency || {};
+  var sess = data.session || null;
+  window.__sessionObj = sess;
+  var sessHtml = '';
+  if (sess) {
+    sessHtml = '<span>Session: <b>' + esc(sess.id || '--') + '</b></span>' +
+      '<span>Phase: <b>' + esc(sess.phase || '--') + '</b>' +
+      (sess.step ? ' · Step: <b>' + esc(sess.step) + '</b>' : '') + '</span>';
+  }
   meta.innerHTML =
     '<span>Run: <b>' + esc(data.run_id || '--') + '</b></span>' +
     '<span>Concurrency: <b>' + (concurrency.current || 0) + '/' + (concurrency.max || 3) + '</b></span>' +
     '<span>Updated: <b>' + esc(data.updated || '--') + '</b></span>' +
-    '<span>Stories: <b>' + stories.length + '</b></span>';
+    '<span>Stories: <b>' + stories.length + '</b></span>' +
+    sessHtml;
+  // also refresh session panel header if it exists
+  var sm = document.getElementById('session-meta');
+  if (sm && sess) {
+    sm.innerHTML = ' — Session: <b>' + esc(sess.id || '') + '</b>' +
+      (sess.phase ? ' · Phase: <b>' + esc(sess.phase) + '</b>' : '') +
+      (sess.step ? ' · Step: <b>' + esc(sess.step) + '</b>' : '');
+  }
 
   var logEl = document.getElementById('run-log');
   var tail = events.slice(-15).reverse();
@@ -443,6 +517,55 @@ function relativeTime(iso) {
   if (sec < 3600) return Math.floor(sec/60) + 'm ago';
   if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
   return Math.floor(sec/86400) + 'd ago';
+}
+
+function fetchSessionLog() {
+  fetch(logUrl)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      if (text.length === lastLogSize) return;
+      lastLogSize = text.length;
+      var lines = text.trim().split('\n').filter(Boolean);
+      var events = [];
+      for (var i = 0; i < lines.length; i++) {
+        try { events.push(JSON.parse(lines[i])); } catch (e) { /* skip malformed */ }
+      }
+      renderSessionPanel(events);
+    })
+    .catch(function() {
+      renderSessionPanel([]);
+    });
+}
+
+function renderSessionPanel(events) {
+  var panel = document.getElementById('session-panel');
+  var tl = document.getElementById('session-timeline');
+  var meta = document.getElementById('session-meta');
+  if (!events || events.length === 0) {
+    panel.className = '';
+    tl.innerHTML = '<div class="session-empty">No session history</div>';
+    return;
+  }
+  panel.className = 'has-data';
+  var recent = events.slice(-50).reverse();
+  tl.innerHTML = recent.map(function(ev) {
+    var artLink = '';
+    if (ev.artifact) {
+      artLink = ' <a href="file://' + esc(ev.artifact) + '">' + esc(ev.artifact) + '</a>';
+    }
+    return '<div class="sev">' +
+      '<span class="ts">' + esc(ev.ts || '') + '</span>' +
+      '<span class="typ ' + esc(ev.type || '') + '">' + esc(ev.type || '') + '</span>' +
+      '<span class="det">' + esc(ev.detail || '') + artLink + '</span>' +
+      '</div>';
+  }).join('');
+  // session header context from board-state session object
+  if (window.__sessionObj) {
+    var s = window.__sessionObj;
+    meta.innerHTML = ' — Session: <b>' + esc(s.id || '') + '</b>' +
+      (s.phase ? ' · Phase: <b>' + esc(s.phase) + '</b>' : '') +
+      (s.step ? ' · Step: <b>' + esc(s.step) + '</b>' : '');
+  }
 }
 
 function esc(s) {
