@@ -42,7 +42,11 @@ python3 -m http.server -d . 8080 --bind 127.0.0.1
 ```
 
 The page polls `board-state.json` and `session-log.jsonl` every 2 seconds and
-re-renders on change.
+re-renders on change. When either file is absent (404), the poll interval
+backs off to 15 seconds and the dashboard shows a "Waiting for
+board-state.json..." status — this prevents endless 404 spam in the server
+log when no session has created the files yet. Polling resumes at 2s
+automatically once the files appear.
 
 ## Launch (offline mode — drag-drop fallback)
 

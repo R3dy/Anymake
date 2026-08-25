@@ -293,6 +293,7 @@ var COLUMNS = [
   { key: 'blocked',          label: 'Escalated',        color: '#ef4444' }
 ];
 var POLL_MS = 2000;
+var BACKOFF_MS = 15000; // back off to 15s when files are missing (404)
 var boardUrl = null;
 var logUrl = null;
 var lastUpdated = null;
@@ -322,24 +323,44 @@ function setBadge(cls, text) {
 
 function startPolling() {
   fetchBoard();
-  pollTimer = setInterval(fetchBoard, POLL_MS);
   if (logUrl) {
     fetchSessionLog();
-    logPollTimer = setInterval(fetchSessionLog, POLL_MS);
   }
+}
+
+function scheduleBoardPoll(delay) {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(fetchBoard, delay);
+}
+
+function scheduleLogPoll(delay) {
+  clearTimeout(logPollTimer);
+  logPollTimer = setTimeout(fetchSessionLog, delay);
 }
 
 function fetchBoard() {
   fetch(boardUrl)
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) {
+        // File missing (404) — back off, show waiting status
+        document.getElementById('meta').textContent =
+          'Waiting for board-state.json (polling every ' + (BACKOFF_MS / 1000) + 's)...';
+        scheduleBoardPoll(BACKOFF_MS);
+        return null;
+      }
+      return r.json();
+    })
     .then(function(data) {
+      if (!data) return;
       if (data.updated !== lastUpdated) {
         lastUpdated = data.updated;
         render(data);
       }
+      scheduleBoardPoll(POLL_MS);
     })
     .catch(function(e) {
       document.getElementById('meta').textContent = 'Fetch error: ' + e.message;
+      scheduleBoardPoll(BACKOFF_MS);
     });
 }
 
@@ -521,9 +542,22 @@ function relativeTime(iso) {
 
 function fetchSessionLog() {
   fetch(logUrl)
-    .then(function(r) { return r.text(); })
+    .then(function(r) {
+      if (!r.ok) {
+        // File missing (404) — back off, show empty panel
+        if (lastLogSize !== -1) { lastLogSize = -1; }
+        renderSessionPanel([]);
+        scheduleLogPoll(BACKOFF_MS);
+        return null;
+      }
+      return r.text();
+    })
     .then(function(text) {
-      if (text.length === lastLogSize) return;
+      if (text === null) return;
+      if (text.length === lastLogSize) {
+        scheduleLogPoll(POLL_MS);
+        return;
+      }
       lastLogSize = text.length;
       var lines = text.trim().split('\n').filter(Boolean);
       var events = [];
@@ -531,9 +565,11 @@ function fetchSessionLog() {
         try { events.push(JSON.parse(lines[i])); } catch (e) { /* skip malformed */ }
       }
       renderSessionPanel(events);
+      scheduleLogPoll(POLL_MS);
     })
     .catch(function() {
       renderSessionPanel([]);
+      scheduleLogPoll(BACKOFF_MS);
     });
 }
 

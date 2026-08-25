@@ -516,11 +516,11 @@ console.log('\n[11] Zero-build kanban monitor');
     } else {
       bad('dashboard/kanban.html: missing columns: ' + missingCols.join(', '));
     }
-    // (c) polling fetch present
-    if (kb.includes('fetch(') && kb.includes('setInterval')) {
+    // (c) polling fetch present (setInterval or self-scheduling setTimeout with backoff)
+    if (kb.includes('fetch(') && (kb.includes('setInterval') || kb.includes('setTimeout'))) {
       ok('dashboard/kanban.html: polling fetch present');
     } else {
-      bad('dashboard/kanban.html: missing polling fetch or setInterval');
+      bad('dashboard/kanban.html: missing polling fetch or setInterval/setTimeout');
     }
     // (d) read-only (no write controls — no POST, no PUT, no fetch with method: 'POST')
     if (!/method:\s*['"](?:POST|PUT|PATCH|DELETE)/.test(kb)) {
