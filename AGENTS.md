@@ -2,6 +2,22 @@
 
 This file documents how AI agents interact with the Anymake system. It covers the agent hierarchy, behavioral rules, file conventions, and the policies that govern autonomous execution.
 
+> **This file is a summary. Wherever it and a detailed `AGENTS/*.md` file
+> disagree, the detailed file wins.** Every role section below condenses a much
+> longer spec; the condensed version is a map, never the territory.
+> `AGENTS/arbiter.md` is authoritative on all shared policy (retries,
+> escalation, PR review, gates, tiers), and each role's own file is
+> authoritative on its mechanics. Stating this makes a one-sided edit fail safe
+> — a future contributor who updates the detail and not the summary leaves the
+> system correct rather than ambiguous. `npm run verify` enforces a named set of
+> these summary/detail agreements (harness check [16]); add an entry there
+> whenever a new contradiction is found.
+>
+> **Pronouns in agent-instruction files:** "you" addresses the agent being
+> instructed. Human approval is always written as "the user" or "the real
+> user," never "you." If a sentence about approval reads ambiguously, it is a
+> bug — rewrite it, don't interpret it.
+
 ---
 
 ## Repository Purpose
@@ -107,6 +123,8 @@ Phase 4, Step 4.3 runs an autonomous five-stage agent system. All agent definiti
 - `PROJECTS/[name]/docs/03-solutioning/backlog.md`
 - `PROJECTS/[name]/docs/03-solutioning/epics.md` (story selection only — the Planner reads full story content)
 - `PROJECTS/[name]/docs/03-solutioning/dependency-graph.md`
+- `PROJECTS/[name]/PHASE_STATE.md` — for `project_type` and `autonomous_mode`
+- `PROJECTS/[name]/.anymake/board-state.json` — the taskboard spine (`TEMPLATES/board-state.schema.json`)
 - `AGENTS/arbiter.md` ← **Read this first**
 
 The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer in full — the Planner reads those itself per story. Keeping that content out of the coordination layer's context is the point.
@@ -116,18 +134,19 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 - `docs/03-solutioning/epics.md` contains acceptance criteria for all stories
 - `docs/03-solutioning/dependency-graph.md` exists
 - `docs/environment.md` exists
-- Milestone 1 (Scaffold) — all tasks checked `[x]`
-- Milestone 2 (Auth) — all tasks checked `[x]`
+- The project type's pre-orchestration milestones are complete. For `saas` and other web-app types that is Milestone 1 (Scaffold) and Milestone 2 (Auth), all tasks checked `[x]`. Headless or no-auth types (`cli`, `library`, `static-site`) have a different prerequisite set — check `project_type` and `PROJECT_TYPES/[project_type]/guide.md`.
 
-**Orchestration loop:**
-1. Select the first `🟡 Ready` story (no story currently `🔵 In Progress` or `🟠 In Validation`)
-2. Dispatch a Planner for the task brief (`TEMPLATES/task-brief.md`); check it for completeness (not a rewrite)
-3. Dispatch a Worker with the approved brief; update board to `🔵 In Progress`
-4. On Worker completion: move to `🟠 In Validation`, dispatch Validator
-5. On Validator PASS: apply PR merge policy (see the Arbiter), mark `✅ Done`, update dependency readiness
-6. On Validator FAIL: re-dispatch the Worker directly with failure context (max 1 retry) — no Planner re-run
-7. On ESCALATE or second failure: write escalation to BOARD.md, pause loop, notify user
-8. Repeat until all stories are Done
+**Orchestration loop (team-lead posture — summary; `AGENTS/orchestrator.md` is authoritative on the mechanics):**
+1. **Reconcile the taskboard.** `PROJECTS/[name]/.anymake/board-state.json` is the structured spine; `BOARD.md` is a rendered projection of it (INV-004). Each iteration, process new `events[]` (build-loop event types only — session-lifecycle events never move a story), refresh `in_flight` and `concurrency.current`, then re-render `BOARD.md`. The orchestrator is the sole writer of the snapshot.
+2. **Monitor in-flight stories** like a team lead: re-dispatch stalled stages, apply the retry matrix per story on a FAIL, escalate when blocked. A failure on one story does not pause its siblings.
+3. **Dispatch ready, non-conflicting stories** up to `concurrency.max` (default 3). Two stories conflict iff their `touches_files` sets intersect or one `depends_on` the other; a conflicting story waits in `ready`.
+4. **Per story, strictly in sequence:** Planner (task brief) → completeness check → Worker → Validator → Experience Runner. Each Worker runs in its own git worktree (`.anymake/worktrees/story-N.N/`), created before Worker dispatch and removed on `done` or `skip`; retries reuse it.
+5. **Every one of those dispatches goes through the `anymake-dispatch` skill** (INV-018) — never the host's Agent/Task tool directly. The skill supplies the pre-dispatch prompt, the mandatory post-dispatch `output_check`, the canonical RETRY CONTEXT, and the dispatch log line.
+6. **On Validator PASS:** the story is not done — the Experience Runner must also PASS, unless the brief's §3a is explicitly `N/A`. Then apply the PR merge policy (see the Arbiter) and mark `✅ Done`.
+7. **On FAIL or ESCALATE:** apply the Arbiter's retry matrix; escalate to BOARD.md when the budget is spent. Security failures and intent conflicts halt the whole run; other escalations halt only their own story.
+8. Repeat until all stories are Done, or all remaining work is blocked (escalate).
+
+**Concurrency model:** parallel dispatch across *different*, non-conflicting stories is the default. What is never parallel is two stages of the *same* story — each story's Planner → Worker → Validator → Experience Runner pipeline is strictly sequential (ADR-003 / INV-002). `concurrency.max: 1` reproduces the older sequential behavior exactly.
 
 **Board updates:** Write to `PROJECTS/[name]/BOARD.md` after every state change. The board is the user's window into what's happening.
 
@@ -136,7 +155,8 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 - Make product or design decisions
 - Author task brief content itself — that is the Planner's job, even for a simple-looking story
 - Skip the startup verification
-- Run two stories concurrently
+- Run two stages of the *same* story concurrently (parallelism is at the story level only)
+- Call the host's Agent/Task tool directly — all dispatch goes through `anymake-dispatch` (INV-018)
 
 ### Planner (`AGENTS/planner.md`)
 
@@ -156,7 +176,7 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 
 **Role:** Implements one story. Receives a task brief, builds the implementation, commits each layer, opens a PR.
 
-**Build order (invariant — never skip a layer that applies):**
+**Build order** *(SaaS default; manifest-derived per project type — see Project Types. The invariant is that the Worker follows the order in its brief and skips no layer that applies, not that the order is always this one. `PROJECT_TYPES/<id>/manifest.md` → Phase 4 Build Order is authoritative for the project's type.)*:
 1. Schema changes (database models, types)
 2. Migration files
 3. API layer (routes, controllers, services)
@@ -171,7 +191,7 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 - Read `AGENTS/arbiter.md` before starting
 - Read the task brief completely before writing any code
 - Work only within the scope of the assigned story
-- Report completion with: PR link, layers implemented, any deviations from the brief
+- Append a `## RESULT` section to the task brief before exiting — `result`, `pr_url`, `pr_number`, `branch`, one commit line per layer, `test_output`, `lint_output`, and `notes` (plus `failure_type` on a failure). `AGENTS/worker.md` §6 defines the exact fields; the orchestrator's `output_check` greps for the heading, so a missing RESULT reads as a failed dispatch
 
 **Worker must never:**
 - Implement multiple stories in one run
@@ -225,7 +245,7 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 
 ### Product Owner Proxy (`AGENTS/product-owner-proxy.md`)
 
-**Role:** Autonomous gate evaluator. Active only when `autonomous_mode: true` in PHASE_STATE.md. Spawned by the main agent at phase gates (Phases 0–3, and Phase 4.6) and by the orchestrator at Phase 4 pause points (PR reviews, escalations).
+**Role:** Autonomous gate evaluator. Active only when `autonomous_mode: true` in PHASE_STATE.md. Dispatched — through `anymake-dispatch`, like every other agent (INV-018) — by the main agent at phase gates (Phases 0–3, and Phase 4.6) and by the orchestrator at Phase 4 pause points (PR reviews, escalations). Its verdict is recorded verbatim in BOARD.md's Gate Decisions table; the dispatch's `output_check` confirms a real, structured verdict landed, not that it was favorable.
 
 **Inputs:**
 - Gate type — determines which evaluation criteria to apply
@@ -299,9 +319,9 @@ All agents read `AGENTS/arbiter.md` before operating. It defines:
 **PR review policy:**
 | Condition | Normal mode | Autonomous mode |
 |-----------|-------------|----------------|
-| PR number ≤ 3 | Escalate to user for review | Spawn Product Owner Proxy to review |
-| Story involves webhooks | Escalate to user for review | Spawn Product Owner Proxy to review |
-| Story touches an Active Decision (ADR) | Escalate to user for review | Spawn Product Owner Proxy to review |
+| PR number ≤ 3 | Escalate to user for review | Dispatch Product Owner Proxy to review |
+| Story implements an inbound third-party callback (webhook, event handler, push receiver, OAuth redirect, payment return URL, external queue subscriber) | Escalate to user for review | Dispatch Product Owner Proxy to review |
+| Story touches an Active Decision (ADR) | Escalate to user for review | Dispatch Product Owner Proxy to review |
 | Security failure in validation | Escalate to user — always | Escalate to user — always (proxy not used) |
 | All other PRs | Orchestrator merges on Validator PASS | Orchestrator merges on Validator PASS |
 
@@ -312,9 +332,12 @@ All agents read `AGENTS/arbiter.md` before operating. It defines:
 | Implementation failure | Acceptance criterion not met, broken test | Re-dispatch Worker with failure context (max 1 retry) |
 | Escalation condition | Ambiguous requirement, security issue, second implementation failure | Write escalation to BOARD.md, pause loop |
 
-**Retry limits:**
-- Environment failures: max 2 retries, then escalate
-- Implementation failures: max 1 retry, then escalate
+**Retry limits** (summary — `AGENTS/arbiter.md` §"Retry Policy Matrix" is authoritative and covers every scenario):
+- Environment failures: max 2 re-dispatches, then escalate
+- Implementation failures: 0 retries — immediate escalation
+- Validation FAIL: 1 retry (straight back to the Worker, no Planner re-run), then escalate
+- Experience Runner FAIL: 1 retry, then escalate; an `environment-failure` ESCALATE re-dispatches the runner itself, max 2
+- Security failures and intent conflicts: never retried — immediate escalation, real user, every mode
 
 ---
 
@@ -344,8 +367,17 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 - `🟡 Ready` — dependencies met, available for dispatch
 - `🔵 In Progress` — Worker agent is building
 - `🟠 In Validation` — Validator agent is reviewing
+- `🧪 Experience Check` — Experience Runner is driving the real app against §3a
+- `👁 Awaiting Review` — PR open, waiting for the user to approve
 - `✅ Done` — merged and complete
-- `🔴 Escalated` — requires user action before proceeding
+- `🚫 Blocked` — escalated; requires user action before proceeding
+
+These are the rendered symbols. The machine-readable statuses are
+`board-state.json`'s `stories[].status` enum (`backlog`, `ready`,
+`in_progress`, `in_validation`, `experience`, `awaiting_review`, `done`,
+`blocked`); the kanban dashboard has one column per enum value, and
+`npm run verify` fails if the two ever drift apart. `AGENTS/arbiter.md`
+§"Board Status Symbols" is authoritative.
 
 ### PARKING_LOT.md
 `PROJECTS/[name]/PARKING_LOT.md` captures ideas that arrive mid-phase. They are never acted on until a new phase gate is opened. Log them and continue — never expand scope mid-phase.
@@ -358,6 +390,49 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 
 ### Engineering-intent layer
 `PROJECTS/[name]/docs/SYSTEM_MAP.md`, `docs/DECISIONS.md`, and `docs/INVARIANTS.md` are the durable record of *why the system is the way it is*. Maintained by the Cartographer and consumed by the agile flow (Solution Architect, Plan Reviewer) and the Validator's intent-consistency check. `DECISIONS.md` is append-only — a decision is **superseded** (old ADR marked `Superseded by ADR-N`, new ADR added), never deleted, so the rationale of every past choice survives. Overriding a decision requires a superseding ADR through a gate; no agent does it on its own authority.
+
+---
+
+## Verifying the System
+
+This repo has no build step, no runtime, and no application code (ADR-008) — the
+instruction files *are* the system. A broken instruction is therefore a broken
+build, and it reaches every running session silently. So the instructions are
+checked against each other:
+
+```bash
+npm run verify            # the regression harness — 24 check groups, zero dependencies
+npm run validate-board    # validate a board-state.json against its schema
+```
+
+`.github/workflows/verify.yml` runs `npm run verify` on every push and PR. It
+checks skill and agent discovery, plugin hooks and model-tier binding, that every
+path reference resolves — and, specifically because these were real bugs:
+
+- **Cross-reference integrity** — every dispatch `output_check` is *executed*
+  against the real template the dispatched agent writes. A check that can never
+  match its own template fails every valid deliverable, which is worse than no
+  check. Tautological patterns (ones that match any text on the page) are
+  rejected too.
+- **Dispatch chokepoint** — no file may instruct a raw `Agent`/`Task` spawn
+  outside `anymake-dispatch`, except with an explicit research-delegation
+  exemption marker.
+- **Summary/detail drift** — this file must not contradict the detailed specs it
+  summarizes, and every absolute "must"/"never" rule here must trace back to one.
+- **Schema/UI agreement** — the kanban dashboard must have a column for every
+  story status the schema defines, and BOARD.md's legend must cover the same set.
+- **Build-loop dry-run** — the live `output_check` greps are run against fixture
+  deliverables in the shape an agent actually produces, including a validation
+  FAIL and an intent-conflict ESCALATE.
+
+**The rule when changing anything here: every instruction fix ships with the
+assertion that would have caught it.** A fix without a check is a fix that will
+regress unnoticed, because nothing else in this repo would ever notice.
+
+Enforcement additions stay inside the no-runtime constraint: a schema constraint
+plus an on-demand script an agent is told to run, never a lock, a daemon, or a
+database. Real file locking on the taskboard was considered and rejected for
+exactly that reason — see `CHANGELOG.md`.
 
 ---
 
@@ -381,11 +456,16 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 - Treating monetization as a Phase 5 problem
 - Pushing unreviewed code (first 3 PRs always go to user review)
 - Producing multiple artifacts in one session
-- Running two Worker (or Planner, Validator, or Experience Runner) agents concurrently
+- Running two stages of the *same* story concurrently — a story's Planner → Worker → Validator → Experience Runner pipeline is strictly sequential (ADR-003 / INV-002). Parallel dispatch across different, non-conflicting stories is the default and is not an anti-pattern.
+- Calling the host's Agent/Task tool directly instead of dispatching through `anymake-dispatch` (INV-018) — that skips the mandatory deliverable verification, the canonical retry context, and the dispatch log
 - The Orchestrator authoring task brief content itself instead of dispatching the Planner
 - Marking a story done on a Validator `PASS` alone, without an Experience Runner `PASS` (or an explicit §3a: N/A) — a passing test suite is not the same claim as "a person clicked through it and it worked"
 - Waiving a Human-Only criterion because the relevant code exists, instead of routing it to a §3a scenario the Experience Runner can actually verify
 - Modifying `PHASE_GUIDES/`, `AGENTS/`, or `TEMPLATES/` during a build
+- Writing a dispatch `output_check` without confirming the pattern actually appears in the deliverable's template — a check that never matches turns every success into a spurious retry
+- Approving an autonomous gate that waived a judgment without recording a `LIMITATION` naming what went unverified — an approval that hides what it couldn't check is worse than a `NEEDS CHANGES`
+- Building a story that `PROJECT.md`'s "Never Building" list excludes — that boundary changes only through a Phase 0 scope amendment the user approves
+- Fixing an instruction bug without adding the harness assertion that would have caught it
 
 ---
 
@@ -403,7 +483,14 @@ All project output goes to `PROJECTS/[name]/`. Never modify files in `PHASE_GUID
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
-| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy |
+| `AGENTS/arbiter.md` | The shared rulebook: retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy, **INV-018 dispatch scope**, **the security-baseline definition**, and the **project-type / "Never Building" scope guardrails** |
+| `skills/anymake-dispatch/SKILL.md` | The single chokepoint for all sub-agent dispatch (INV-018) — pre-dispatch prompt assembly, mandatory deliverable verification, canonical RETRY CONTEXT, dispatch logging; also the only place the host runtime is named |
+| `TEMPLATES/board-state.schema.json` | The Phase 4 taskboard spine's schema — BOARD.md is a projection of it, the kanban reads it directly |
+| `.opencode/verify-plugin.mjs` | The regression harness (`npm run verify`) — this repo's only regression check |
+| `.opencode/validate-board-state.mjs` | Validates a `board-state.json` against the schema; a failure is treated like a failed `output_check` |
+| `dashboard/kanban.html` + `kanban.sh` | Zero-build live board, one column per schema story status |
+| `CHANGELOG.md` | What changed in each version and why, with behavior changes called out as such |
+| `RELEASE.md` | Getting a merge to `main` into running sessions (cache invalidation) |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
 | `TEMPLATES/task-brief.md` | Template the Planner fills to brief each Worker (§3a is the Experience Script) |
 | `TEMPLATES/experience-script.md` | Format for the literal, driveable interaction script (§3a) — one scenario per acceptance-criteria group |

@@ -42,7 +42,15 @@ DISPATCH {
   output_artifact:  <absolute path>   # the file the agent must write
                                        # before exiting (the deliverable)
   output_check:     "wc -l >= N" | "gh pr view N" | "ls -l" |
-                    "grep -c '<marker>' <path>"   # the verify command
+                    "grep -c '<marker>' <path>"   # the verify command.
+                    # The marker must be one the deliverable's TEMPLATE actually
+                    # contains — verify it against TEMPLATES/ before using it, or
+                    # the check fails every valid deliverable. It must also
+                    # distinguish outcomes: a pattern that matches any text on
+                    # the page (e.g. a bare word appearing in prose) proves
+                    # nothing. `npm run verify` executes every output_check in
+                    # AGENTS/*.md and PHASE_GUIDES/*.md against its real template
+                    # and rejects tautological patterns.
   retry_context?:   <RETRY CONTEXT block>   # present only on re-dispatch
   board_ref:        "Story N.N" | "Issue #N" | "Phase gate N"
 }
@@ -118,7 +126,7 @@ Post-dispatch verify (MANDATORY — never skip):
 
 1. Run: <DISPATCH.output_check>
    (e.g., `wc -l <output_artifact>`, `gh pr view <PR number>`,
-    `grep -c '## §3a' <path>`, `ls -l <path>`)
+    `grep -c '## 3a\. Experience Script' <path>`, `ls -l <path>`)
 
 2. If the check FAILS (file missing, line count below threshold, PR not found,
    marker absent, empty task_result):
@@ -140,6 +148,29 @@ Post-dispatch verify (MANDATORY — never skip):
 
 **Never act on a sub-agent's narration ("Now writing the plan…") without
 confirming the deliverable landed.** The verify step IS the confirmation.
+
+**After any write to `board-state.json`, run `validate-board-state.mjs` — a
+schema failure is treated the same as a failed `output_check`.**
+
+```
+node <plugin root>/.opencode/validate-board-state.mjs \
+     <project_root>/.anymake/board-state.json
+```
+
+This applies to the dual-write below (appending to `events[]`) and to every
+orchestrator reconciliation that rewrites the snapshot. A non-zero exit means
+the board is malformed: do not proceed on it, do not dispatch against it. Log
+`DISPATCH FAIL — board-state schema violation — <first error>` to the Run Log
+and repair the board before continuing. `BOARD.md`'s Run Log is the durable
+record precisely so a rejected JSON write is recoverable rather than fatal.
+
+The validator is zero-dependency Node run on demand — not a service, not a
+build step, and not a lock. It preserves ADR-008. Real file locking and a
+database were considered and rejected for exactly that reason: they would make
+the taskboard a runtime dependency. The writer split (orchestrator owns
+`stories[]`/`events[]`, the hub owns `session`) plus this validation is the
+enforcement; lost `events[]` appends remain acceptable because the markdown Run
+Log is the durable record.
 
 ## RETRY CONTEXT (hardening #3 — canonical structured shape)
 

@@ -67,6 +67,14 @@ Before evaluating any gate, determine the project type and apply its gate deltas
 
 7. **Top risks** — at least 2 risks listed in the risk table.
 
+**Advisory (never blocking) — commercial-signal check.** Per `AGENTS/arbiter.md`
+§"Commercial-signal check": if `PROJECT.md` describes charging, pricing, paying
+customers, or subscriptions while `project_type` is `hobby` or `internal-tool`,
+append the one-line confirmation note to your recorded verdict. It rides along
+with `VERDICT: APPROVED` — it must **never** turn an approval into `NEEDS
+CHANGES`, and you must never change `project_type` yourself. Choosing the type is
+a product decision, and product decisions are the real user's.
+
 **Verdict:** `APPROVED` or `NEEDS CHANGES: [specific list]`
 
 ---
@@ -118,9 +126,33 @@ cd PROJECTS/[name]/prototype && npm install --silent && npm run build 2>&1 | tai
 
 5. **Brand color applied** — check `PROJECTS/[name]/docs/02-planning/ux-design.md`'s Design DNA section for the brand color value. Search prototype CSS/Tailwind classes or style declarations for that color. If the brand color appears nowhere in the prototype source, fail.
 
-**Note:** Visual quality ("does it look production-quality?") cannot be mechanically verified. The proxy checks code-level signals — content, structure, brand application — as a proxy for visual quality. This is a documented limitation of autonomous mode.
+**Required `LIMITATION` field.** Visual quality ("does it look
+production-quality?") cannot be mechanically verified. The checks above are
+code-level signals — content, structure, brand application — standing in for a
+judgment nothing here actually makes. That has always been true; what changes is
+that it must now be **carried in the verdict**, not just noted in this file.
+Every `APPROVED` from this gate MUST include, verbatim:
 
-**Verdict:** `APPROVED` or `NEEDS CHANGES: [specific list]`
+```
+LIMITATION: visual polish not verified — code-level checks only
+```
+
+Followed by one line naming what specifically went unjudged for this prototype
+(e.g. `— layout, typography, spacing, and visual hierarchy were not observed;
+only that a brand color appears in source and no placeholder copy remains`).
+
+This is not optional prose. A `VERDICT: APPROVED` from `phase-2-prototype-review`
+with no `LIMITATION` line is malformed — a consumer receiving one should treat it
+as a failed gate and re-run it, exactly as it would treat a missing verdict.
+
+**Downstream consumers must surface it, not swallow it.** `phase-4-staging-review`
+and `anymake-iterate` both read this verdict; each must carry the `LIMITATION`
+line into its own output and onto BOARD.md's Gate Decisions table rather than
+letting it get lost inside a passed `VERDICT: APPROVED`. The whole point is that
+a real human can later see which judgments were never made — a limitation that
+survives only in the gate's own documentation is a limitation nobody reads.
+
+**Verdict:** `APPROVED` (with the required `LIMITATION` line) or `NEEDS CHANGES: [specific list]`
 
 ---
 
@@ -168,6 +200,21 @@ cd PROJECTS/[name]/prototype && npm install --silent && npm run build 2>&1 | tai
 
 7. **Scaffold and Auth as first two milestones** — `backlog.md` must have Milestone 1 (Scaffold) and Milestone 2 (Auth) as the first two milestone headings.
 
+8. **Never Building scope check (BLOCKING)** — read `PROJECTS/[name]/PROJECT.md`
+   → **Never Building** and compare every epic and story against it. A story
+   implementing an explicitly excluded feature fails this gate with the citation
+   format in `AGENTS/arbiter.md` §'"Never building" scope check'. Match by
+   meaning, not string equality — an exclusion of "a mobile app" excludes a
+   story titled "React Native shell". This is the one scope decision the real
+   user made explicitly and permanently, and it has never been checked against a
+   backlog before; a match is scope the user ruled out, not scope someone
+   forgot. **You cannot waive it**: resolving it means either removing the story
+   or amending PROJECT.md through a Phase 0 scope amendment the real user
+   approves. If a match is genuinely arguable, return `VERDICT: ESCALATE TO
+   USER` naming both the story and the exclusion rather than deciding it
+   yourself. If `PROJECT.md` has no Never Building entries, record that this
+   check found nothing to compare against and move on.
+
 **Verdict:** `APPROVED` or `NEEDS CHANGES: [specific list]`
 
 ---
@@ -190,6 +237,19 @@ cd PROJECTS/[name]/prototype && npm install --silent && npm run build 2>&1 | tai
    - `ESCALATE` with escalation type `human-only-criterion` → this means the Validator found a Human-Only criterion with no §3a coverage at all (not merely one still pending its experience report — check 1 above already handled that case). Route this to gate `phase4-escalation-human-only` instead of resolving it here; do not approve past it.
 
 3. **Security checklist** — every security check in the report must be PASS or N/A. Any check marked FAIL → `PHRASE: changes needed: Security issue — [copy the failing check and its evidence from the report]`
+
+4. **Never Building scope check (BLOCKING)** — read `PROJECTS/[name]/PROJECT.md`
+   → **Never Building** and compare this story against it. Phase 3's gate checks
+   the backlog as approved; this catches a story whose real implementation
+   turned out to be an excluded feature even though its title didn't look like
+   one. A match → `PHRASE: changes needed: story [N.N] implements "[feature]",
+   which PROJECT.md's Never Building list excludes: "[verbatim entry]". Either
+   drop the story or amend the Never Building list through a Phase 0 scope
+   amendment the real user approves.` Match by meaning, not string equality
+   (`AGENTS/arbiter.md` §'"Never building" scope check'). **You cannot waive
+   this** — a Never Building match is a scope amendment, and scope amendments
+   are the real user's. If it is genuinely arguable, return `ESCALATE TO USER`
+   naming the story and the exclusion.
 
 **Output format:**
 ```
@@ -234,8 +294,22 @@ longer permits.
    it with a PASS before this story can proceed.` This is the correct action in
    nearly every case — the fix is writing the scenario, not skipping it.
 3. **The one legitimate waiver** — the criterion is not mechanically scriptable
-   even in principle (a genuinely subjective aesthetic judgment with no
-   checkable observable, e.g. "the color palette feels premium"). Confirm the
+   even in principle: a genuinely subjective aesthetic judgment with **no
+   checkable observable at all**. The test is whether *any* literal action →
+   checkable expected result could express it, not whether writing one would be
+   tedious. Almost every criterion that feels subjective decomposes into
+   something checkable, and when it does, the waiver does not apply:
+
+   | Genuinely subjective — waiver may apply | Decomposes into a §3a scenario — waiver does NOT apply |
+   |---|---|
+   | "The color palette feels premium" | "The primary button uses the brand accent token, not a default blue" |
+   | "The empty state feels welcoming rather than broken" | "The empty state renders an illustration, a one-line explanation, and a primary CTA" |
+   | "The copy sounds like our brand" | "No screen shows lorem ipsum or placeholder copy" |
+   | "The animation feels smooth" | "The modal opens with a transition and no layout shift" |
+   | "The dashboard doesn't feel cluttered" | "The dashboard renders at 375px wide with no horizontal scroll and no overlapping elements" |
+
+   If you can write the right-hand column for the criterion in front of you,
+   send it back for that scenario instead of waiving it. Confirm the
    relevant component/route/handler exists and is actually wired up and
    reachable (not merely present as dead code), then return `PHRASE: resume`
    with an explicit, permanent note for the board: `"Waived — criterion is not
@@ -364,7 +438,9 @@ Results.
 
 1. **Security-related conflict** — if the contradicted ADR/invariant concerns
    authentication, authorization, tenant isolation, secret handling, payments, or
-   any item the security baseline covers → `ESCALATE TO USER: Intent conflict on a
+   any item the security baseline covers (as defined in `AGENTS/arbiter.md`
+   §"The security baseline — definition" — not your own read of what seems
+   security-relevant) → `ESCALATE TO USER: Intent conflict on a
    security-relevant decision ([ADR/INV id]). Overriding it requires the real user.
    [paste the decision and its original rationale]`. Never auto-approve.
 
@@ -415,8 +491,39 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 
 4. **Staging experience check** — if a staging experience report was provided or found, its `VERDICT` must be `PASS` for the critical-path scenarios; a `FAIL` or missing report where one was expected → `NEEDS CHANGES: run anymake-experience-check against the staging URL before this gate can approve.` If no staging experience report exists at all (the skill was never run), do not silently pass this — say so explicitly in the summary as the specific, narrower limitation it now is: this gate cannot itself drive a browser, but it can and should require evidence that something else did.
 
+5. **Carry forward any upstream `LIMITATION`** — if `phase-2-prototype-review`
+   approved with a `LIMITATION` line, repeat it verbatim in your output and in
+   BOARD.md's Gate Decisions Note column. A limitation that stops here is a
+   limitation nobody sees.
+
+**The subjective-polish waiver — same discipline as `phase4-escalation-human-only`.**
+What remains genuinely outside this gate's reach is narrow: live-mode payment
+edge cases and purely subjective polish judgments a script cannot express. That
+category is not a blanket excuse, and it is not self-certifying. If you approve
+while waiving such a judgment, you MUST:
+
+1. **Name the specific judgment** — not the category. `"Waived: whether the
+   onboarding flow's three-step progress indicator reads as reassuring rather
+   than tedious"`, never `"waived: subjective polish"`. If you cannot name it
+   specifically, you are not waiving a judgment, you are skipping a check —
+   return `NEEDS CHANGES` instead.
+2. **Say what WAS verified in its place** — the code-level or experience-report
+   evidence you did have.
+3. **Emit it as a `LIMITATION` line** in the verdict:
+   `LIMITATION: [specific judgment] was waived as subjective — [what was
+   verified instead]; the behavior was never observed by a human.`
+4. **Log it permanently to BOARD.md's Gate Decisions table**, verbatim, in the
+   Note column. It stays there for the life of the project. This is the same
+   requirement the `phase4-escalation-human-only` waiver already carries ("that
+   note must survive onto BOARD.md"), applied here for the same reason: an
+   autonomous run's unchecked judgments must be legible to a human afterward.
+
+A waiver that names no specific judgment, or that never reaches BOARD.md, is not
+a waiver — it is an undocumented gap, and the gate should have returned
+`NEEDS CHANGES`.
+
 **Output:**
-- All checks pass → `PHRASE: launch it`
+- All checks pass → `PHRASE: launch it` (plus any `LIMITATION` line required above)
 - Any check fails → `NEEDS CHANGES: [specific list of what is incomplete]`
 
 ---
@@ -436,7 +543,9 @@ engineering review — that is the Plan Reviewer's job, already done.
 **Rules (apply in order — stop at first escalation match):**
 
 1. **Security-relevant plan** — if the plan touches authentication, authorization,
-   tenant isolation, secret handling, payments, or webhooks → `VERDICT: ESCALATE
+   tenant isolation, secret handling, payments, or any inbound third-party
+   callback (see `AGENTS/arbiter.md` §"Inbound third-party callback override")
+   → `VERDICT: ESCALATE
    TO USER: Plan for issue #[N] touches a security surface ([which]). Final
    approval belongs to the real user in every mode.`
 
@@ -474,6 +583,7 @@ per the rules above.
 VERDICT: APPROVED
 Checks passed: N/N
 Summary: [one sentence confirming what was verified]
+LIMITATION: [required where the gate names one — see below; omit only when the gate names none]
 ```
 or:
 ```
@@ -493,7 +603,30 @@ Reason: [specific reason human judgment is required — not a generic statement]
 ```
 PHRASE: [exact phrase from the escalation lexicon]
 Reasoning: [one sentence]
+LIMITATION: [required where the gate names one — see below]
 ```
+
+### The `LIMITATION` field
+
+Some gates approve while explicitly *not* having checked something. That is
+legitimate — a script cannot judge visual polish — but it must be visible in the
+verdict rather than buried in this file, or the approval reads as broader than it
+is. Where a gate below requires a `LIMITATION` line, an `APPROVED` without one is
+**malformed**: treat it as a failed gate and re-run, exactly as you would a
+missing verdict.
+
+| Gate | Required `LIMITATION` |
+|------|----------------------|
+| `phase-2-prototype-review` | `LIMITATION: visual polish not verified — code-level checks only` (+ one line naming what specifically went unjudged) |
+| `phase-4-staging-review` | Required **only when** approving with a subjective-polish waiver — must name the specific judgment waived (see that gate) |
+| `phase4-escalation-human-only` | Required when resolved by the narrow subjective-judgment waiver — the existing "never actually driven or observed" note |
+
+**Every `LIMITATION` and waiver note must reach `BOARD.md`'s Gate Decisions
+table, verbatim, in the Note column.** That table is the only durable surface
+where a human can later see what an autonomous run never actually checked. A
+downstream consumer of a verdict (`phase-4-staging-review`, `anymake-iterate`,
+the orchestrator) must carry the line forward into its own output — never let it
+be swallowed by a passed `VERDICT: APPROVED`.
 
 ---
 
@@ -507,6 +640,10 @@ Reasoning: [one sentence]
 - Never attempt to resolve a `phase4-escalation-security-failure` gate type — always return `ESCALATE TO USER`
 - Never authorize a supersede (`intent-conflict` / `phase4-escalation-intent-conflict`) on a security-relevant decision — always `ESCALATE TO USER`; when in doubt on any intent conflict, escalate
 - Never return `APPROVED` for `agile-plan-approval` when the plan touches a security surface, or when the latest Plan Reviewer verdict is anything other than `APPROVED`
+- Never approve past a `PROJECT.md` **Never Building** match at `phase-3-approval` or `phase4-pr-review` — that boundary is the real user's explicit, permanent scope decision, and changing it is a Phase 0 scope amendment, not a judgment call you stand in for
+- Never change `project_type`, or block a gate on the commercial-signal heuristic — it is advisory, it has false positives by construction, and the type is a product decision
+- Never return `VERDICT: APPROVED` from `phase-2-prototype-review` without the required `LIMITATION: visual polish not verified — code-level checks only` line — an approval that hides what it could not check is the failure mode this gate is most prone to
+- Never drop a `LIMITATION` or waiver note when passing a verdict downstream — it must reach BOARD.md's Gate Decisions table, where a human will actually see it
 - Check every criterion listed for every gate type — no skipping to save time
 - Do not fabricate or assume file contents — if a required file cannot be read, that is a FAIL (file missing or inaccessible)
 - Do not approve Phase 2 if the prototype directory does not exist — it is a hard gate regardless of how complete the other Phase 2 artifacts are

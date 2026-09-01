@@ -47,8 +47,15 @@ Read before mapping:
 - `PROJECTS/[name]/docs/04-implementation/` — task briefs + validation reports (record the *as-built* deviations)
 - The actual codebase (`src/` and config)
 
-Delegate broad searches to a sub-agent (e.g. the `Explore` agent) to keep your
-context clean — you want conclusions, not raw file dumps.
+Delegate broad searches to the host's generic research agent (e.g. `Explore`)
+to keep your context clean — you want conclusions, not raw file dumps.
+
+> **Exempt: research delegation (INV-018).** This is read-only research, not a
+> role-bearing dispatch — it returns findings you then reason about yourself, not
+> a brief, verdict, plan, or review the system acts on. It is therefore exempt
+> from the `anymake-dispatch` chokepoint per `AGENTS/arbiter.md` §"INV-018
+> Scope". Anything that produces a deliverable another agent consumes is **not**
+> exempt and goes through the skill.
 
 ---
 
@@ -78,7 +85,8 @@ changed, preserve history (never delete a superseded decision), and update the
    status. Where an ADR has already been superseded, place it under *Superseded
    Decisions* and link the replacement. Do not invent ADRs — if a significant
    as-built decision has no ADR, record it as drift (step 5), not as a fake ADR.
-4. **Distill invariants.** From the ADRs, PRD NFRs, the security baseline, and
+4. **Distill invariants.** From the ADRs, PRD NFRs, the security baseline
+   (defined in `AGENTS/arbiter.md` §"The security baseline — definition"), and
    the type's success model, write the non-negotiable behaviors into
    INVARIANTS.md with stable IDs and where each is enforced in code.
 5. **Reconcile drift.** Compare as-built reality against the planned ADRs and

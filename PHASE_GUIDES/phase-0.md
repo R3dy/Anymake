@@ -94,6 +94,15 @@ You review `PROJECT.md`. Key questions:
 
 You say "looks good, start Discovery" → proceed to Phase 1.
 
+**Before presenting the gate, run the commercial-signal check** (`AGENTS/arbiter.md`
+§"Commercial-signal check"): if `PROJECT.md` describes charging, pricing, paying
+customers, or subscriptions while `project_type` is `hobby` or `internal-tool`,
+surface the one-line confirmation prompt alongside the gate questions. It is
+advisory — never block on it, never change `project_type` yourself, and continue with the
+chosen type if the user doesn't respond to it. The point is that the type is
+chosen once and then silently governs which gates run for the whole build, so
+this is the moment it is cheapest to correct.
+
 **Autonomous mode:** If `autonomous_mode: true` is set in PHASE_STATE.md, dispatch the Product Owner Proxy via the `anymake-dispatch` skill instead of waiting:
 
 ```
@@ -101,7 +110,8 @@ DISPATCH {
   agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
   inputs: { gate_type: "phase-0-approval", artifacts: ["<absolute path to PROJECTS/[name]/PROJECT.md>"] },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Phase gate 0"
 }
 ```
@@ -109,6 +119,11 @@ DISPATCH {
 - `VERDICT: APPROVED` → proceed to Phase 1
 - `VERDICT: NEEDS CHANGES` → address every listed item, update PROJECT.md, then re-run the proxy
 - `VERDICT: ESCALATE TO USER` → output the reason to the user and wait for their input before continuing
+
+The proxy runs the same commercial-signal check at this gate and, if it fires,
+includes the one-line note in its recorded verdict. It is advisory there too —
+the note rides along with `VERDICT: APPROVED`; it never converts an approval
+into `NEEDS CHANGES`.
 
 ## Templates
 

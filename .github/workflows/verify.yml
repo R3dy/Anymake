@@ -1,0 +1,32 @@
+name: verify
+
+# Anymake is markdown-as-source-of-truth (ADR-008): there is no build step and
+# no runtime. `verify-plugin.mjs` is the repo's only regression check — it lints
+# the instruction files against each other and against the templates they
+# reference. It runs on every push and PR so instruction drift fails here rather
+# than during a live build loop.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No dependencies to install — the harness is zero-dependency Node
+      # (ADR-008: no build step, no runtime dependency).
+      - name: Verify plugin, skills, and instruction cross-references
+        run: npm run verify
+
+      - name: Validate board-state fixtures against the schema
+        run: |
+          node .opencode/validate-board-state.mjs .opencode/fixtures/board-state.valid.json
+          node .opencode/validate-board-state.mjs --expect-fail .opencode/fixtures/board-state.invalid.json

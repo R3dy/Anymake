@@ -186,6 +186,7 @@ You review epics and backlog. Key questions:
 - Are acceptance criteria specific enough to verify?
 - Does every story with user-observable behavior have an Experience Script, and does every Human-Only-style criterion have a matching scenario in it?
 - Is Monetization in Milestone 4 or earlier?
+- **Does any story implement something `PROJECT.md`'s "Never Building" list excludes?** Check the backlog against that list explicitly — it is the one scope boundary the user set permanently in Phase 0, and this is the last gate before it becomes code. A match blocks the gate: either drop the story, or amend the Never Building list as a Phase 0 scope amendment. See `AGENTS/arbiter.md` §'"Never building" scope check' — match by meaning, not by matching words.
 
 You say "solutioning complete, start building" → proceed to Phase 4.
 
@@ -196,7 +197,8 @@ DISPATCH {
   agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
   inputs: { gate_type: "phase-3-approval", artifacts: ["<absolute paths to PROJECTS/[name]/docs/03-solutioning/epics.md, backlog.md, dependency-graph.md>"] },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Phase gate 3"
 }
 ```

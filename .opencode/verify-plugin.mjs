@@ -1,7 +1,18 @@
-// Verification harness: exercises the Anymake plugin's hooks the way OpenCode
-// would, and validates that every skill is discoverable with valid frontmatter.
-// Run: node .opencode/verify-plugin.mjs   (delete after — not part of the plugin)
+// Anymake regression harness.
+//
+// This repo is markdown-as-source-of-truth (ADR-008): no build step, no runtime,
+// no test suite. This script IS the regression check. It exercises the plugin's
+// hooks the way OpenCode would, validates that every skill is discoverable with
+// valid frontmatter, and — critically — checks the instruction files against
+// each other and against the templates they reference, so a broken
+// cross-reference fails in CI instead of during a live build loop.
+//
+// Run: node .opencode/verify-plugin.mjs   (or `npm run verify`)
+// CI:  .github/workflows/verify.yml runs this on every push and PR.
+//
+// When you fix an instruction bug, add the assertion that would have caught it.
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { AnymakePlugin } from './plugins/anymake.js';
@@ -508,13 +519,40 @@ console.log('\n[11] Zero-build kanban monitor');
       if (extLink) bad('dashboard/kanban.html: has external <link href=> (violates ADR-008)');
       if (extImport) bad('dashboard/kanban.html: has bare import (violates ADR-008)');
     }
-    // (b) 7 column keys present
-    const colKeys = ['backlog', 'ready', 'in_progress', 'in_validation', 'experience', 'done', 'blocked'];
-    const missingCols = colKeys.filter((k) => !kb.includes(k));
-    if (missingCols.length === 0) {
-      ok('dashboard/kanban.html: all 7 column keys present');
+    // (b) Every story status in the schema has a column. Derived from
+    //     board-state.schema.json, NOT hardcoded — a status added to the schema
+    //     without a matching column now fails CI instead of silently vanishing
+    //     from the board. (`awaiting_review` — the one state where a human is
+    //     supposed to be watching — was missing exactly this way.)
+    const schemaForCols = JSON.parse(
+      fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'board-state.schema.json'), 'utf8'));
+    const statusEnum =
+      schemaForCols.properties.stories.items.properties.status.enum;
+    // Parse the COLUMNS array's declared keys rather than substring-matching the
+    // whole file: 'experience' appears in kanban.html for other reasons too.
+    const columnsBlock = kb.match(/var COLUMNS = \[([\s\S]*?)\];/)?.[1] || '';
+    const declaredCols = [...columnsBlock.matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]);
+    const missingCols = statusEnum.filter((k) => !declaredCols.includes(k));
+    const extraCols = declaredCols.filter((k) => !statusEnum.includes(k));
+    if (missingCols.length === 0 && extraCols.length === 0) {
+      ok(`dashboard/kanban.html: a column for every one of the schema's ${statusEnum.length} story statuses`);
     } else {
-      bad('dashboard/kanban.html: missing columns: ' + missingCols.join(', '));
+      if (missingCols.length) bad('dashboard/kanban.html: schema statuses with no column: ' + missingCols.join(', '));
+      if (extraCols.length) bad('dashboard/kanban.html: columns with no matching schema status: ' + extraCols.join(', '));
+    }
+    // (b2) BOARD.md's Status Legend must cover the same set, so the markdown
+    //      projection and the JSON spine never drift apart either.
+    const boardTmpl = fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'BOARD.md'), 'utf8');
+    const legendGaps = statusEnum.filter((k) => {
+      const label = k.replace(/_/g, ' ');
+      // Prefix match: the legend may use a longer human label
+      // ('experience' -> 'Experience Check').
+      return !new RegExp(`\\| ${label}\\b`, 'i').test(boardTmpl);
+    });
+    if (legendGaps.length === 0) {
+      ok('TEMPLATES/BOARD.md: Status Legend covers every schema story status');
+    } else {
+      bad('TEMPLATES/BOARD.md: Status Legend missing: ' + legendGaps.join(', '));
     }
     // (c) polling fetch present (setInterval or self-scheduling setTimeout with backoff)
     if (kb.includes('fetch(') && (kb.includes('setInterval') || kb.includes('setTimeout'))) {
@@ -647,6 +685,803 @@ console.log('\n[14] RELEASE.md (cache-invalidation procedure)');
       bad('RELEASE.md: missing restart step');
     }
   }
+}
+
+// 15. Cross-reference integrity (remediation Phase 0) — every `output_check`
+//     grep in a DISPATCH block is EXECUTED against the real template file the
+//     dispatched agent writes. A check that can never match its own template is
+//     a check that fails every valid deliverable, which is worse than no check:
+//     it turns every success into a spurious retry/escalation.
+//     This is what would have caught the three broken greps in the 2026-08-29
+//     audit (`## §3a`, `## RESULT`, `verdict:`) and the `grep -c 'proxy'`
+//     tautology.
+console.log('\n[15] Cross-reference integrity (output_check greps run against real templates)');
+{
+  // Which template each dispatched agent's deliverable is shaped by. The
+  // output_check must match against THIS file, because this is the file the
+  // agent copies its structure from.
+  const AGENT_TEMPLATE = {
+    'anymake-planner': 'TEMPLATES/task-brief.md',
+    'anymake-worker': 'TEMPLATES/task-brief.md',
+    'anymake-validator': 'TEMPLATES/validation-report.md',
+    'anymake-experience-runner': 'TEMPLATES/experience-report.md',
+    'anymake-product-owner-proxy': 'TEMPLATES/BOARD.md',
+    'anymake-cartographer': 'TEMPLATES/system-map.md',
+    'anymake-solution-architect': 'TEMPLATES/dev-plan.md',
+    'anymake-plan-reviewer': 'TEMPLATES/plan-review.md',
+  };
+
+  // Split a shell-ish command into argv, respecting single quotes. Trailing
+  // `# comment` (outside quotes) is dropped.
+  const tokenize = (cmd) => {
+    const argv = [];
+    let cur = '';
+    let quoted = false;
+    let started = false;
+    for (let i = 0; i < cmd.length; i++) {
+      const c = cmd[i];
+      if (c === "'") { quoted = !quoted; started = true; continue; }
+      if (!quoted && c === '#' && !started) break;          // start-of-token comment
+      if (!quoted && /\s/.test(c)) {
+        if (started) { argv.push(cur); cur = ''; started = false; }
+        continue;
+      }
+      cur += c; started = true;
+    }
+    if (started) argv.push(cur);
+    return argv;
+  };
+
+  // Collect (sourceFile, agent, output_check) triples from every DISPATCH block.
+  const dispatchSources = [
+    ...fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => path.join('AGENTS', f)),
+    ...fs.readdirSync(path.join(ROOT, 'PHASE_GUIDES')).filter((f) => f.endsWith('.md')).map((f) => path.join('PHASE_GUIDES', f)),
+  ];
+  const checks = [];
+  for (const rel of dispatchSources) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    // Each ```-fenced (or bare) DISPATCH { ... } block.
+    for (const m of body.matchAll(/DISPATCH \{([\s\S]*?)\n\}/g)) {
+      const block = m[1];
+      const agent = block.match(/agent:\s*"([^"]+)"/)?.[1];
+      const check = block.match(/output_check:\s*"([^"]+)"/)?.[1];
+      const line = body.slice(0, m.index).split('\n').length;
+      if (agent && check) checks.push({ rel, agent, check, line });
+    }
+  }
+
+  if (checks.length === 0) {
+    bad('cross-reference: found no DISPATCH blocks with an output_check — the parser is broken');
+  } else {
+    ok(`cross-reference: parsed ${checks.length} DISPATCH output_check(s) from ${dispatchSources.length} instruction files`);
+  }
+
+  for (const { rel, agent, check, line } of checks) {
+    const tmplRel = AGENT_TEMPLATE[agent];
+    if (!tmplRel) { bad(`${rel}:${line}: DISPATCH agent '${agent}' has no known deliverable template`); continue; }
+    const tmplPath = path.join(ROOT, tmplRel);
+    if (!fs.existsSync(tmplPath)) { bad(`${rel}:${line}: template ${tmplRel} does not exist`); continue; }
+
+    if (!check.startsWith('grep')) {
+      // Non-grep checks (wc -l, gh pr view, ls) can't be run against a template.
+      ok(`${rel}:${line}: ${agent} — non-grep check, skipped ('${check.split(/\s+/)[0]}')`);
+      continue;
+    }
+    // Substitute the <path ...> placeholder with the real template path.
+    const cmd = check.replace(/<[^>]*>/g, tmplPath);
+    const argv = tokenize(cmd);
+    if (argv[0] !== 'grep') { bad(`${rel}:${line}: could not parse output_check: ${check}`); continue; }
+
+    let count = 0;
+    let ran = false;
+    try {
+      const out = execFileSync('grep', argv.slice(1), { encoding: 'utf8' });
+      count = parseInt(out.trim().split('\n').pop(), 10) || 0;
+      ran = true;
+    } catch (e) {
+      // grep exits 1 on "no match" — that is a real result, not an error.
+      if (e.status === 1) { count = 0; ran = true; }
+      else bad(`${rel}:${line}: output_check failed to execute (${e.message.split('\n')[0]}): ${check}`);
+    }
+    if (!ran) continue;
+    if (count > 0) {
+      ok(`${rel}:${line}: ${agent} — output_check matches ${tmplRel} (${count} hit${count === 1 ? '' : 's'})`);
+    } else {
+      bad(`${rel}:${line}: ${agent} — output_check NEVER matches its own template ${tmplRel}: ${check}`);
+    }
+  }
+
+  // A check that matches ANY text on the page proves nothing about the outcome.
+  // `grep -c 'proxy'` on BOARD.md was exactly this: a NEEDS CHANGES entry and an
+  // APPROVED entry satisfy it identically.
+  for (const { rel, check, line } of checks) {
+    const pattern = check.match(/grep[^']*'([^']*)'/)?.[1];
+    if (!pattern) continue;
+    const TAUTOLOGICAL = ['proxy', 'decision', 'result', 'story', 'board'];
+    if (TAUTOLOGICAL.includes(pattern.toLowerCase())) {
+      bad(`${rel}:${line}: output_check '${pattern}' is a tautology — it cannot distinguish outcomes. Match a structured verdict token instead.`);
+    }
+  }
+}
+
+// 16. Stale-summary drift (remediation Phase 0) — an allow-listed set of named
+//     assertions that the root AGENTS.md summary does not contradict the
+//     detailed AGENTS/*.md files and schema it summarizes. This is deliberately
+//     NOT general NLP: each entry names one topic, one trigger, and one
+//     forbidden/required claim. Add an entry whenever a summary/detail
+//     contradiction is found, so it can never come back silently.
+console.log('\n[16] Stale-summary drift (AGENTS.md vs. the specs it summarizes)');
+{
+  const read = (rel) => {
+    const p = path.join(ROOT, rel);
+    return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null;
+  };
+
+  const DRIFT_ASSERTIONS = [
+    {
+      topic: 'concurrency model',
+      // If the orchestrator makes parallel dispatch configurable...
+      trigger: { file: 'AGENTS/orchestrator.md', contains: 'concurrency.max' },
+      // ...AGENTS.md must not still claim stories are strictly serial.
+      target: 'AGENTS.md',
+      forbidden: [
+        'never run two stories concurrently',
+        'run two stories concurrently',
+        'Running two Worker',
+      ],
+      why: 'AGENTS/orchestrator.md makes parallel story dispatch the default (concurrency.max, default 3). AGENTS.md must not contradict it.',
+    },
+    {
+      topic: 'board-state.json in the Phase 4 summary',
+      trigger: { file: 'TEMPLATES/board-state.schema.json', contains: 'in_flight' },
+      target: 'AGENTS.md',
+      required: ['board-state.json', 'worktree', 'concurrency'],
+      why: 'The Phase 4 build loop runs on board-state.json + worktrees. AGENTS.md summarizing Phase 4 without naming them describes a model that no longer exists.',
+    },
+    {
+      topic: 'precedence rule',
+      trigger: { file: 'AGENTS.md', contains: 'AGENTS/' },
+      target: 'AGENTS.md',
+      required: ['the detailed file wins'],
+      why: 'AGENTS.md must state that a detailed AGENTS/*.md file wins on conflict, so future one-sided edits fail safe instead of ambiguous.',
+    },
+    {
+      topic: 'worker build order is manifest-derived',
+      trigger: { file: 'AGENTS/worker.md', contains: 'build order' },
+      target: 'AGENTS.md',
+      required: ['manifest-derived'],
+      why: 'The 7-layer build order is the SaaS default, not an invariant — AGENTS.md must qualify it at the point of the list.',
+    },
+    {
+      topic: 'dispatch chokepoint',
+      trigger: { file: 'skills/anymake-dispatch/SKILL.md', contains: 'INV-018' },
+      target: 'AGENTS.md',
+      required: ['anymake-dispatch'],
+      why: 'INV-018 routes all dispatch through anymake-dispatch; the contract file must name the chokepoint.',
+    },
+    {
+      topic: 'pronoun convention',
+      trigger: { file: 'AGENTS.md', contains: 'you' },
+      target: 'AGENTS.md',
+      required: ['the real user'],
+      why: '"You" addresses the agent being instructed; human approval must be written as "the user" / "the real user".',
+    },
+  ];
+
+  for (const a of DRIFT_ASSERTIONS) {
+    const trig = read(a.trigger.file);
+    if (trig === null) { bad(`drift/${a.topic}: trigger file ${a.trigger.file} missing`); continue; }
+    if (!trig.includes(a.trigger.contains)) {
+      ok(`drift/${a.topic}: trigger not present in ${a.trigger.file} — assertion not applicable`);
+      continue;
+    }
+    const body = read(a.target);
+    if (body === null) { bad(`drift/${a.topic}: target file ${a.target} missing`); continue; }
+    const lower = body.toLowerCase();
+    let failed = false;
+    for (const f of a.forbidden || []) {
+      if (lower.includes(f.toLowerCase())) {
+        bad(`drift/${a.topic}: ${a.target} still contains "${f}" — ${a.why}`);
+        failed = true;
+      }
+    }
+    for (const r of a.required || []) {
+      if (!lower.includes(r.toLowerCase())) {
+        bad(`drift/${a.topic}: ${a.target} does not mention "${r}" — ${a.why}`);
+        failed = true;
+      }
+    }
+    if (!failed) ok(`drift/${a.topic}: ${a.target} consistent with ${a.trigger.file}`);
+  }
+}
+
+// 17. Kanban render against a real fixture (remediation Phase 1 exit criterion).
+//     Runs the dashboard's actual column-filter logic over a hand-built
+//     board-state.json and asserts every story lands in exactly one column.
+//     `awaiting_review` — the single status where a human is supposed to be
+//     watching — used to land in zero.
+console.log('\n[17] Kanban renders every fixture story into exactly one column');
+{
+  const kb = fs.readFileSync(path.join(ROOT, 'dashboard', 'kanban.html'), 'utf8');
+  const columnsBlock = kb.match(/var COLUMNS = \[([\s\S]*?)\];/)?.[1] || '';
+  const cols = [...columnsBlock.matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]);
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(ROOT, '.opencode', 'fixtures', 'board-state.valid.json'), 'utf8'));
+
+  // Mirror of kanban.html's render() filter: `s.status === col.key`.
+  let unplaced = 0;
+  for (const story of fixture.stories) {
+    const landed = cols.filter((k) => story.status === k);
+    if (landed.length === 1) {
+      ok(`fixture story ${story.id} (${story.status}) → column '${landed[0]}'`);
+    } else {
+      bad(`fixture story ${story.id} (${story.status}) lands in ${landed.length} columns — it would ${landed.length === 0 ? 'vanish from' : 'be duplicated on'} the board`);
+      unplaced++;
+    }
+  }
+  if (!fixture.stories.some((s) => s.status === 'awaiting_review')) {
+    bad('.opencode/fixtures/board-state.valid.json: no awaiting_review story — the regression this fixture exists to catch is untested');
+  } else if (unplaced === 0) {
+    ok('fixture covers awaiting_review (the status that used to have no column)');
+  }
+}
+
+// 18. INV-018 chokepoint (remediation Phase 2). Greps every AGENTS/*.md and
+//     skills/*/SKILL.md for references to the host's raw dispatch primitive.
+//     `anymake-dispatch/SKILL.md` is the seam itself and is exempt wholesale;
+//     `AGENTS/orchestrator.md`'s Step 0 capability check legitimately names the
+//     tool to test for its presence. Everywhere else, a mention is only allowed
+//     when it is either (a) prohibitive ("do not call the Agent tool directly"),
+//     or (b) inside a paragraph carrying the explicit research-delegation
+//     exemption block, per AGENTS/arbiter.md §"INV-018 Scope".
+//     This is what would have caught anymake-build-loop and
+//     anymake-experience-check instructing the raw spawn.
+console.log('\n[18] INV-018 dispatch chokepoint (no unlisted raw Agent/Task spawns)');
+{
+  // The arbiter must actually carry the scope decision the call sites cite.
+  const arbiter = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8');
+  if (arbiter.includes('INV-018 Scope') &&
+      /read-only research delegation[\s\S]{0,200}exempt/i.test(arbiter)) {
+    ok('AGENTS/arbiter.md: carries the durable INV-018 scope decision');
+  } else {
+    bad('AGENTS/arbiter.md: missing the INV-018 scope section (the exemption must be a recorded decision, not implicit per-file wording)');
+  }
+
+  const PRIMITIVE = /\bAgent\s*\(|\bAgent\/(?:sub)?[Aa]gent tool|\bAgent\/Task tool|`Agent`\s*(?:\/\s*`?Task`?\s*)?tool|\bAgent tool\b|\bTask tool\b|\bsubagent tool\b/;
+  // Wording that makes the mention a prohibition rather than an instruction.
+  const PROHIBITIVE = /\b(?:never|do not|don't|not|rather than|instead of)\b[^.\n]{0,80}(?:call|use|spawn|invoke)/i;
+  const EXEMPT_MARKER = 'Exempt: research delegation (INV-018)';
+
+  const targets = [
+    ...fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => ({ rel: path.join('AGENTS', f), abs: path.join(AGENTS_DIR, f) })),
+    ...dirs.filter((d) => d !== 'anymake-dispatch')
+      .map((d) => ({ rel: path.join('skills', d, 'SKILL.md'), abs: path.join(SKILLS_DIR, d, 'SKILL.md') })),
+  ];
+
+  let violations = 0;
+  for (const { rel, abs } of targets) {
+    const lines = fs.readFileSync(abs, 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!PRIMITIVE.test(line)) continue;
+      // Allowed: the orchestrator's Step 0 capability check (it must name the
+      // tool to test whether the host provides it at all).
+      if (rel === 'AGENTS/orchestrator.md' && i < 25) continue;
+      // Test the prohibition across the wrapped line too — "do not call" and
+      // "the Agent tool directly" routinely land on separate markdown lines.
+      const joined = (lines[i - 1] || '') + ' ' + line;
+      if (PROHIBITIVE.test(joined)) continue;
+      // Allowed: a mention describing what the dispatch skill wraps, or the
+      // host's tool as a property of the environment rather than a call.
+      if (/anymake-dispatch|the skill (?:uses|wraps)|backend dispatch primitive|host'?s (?:Agent\/Task |dispatch )?(?:tool|primitive)|Wraps the host/i.test(joined)) continue;
+      // Allowed: inside an explicitly-marked research-delegation exemption.
+      const window = lines.slice(Math.max(0, i - 6), i + 8).join('\n');
+      if (window.includes(EXEMPT_MARKER)) continue;
+      bad(`${rel}:${i + 1}: names the host's raw dispatch primitive without routing through anymake-dispatch or citing the research exemption → ${line.trim().slice(0, 110)}`);
+      violations++;
+    }
+  }
+  if (violations === 0) ok(`INV-018: no unlisted raw dispatch instructions across ${targets.length} instruction files`);
+
+  // The two files the audit caught must now read like orchestrator.md does.
+  for (const skill of ['anymake-build-loop', 'anymake-experience-check']) {
+    const body = fs.readFileSync(path.join(SKILLS_DIR, skill, 'SKILL.md'), 'utf8');
+    if (body.includes('anymake-dispatch') && body.includes('INV-018')) {
+      ok(`skills/${skill}/SKILL.md: routes dispatch through anymake-dispatch (INV-018)`);
+    } else {
+      bad(`skills/${skill}/SKILL.md: does not route its spawns through anymake-dispatch`);
+    }
+  }
+  // The experience-check skill must carry a real DISPATCH request, matching
+  // Phase 1's corrected case-insensitive VERDICT grep.
+  const expCheck = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-experience-check', 'SKILL.md'), 'utf8');
+  if (/DISPATCH \{[\s\S]*?anymake-experience-runner[\s\S]*?output_check[\s\S]*?VERDICT:/.test(expCheck)) {
+    ok('skills/anymake-experience-check/SKILL.md: DISPATCH request carries output_artifact + a VERDICT output_check');
+  } else {
+    bad('skills/anymake-experience-check/SKILL.md: missing a DISPATCH request with output_check');
+  }
+}
+
+// 19. Absolute-claim drift (remediation Phase 3). Root AGENTS.md summarizes ten
+//     detailed AGENTS/*.md specs. An absolute claim ("must never ...", "must
+//     ...") that appears only in the summary is drift: it either contradicts
+//     the spec or invents a rule the spec never states. Both are how
+//     "Orchestrator must never run two stories concurrently" outlived the
+//     concurrency model that replaced it.
+//
+//     Not NLP: each claim's distinctive content words must appear in the role's
+//     own file or in the arbiter (which roles defer to). A claim below the
+//     overlap threshold is reported for a human to reconcile — it is a prompt
+//     to check, and the fix is to update whichever file is stale.
+console.log('\n[19] Absolute-claim drift (AGENTS.md "must"/"never" rules trace to a spec)');
+{
+  const agentsMd = fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8');
+  const arbiterBody = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8').toLowerCase();
+
+  // AGENTS.md role heading -> the detailed file it summarizes.
+  const ROLE_FILES = {
+    'Orchestrator': 'orchestrator.md',
+    'Planner': 'planner.md',
+    'Worker': 'worker.md',
+    'Validator': 'validator.md',
+    'Experience Runner': 'experience-runner.md',
+    'Product Owner Proxy': 'product-owner-proxy.md',
+    'Cartographer': 'cartographer.md',
+    'Solution Architect': 'solution-architect.md',
+    'Plan Reviewer': 'plan-reviewer.md',
+  };
+  const STOP = new Set(['that','this','with','from','into','than','then','when','what','which','your','their','have','been','does','doing','make','made','only','also','even','just','same','such','they','them','there','here','over','under','without','before','after','because','while','about','never','always','must','not','the','and','for','its','it','a','an','of','to','in','on','is','are','be','or','by','as','at','one','two','all','any','own','per','via','see','use','used','using','something','anything','instead','rather','those','these','other','more','most','less','each','every','some','both','again','still','yet','way','thing','things','like','unless','into']);
+  const contentWords = (text) => [...new Set(
+    text.toLowerCase()
+      .replace(/`[^`]*`/g, ' ')            // drop code spans (paths, symbols)
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !STOP.has(w))
+  )];
+
+  const OVERLAP_MIN = 0.5;
+  let checked = 0;
+  let drifted = 0;
+
+  for (const [role, file] of Object.entries(ROLE_FILES)) {
+    const specPath = path.join(AGENTS_DIR, file);
+    if (!fs.existsSync(specPath)) { bad(`AGENTS.md summarizes ${role}, but AGENTS/${file} does not exist`); continue; }
+    const spec = fs.readFileSync(specPath, 'utf8').toLowerCase();
+
+    // The "**<Role> must never:**" / "**<Role> must:**" bullet lists.
+    const listRe = new RegExp(`\\*\\*${role} must(?: never)?:\\*\\*\\n((?:- .*\\n)+)`, 'g');
+    for (const m of agentsMd.matchAll(listRe)) {
+      for (const line of m[1].split('\n').filter((l) => l.startsWith('- '))) {
+        const claim = line.slice(2).trim();
+        const words = contentWords(claim);
+        if (words.length < 3) continue;      // too short to judge
+        checked++;
+        const hits = words.filter((w) => spec.includes(w) || arbiterBody.includes(w));
+        const overlap = hits.length / words.length;
+        if (overlap < OVERLAP_MIN) {
+          const missing = words.filter((w) => !hits.includes(w));
+          bad(`AGENTS.md: "${role} must..." rule does not trace to AGENTS/${file} or arbiter.md (${Math.round(overlap * 100)}% of terms found; unmatched: ${missing.slice(0, 6).join(', ')}) → "${claim.slice(0, 95)}"`);
+          drifted++;
+        }
+      }
+    }
+  }
+  if (checked === 0) {
+    bad('AGENTS.md: parsed no "must"/"must never" rules — the parser is broken or the rules were removed');
+  } else if (drifted === 0) {
+    ok(`AGENTS.md: all ${checked} absolute role rules trace back to their detailed spec or the arbiter`);
+  }
+}
+
+// 20. Board-state schema enforcement (remediation Phase 4). The schema is the
+//     only mechanical constraint on the taskboard — there is deliberately no
+//     locking and no database (that would make the board a runtime dependency
+//     and break ADR-008). So the constraints it does carry have to be real, and
+//     the validator that applies them has to actually reject a bad board.
+console.log('\n[20] board-state schema constraints + validate-board-state.mjs');
+{
+  const schema = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'board-state.schema.json'), 'utf8'));
+
+  const conc = schema.properties.concurrency.properties.max;
+  if (typeof conc.maximum === 'number' && conc.maximum >= 1) {
+    ok(`board-state.schema.json: concurrency.max is bounded (1..${conc.maximum}), not unlimited`);
+  } else {
+    bad('board-state.schema.json: concurrency.max has no maximum — unbounded parallelism is schema-permitted');
+  }
+
+  const storyItems = schema.properties.stories.items;
+  if ((storyItems.required || []).includes('touches_files')) {
+    ok('board-state.schema.json: touches_files is required (an absent field is not the same fact as [])');
+  } else {
+    bad('board-state.schema.json: touches_files is optional — "no declared conflicts" is indistinguishable from "never computed"');
+  }
+  if (Array.isArray(storyItems.properties.touches_files.default)) {
+    ok('board-state.schema.json: touches_files defaults to []');
+  } else {
+    bad('board-state.schema.json: touches_files has no [] default');
+  }
+
+  const retries = storyItems.properties.retries;
+  const unbounded = Object.entries(retries.properties)
+    .filter(([, f]) => typeof f.maximum !== 'number').map(([k]) => k);
+  if (unbounded.length === 0) {
+    ok('board-state.schema.json: every retries.* field has a maximum matching an arbiter policy ceiling');
+  } else {
+    bad('board-state.schema.json: unbounded retries fields: ' + unbounded.join(', '));
+  }
+  if (/policy.{0,40}not the schema|schema.{0,40}decides/is.test(retries.description || '')) {
+    ok('board-state.schema.json: retries description notes the policy, not the schema, picks the ceiling');
+  } else {
+    bad('board-state.schema.json: retries description must note that policy decides which ceiling applies');
+  }
+
+  // The validator itself: it must accept the good fixture and reject the bad one.
+  const validator = path.join(ROOT, '.opencode', 'validate-board-state.mjs');
+  if (!fs.existsSync(validator)) {
+    bad('.opencode/validate-board-state.mjs does not exist');
+  } else {
+    const run = (fixture, expectValid) => {
+      const f = path.join(ROOT, '.opencode', 'fixtures', fixture);
+      let status = 0;
+      let out = '';
+      try {
+        out = execFileSync('node', [validator, f], { encoding: 'utf8' });
+      } catch (e) { status = e.status; out = (e.stdout || '') + (e.stderr || ''); }
+      const isValid = status === 0;
+      if (isValid === expectValid) {
+        ok(`validate-board-state.mjs: ${fixture} → ${isValid ? 'VALID' : 'INVALID'} as expected`);
+      } else {
+        bad(`validate-board-state.mjs: ${fixture} → ${isValid ? 'VALID' : 'INVALID'}, expected the opposite\n${out.split('\n').slice(0, 6).join('\n')}`);
+      }
+      return out;
+    };
+    run('board-state.valid.json', true);
+    const out = run('board-state.invalid.json', false);
+    // Each seeded defect must be individually reported, not just "invalid".
+    for (const [label, needle] of [
+      ['concurrency.max ceiling', 'exceeds the maximum of 10'],
+      ['missing touches_files', 'missing required property "touches_files"'],
+      ['retry ceiling', 'retries/worker'],
+      ['unknown status', 'is not one of'],
+    ]) {
+      if (out.includes(needle)) ok(`validate-board-state.mjs: reports ${label}`);
+      else bad(`validate-board-state.mjs: did not report ${label} on the invalid fixture`);
+    }
+  }
+
+  // The instruction files must actually tell an agent to run it — an enforcement
+  // script nobody is told to run is not enforcement (ADR-008: the agent runs it,
+  // no background service does).
+  for (const rel of ['AGENTS/orchestrator.md', 'skills/anymake-dispatch/SKILL.md']) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    if (body.includes('validate-board-state.mjs')) {
+      ok(`${rel}: instructs running validate-board-state.mjs after a board write`);
+    } else {
+      bad(`${rel}: never tells the agent to validate board-state.json`);
+    }
+  }
+  const dispatchBody = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-dispatch', 'SKILL.md'), 'utf8');
+  if (/schema failure is treated the same as a failed `?output_check/i.test(dispatchBody)) {
+    ok('skills/anymake-dispatch/SKILL.md: a schema failure carries the same weight as a failed output_check');
+  } else {
+    bad('skills/anymake-dispatch/SKILL.md: missing the "schema failure == failed output_check" rule');
+  }
+}
+
+// 21. Pronoun collision (remediation Phase 5). Agent-instruction files are
+//     read BY the agent they instruct, so "you" must mean that agent and
+//     nothing else. Where "you" silently meant the human, an instruction to
+//     "escalate to you" read, to the agent following it, as an instruction to
+//     escalate to itself — and "your review is required" read as self-approval,
+//     which is exactly the builder-is-not-the-approver boundary (INV-002) the
+//     whole architecture exists to hold.
+console.log('\n[21] Pronoun convention ("you" = the agent; the human is "the real user")');
+{
+  // Phrasings where "you"/"your" can only mean the human. Each is a real
+  // instance that existed in this repo, not a hypothetical.
+  const COLLISIONS = [
+    /\byour review is required\b/i,
+    /\bawaiting your review\b/i,
+    /\bawaiting you decision\b/i,
+    /\buntil you approve\b/i,
+    /\bwaiting for you to approve\b/i,
+    /\bescalat(?:e|ed|ing) to you\b/i,
+    /\bgo(?:es)? (?:directly )?to you\b/i,
+    /\bthey always go to you\b/i,
+    /\binteract with you\b/i,
+    /\bnotify you\b/i,
+    /\brequire your review\b/i,
+    /\ba you notification\b/i,
+  ];
+  const files = [
+    ...fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => ({ rel: path.join('AGENTS', f), abs: path.join(AGENTS_DIR, f) })),
+    { rel: 'AGENTS.md', abs: path.join(ROOT, 'AGENTS.md') },
+  ];
+  let hits = 0;
+  for (const { rel, abs } of files) {
+    const lines = fs.readFileSync(abs, 'utf8').split('\n');
+    lines.forEach((line, i) => {
+      // The convention statement itself quotes the bad forms in order to ban them.
+      if (/Pronoun convention/i.test(lines.slice(Math.max(0, i - 8), i + 1).join('\n'))) return;
+      for (const re of COLLISIONS) {
+        if (re.test(line)) {
+          bad(`${rel}:${i + 1}: "you" here means the human — write "the real user" → ${line.trim().slice(0, 100)}`);
+          hits++;
+          break;
+        }
+      }
+    });
+  }
+  if (hits === 0) ok(`no human-meaning "you" across ${files.length} agent-instruction files`);
+
+  // The convention must be stated where agents will read it.
+  for (const rel of ['AGENTS.md', 'AGENTS/arbiter.md']) {
+    // Normalize markdown line wrapping (and blockquote markers) before matching:
+    // the convention sentence spans lines in both files.
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8')
+      .replace(/\n>?\s*/g, ' ');
+    if (/"you" addresses the agent being instructed/i.test(body) && /the real user/i.test(body)) {
+      ok(`${rel}: states the pronoun convention`);
+    } else {
+      bad(`${rel}: does not state the pronoun convention`);
+    }
+  }
+}
+
+// 22. Project-type and scope guardrails (remediation Phase 6). These are new
+//     BEHAVIOR, not bug fixes: the advisory can start asking questions at a
+//     previously-silent gate, and the Never Building check can start failing
+//     one. So the checks here assert both that the rules exist AND that the
+//     advisory's advisory-ness is stated everywhere it appears — an "advisory"
+//     heuristic that quietly hardens into a block is worse than none.
+console.log('\n[22] Project-type + scope guardrails (Phase 6)');
+{
+  const arbiter = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8');
+  if (/## Project-Type and Scope Guardrails/.test(arbiter)) {
+    ok('AGENTS/arbiter.md: guardrails defined once, centrally');
+  } else {
+    bad('AGENTS/arbiter.md: missing the Project-Type and Scope Guardrails section');
+  }
+  if (/ADVISORY — never blocking/i.test(arbiter) && /never (?:auto-)?block/i.test(arbiter)) {
+    ok('AGENTS/arbiter.md: commercial-signal check is stated as advisory and non-blocking');
+  } else {
+    bad('AGENTS/arbiter.md: commercial-signal check does not state that it never blocks');
+  }
+  if (/scope check \(BLOCKING\)/i.test(arbiter) && /not waivable in autonomous mode/i.test(arbiter)) {
+    ok('AGENTS/arbiter.md: Never Building check is blocking and not proxy-waivable');
+  } else {
+    bad('AGENTS/arbiter.md: Never Building check must be stated as blocking and non-waivable');
+  }
+
+  // Every site the plan requires the advisory to appear.
+  for (const rel of ['PHASE_GUIDES/phase-0.md', 'AGENTS/product-owner-proxy.md',
+                     'skills/anymake-iterate/SKILL.md', 'skills/anymake-deploy/SKILL.md']) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const hasCheck = /commercial-signal check|project-type re-check|project_type is \[type\]/i.test(body);
+    const saysAdvisory = /advisory/i.test(body);
+    const saysNoAutoSwitch = /never (?:auto-)?(?:switch|change) (?:the )?`?project_type`?|never change `project_type`/i.test(body);
+    if (hasCheck && saysAdvisory && saysNoAutoSwitch) {
+      ok(`${rel}: carries the advisory type check, stated as advisory and never auto-switching`);
+    } else {
+      if (!hasCheck) bad(`${rel}: missing the project-type advisory check`);
+      else if (!saysAdvisory) bad(`${rel}: type check does not say it is advisory`);
+      else bad(`${rel}: type check does not forbid auto-switching project_type`);
+    }
+  }
+
+  // The blocking check must be at BOTH gates the plan names, plus the human gate.
+  for (const [rel, gate] of [
+    ['AGENTS/product-owner-proxy.md', 'proxy gates'],
+    ['PHASE_GUIDES/phase-3.md', 'the phase-3 human gate'],
+  ]) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    if (/Never Building/i.test(body)) ok(`${rel}: Never Building check present at ${gate}`);
+    else bad(`${rel}: no Never Building scope check at ${gate}`);
+  }
+  const proxy = fs.readFileSync(path.join(AGENTS_DIR, 'product-owner-proxy.md'), 'utf8');
+  const proxyGateCount = (proxy.match(/Never Building/gi) || []).length;
+  if (proxyGateCount >= 2) {
+    ok(`AGENTS/product-owner-proxy.md: Never Building checked at both phase-3-approval and phase4-pr-review (${proxyGateCount} references)`);
+  } else {
+    bad('AGENTS/product-owner-proxy.md: Never Building must be checked at BOTH phase-3-approval and phase4-pr-review');
+  }
+  if (/Never approve past a `?PROJECT\.md`? \*\*Never Building\*\* match/i.test(proxy)) {
+    ok('AGENTS/product-owner-proxy.md: "never approve past a Never Building match" is in the must-never list');
+  } else {
+    bad('AGENTS/product-owner-proxy.md: missing the Never Building entry in its must-never list');
+  }
+
+  // Fixture behavior: the heuristic must separate these two, or it is useless.
+  // Mirrors the arbiter's documented signal list.
+  const SIGNALS = /\b(charge|charging|charges|pricing|paying customers?|paid tier|subscriptions?|subscribe|MRR|ARR|monetize|monetization|billing|invoice|checkout|free trial|per seat)\b/gi;
+  const score = (file) => {
+    const body = fs.readFileSync(path.join(ROOT, '.opencode', 'fixtures', file), 'utf8')
+      .split('\n').filter((l) => !l.trim().startsWith('<!--') && !/^\s{5}/.test(l)).join('\n');
+    return new Set((body.match(SIGNALS) || []).map((m) => m.toLowerCase())).size;
+  };
+  const legit = score('project.hobby-legit.md');
+  const mislabeled = score('project.hobby-mislabeled.md');
+  if (mislabeled > legit && mislabeled >= 3) {
+    ok(`commercial-signal heuristic separates the fixtures: mislabeled-as-hobby ${mislabeled} distinct signals vs. legitimately-hobby ${legit}`);
+  } else {
+    bad(`commercial-signal heuristic does not separate the fixtures (mislabeled ${mislabeled}, legit ${legit}) — it would fire on both or neither`);
+  }
+  if (legit <= 2) {
+    ok(`legitimately-hobby fixture stays below the noise floor (${legit} incidental signal(s)) — the advisory is the right severity for this`);
+  } else {
+    bad(`legitimately-hobby fixture trips ${legit} signals — proof the heuristic must stay advisory, never blocking`);
+  }
+}
+
+// 23. Autonomous-mode gate honesty (remediation Phase 7). An autonomous gate
+//     that approves while knowing it could not check something must say so IN
+//     THE VERDICT. The disclosures already existed — as prose in the gate's own
+//     documentation, where no consumer of the verdict ever reads them. A passed
+//     `VERDICT: APPROVED` looked identical whether the gate had checked
+//     everything or had quietly waived the hardest part.
+console.log('\n[23] Autonomous-mode gate honesty (LIMITATION + waiver discipline)');
+{
+  const proxy = fs.readFileSync(path.join(AGENTS_DIR, 'product-owner-proxy.md'), 'utf8');
+
+  const LIMITATION_LINE = 'LIMITATION: visual polish not verified — code-level checks only';
+  if (proxy.includes(LIMITATION_LINE)) {
+    ok('product-owner-proxy.md: prototype gate specifies the exact required LIMITATION string');
+  } else {
+    bad('product-owner-proxy.md: prototype gate does not specify the required LIMITATION string verbatim');
+  }
+  if (/APPROVED[^\n]*with no `?LIMITATION`? line is malformed|malformed[\s\S]{0,120}treat it as a failed gate/i.test(proxy)) {
+    ok('product-owner-proxy.md: an APPROVED missing its LIMITATION is malformed, not merely untidy');
+  } else {
+    bad('product-owner-proxy.md: must state that an APPROVED without a required LIMITATION is malformed / a failed gate');
+  }
+  if (/### The `LIMITATION` field/.test(proxy)) {
+    ok('product-owner-proxy.md: LIMITATION is a structured field in the canonical Verdict Output Format, not per-gate prose');
+  } else {
+    bad('product-owner-proxy.md: LIMITATION is not defined in the canonical Verdict Output Format');
+  }
+  // Downstream consumers must surface it rather than swallow it.
+  if (/carry (?:it |the line )?forward|Carry forward any upstream/i.test(proxy) &&
+      /Gate Decisions/i.test(proxy)) {
+    ok('product-owner-proxy.md: downstream consumers must carry LIMITATION forward onto BOARD.md');
+  } else {
+    bad('product-owner-proxy.md: nothing requires downstream consumers to surface the LIMITATION');
+  }
+  // Staging-review waiver: must name the SPECIFIC judgment and reach BOARD.md.
+  if (/[Nn]ame the specific judgment/.test(proxy) && /not the category/i.test(proxy)) {
+    ok('product-owner-proxy.md: staging waiver must name the specific judgment, not the category');
+  } else {
+    bad('product-owner-proxy.md: staging-review subjective-polish waiver is still self-certifying');
+  }
+  if (/Log it permanently to BOARD\.md|log(?:ged)? it verbatim to BOARD\.md/i.test(proxy)) {
+    ok('product-owner-proxy.md: staging waiver is logged permanently to BOARD.md, matching the human-only waiver');
+  } else {
+    bad('product-owner-proxy.md: staging waiver has no permanent BOARD.md logging requirement');
+  }
+  // BOARD.md must actually have somewhere for it to land, and say it is permanent.
+  const board = fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'BOARD.md'), 'utf8');
+  if (/Gate Decisions/.test(board) && /LIMITATION/.test(board) && /mandatory and permanent/i.test(board)) {
+    ok('TEMPLATES/BOARD.md: Gate Decisions table carries LIMITATION/waiver notes as mandatory and permanent');
+  } else {
+    bad('TEMPLATES/BOARD.md: no permanent home for LIMITATION and waiver notes');
+  }
+
+  // The exit-criterion fixture: a prototype approval that now carries a
+  // visible LIMITATION a human or the staging gate can act on.
+  const fixture = fs.readFileSync(
+    path.join(ROOT, '.opencode', 'fixtures', 'verdict.prototype-approved.md'), 'utf8');
+  const approved = /^VERDICT: APPROVED$/m.test(fixture);
+  const hasLimitation = fixture.includes(LIMITATION_LINE);
+  const namesWhat = /layout|typography|spacing|hierarchy/i.test(fixture);
+  if (approved && hasLimitation && namesWhat) {
+    ok('fixture verdict: an APPROVED prototype gate now carries an actionable LIMITATION naming what went unjudged');
+  } else {
+    bad(`fixture verdict is not the shape Phase 7 requires (approved=${approved}, limitation=${hasLimitation}, names-specifics=${namesWhat})`);
+  }
+
+  // anymake-iterate's emergency fast path: a checkable condition, logged verbatim.
+  const iterate = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-iterate', 'SKILL.md'), 'utf8');
+  const checkable = /live incident|currently returning errors|5xx|unreachable/i.test(iterate);
+  const notJustUrgency = /not implied by\s*\n?\s*urgency|"this is important" is not the condition/i.test(iterate);
+  const loggedVerbatim = /\*\*Log the condition verbatim\.\*\*|recorded\s*\n?\s*\*\*verbatim\*\*/i.test(iterate);
+  if (checkable && notJustUrgency && loggedVerbatim) {
+    ok('anymake-iterate: emergency fast path has a named, checkable condition, logged verbatim to the tracking issue');
+  } else {
+    if (!checkable) bad('anymake-iterate: fast path condition is still an undefined term ("production-down")');
+    if (!notJustUrgency) bad('anymake-iterate: fast path does not exclude mere urgency');
+    if (!loggedVerbatim) bad('anymake-iterate: fast path condition is not required to be logged verbatim');
+  }
+  if (/skips\s+\*planning\*,\s+never\s+\*verification\*/i.test(iterate)) {
+    ok('anymake-iterate: fast path explicitly skips planning, never verification');
+  } else {
+    bad('anymake-iterate: fast path does not state that verification still runs in full');
+  }
+}
+
+// 24. Build-loop dry-run (remediation Phase 8). [15] proves each output_check
+//     matches its TEMPLATE. That is necessary but not sufficient: agents write
+//     deliverables, not templates. This runs the orchestrator's real greps
+//     against fixture deliverables in the shape an agent actually produces —
+//     a completed brief with a filled §3a and an appended RESULT, a validation
+//     FAIL, an intent-conflict ESCALATE, and an experience PASS.
+console.log('\n[24] Build-loop dry-run (output_checks against real deliverables)');
+{
+  const FIX = path.join(ROOT, '.opencode', 'fixtures', 'build-loop');
+  // Pull the live patterns out of orchestrator.md — if someone edits a grep
+  // there, this dry-run follows it rather than testing a stale copy.
+  const orch = fs.readFileSync(path.join(AGENTS_DIR, 'orchestrator.md'), 'utf8');
+  const byAgent = {};
+  for (const m of orch.matchAll(/DISPATCH \{([\s\S]*?)\n\}/g)) {
+    const agent = m[1].match(/agent:\s*"([^"]+)"/)?.[1];
+    const check = m[1].match(/output_check:\s*"([^"]+)"/)?.[1];
+    if (agent && check && !byAgent[agent]) byAgent[agent] = check;
+  }
+
+  const runCheck = (check, file) => {
+    const cmd = check.replace(/<[^>]*>/g, path.join(FIX, file));
+    const argv = [];
+    let cur = '', quoted = false, started = false;
+    for (const c of cmd) {
+      if (c === "'") { quoted = !quoted; started = true; continue; }
+      if (!quoted && c === '#' && !started) break;
+      if (!quoted && /\s/.test(c)) { if (started) { argv.push(cur); cur = ''; started = false; } continue; }
+      cur += c; started = true;
+    }
+    if (started) argv.push(cur);
+    try {
+      return parseInt(execFileSync(argv[0], argv.slice(1), { encoding: 'utf8' }).trim().split('\n').pop(), 10) || 0;
+    } catch (e) { if (e.status === 1) return 0; throw e; }
+  };
+
+  const CASES = [
+    ['anymake-planner', 'task-brief-story-3.1.md', 'a completed brief with a filled §3a Experience Script'],
+    ['anymake-worker', 'task-brief-story-3.1.md', 'the same brief after the Worker appended its RESULT'],
+    ['anymake-validator', 'validation-report-story-3.2.md', 'a validation report with VERDICT: FAIL'],
+    ['anymake-validator', 'validation-report-story-3.3.md', 'a validation report with VERDICT: ESCALATE (intent-conflict)'],
+    ['anymake-experience-runner', 'experience-report-story-3.1.md', 'an experience report with VERDICT: PASS'],
+  ];
+  for (const [agent, file, desc] of CASES) {
+    const check = byAgent[agent];
+    if (!check) { bad(`dry-run: no output_check found in orchestrator.md for ${agent}`); continue; }
+    const hits = runCheck(check, file);
+    if (hits > 0) {
+      ok(`dry-run: ${agent}'s output_check passes on ${desc} (${hits} hit${hits === 1 ? '' : 's'})`);
+    } else {
+      bad(`dry-run: ${agent}'s output_check FAILS on a valid deliverable — ${desc} (${file}). This is the exact bug Phase 1 fixed; it has regressed.`);
+    }
+  }
+
+  // The Validator check must fire on every verdict, not only PASS — an
+  // output_check that only matched approvals would hide FAIL and ESCALATE
+  // deliverables as "missing", turning real failures into spurious retries.
+  const vCheck = byAgent['anymake-validator'];
+  const fail = runCheck(vCheck, 'validation-report-story-3.2.md');
+  const esc = runCheck(vCheck, 'validation-report-story-3.3.md');
+  if (fail > 0 && esc > 0) {
+    ok('dry-run: the Validator output_check confirms a verdict LANDED regardless of whether it was PASS, FAIL, or ESCALATE');
+  } else {
+    bad('dry-run: the Validator output_check does not fire on non-PASS verdicts — a FAIL or ESCALATE report would read as a missing deliverable');
+  }
+
+  // The two deliberately-broken stories must carry the failure modes the plan
+  // asks the dry-run to exercise.
+  const f32 = fs.readFileSync(path.join(FIX, 'validation-report-story-3.2.md'), 'utf8');
+  const f33 = fs.readFileSync(path.join(FIX, 'validation-report-story-3.3.md'), 'utf8');
+  if (/VERDICT: FAIL/.test(f32)) ok('dry-run fixture: story 3.2 exercises the validation-FAIL retry path');
+  else bad('dry-run fixture: story 3.2 is not a validation FAIL');
+  if (/VERDICT: ESCALATE/.test(f33) && /intent-conflict/.test(f33)) {
+    ok('dry-run fixture: story 3.3 exercises the intent-conflict escalation path');
+  } else {
+    bad('dry-run fixture: story 3.3 is not an intent-conflict escalation');
+  }
+  // And a deliberately-broken board write must still be caught.
+  let rejected = false;
+  try {
+    execFileSync('node', [path.join(ROOT, '.opencode', 'validate-board-state.mjs'),
+      path.join(ROOT, '.opencode', 'fixtures', 'board-state.invalid.json')], { encoding: 'utf8' });
+  } catch (e) { rejected = e.status === 1; }
+  if (rejected) ok('dry-run: a deliberately-broken board-state.json write is rejected by schema validation');
+  else bad('dry-run: a broken board-state.json write was NOT rejected');
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);

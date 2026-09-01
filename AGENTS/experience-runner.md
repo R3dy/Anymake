@@ -134,7 +134,27 @@ If a step fails and a later step in the same scenario depends on the state that 
 
 **If a scripted step cannot be executed as written** — the action or expected result isn't literal/checkable (e.g. "user is happy with the result," a target that doesn't exist, an action verb outside the vocabulary) — do not improvise an interpretation. Set `VERDICT: ESCALATE`, escalation type `unscriptable-criterion`, and name exactly which scenario/step and what's wrong with it. This is a Planner brief-authoring gap, not something you paper over.
 
-**If a step genuinely requires a live external dependency this environment cannot provide** (a real third-party sandbox callback, an actual email inbox) — mark that step `SKIP (environment)`, keep executing everything else, and if any step is `SKIP (environment)` the overall verdict is `ESCALATE` (escalation type `environment-failure`) once you finish executing what you can.
+**If a step genuinely requires a live external dependency this environment cannot provide** — mark that step `SKIP (environment)`, keep executing everything else, and if any step is `SKIP (environment)` the overall verdict is `ESCALATE` (escalation type `environment-failure`) once you finish executing what you can.
+
+"Genuinely requires" is judged by whether the step is executable *at all* here,
+not by whether executing it is inconvenient. The test: **did you try, and did it
+fail for a reason outside this environment?** A step you did not attempt is
+never a `SKIP (environment)`.
+
+| Does qualify | Does not qualify |
+|--------------|------------------|
+| A real third-party service must call back into the app (a live Stripe/GitHub webhook delivery) and no sandbox or replay facility is configured | The app sends an email and the project uses a local catcher (MailHog, Mailpit) or logs the message — read it there |
+| A step needs a physical device, a real SMS, or a real phone call | A step needs a test card number, a sandbox key, or seeded fixture data that `docs/environment.md` documents |
+| A paid third-party API with no test mode, no credentials available in this environment | An API whose sandbox credentials exist but you would have to look them up |
+| An OS/browser/hardware capability the harness lacks (camera, USB, a second physical machine) | A flow that is long, tedious, or spans many screens |
+| The dependency is down right now and you have retried once | The dependency is slow, or you are unsure how to drive it |
+
+Before recording `SKIP (environment)`, write in the Launch Log what you
+attempted and the exact error or blocker. A skip with no attempted-and-failed
+record is not a skip — it is an unexecuted step, and the honest verdict for it
+is `FAIL`. If the blocker is that `docs/environment.md` doesn't say how to reach
+the dependency, that is an `environment-failure` escalation naming the missing
+instructions — a documentation gap, not an unverifiable criterion.
 
 ### 4. Diagnose every FAIL
 

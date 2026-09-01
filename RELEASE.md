@@ -13,15 +13,28 @@ This document is the repeatable "how to get this into running sessions" step. Ev
 
 ## The procedure
 
-1. **Verify `origin/main` is green.** On the local checkout:
+0. **Check CI.** The `verify` workflow (`.github/workflows/verify.yml`) runs the regression
+   harness on every push and PR, so `origin/main` should already be green before you start.
+   Confirm the latest commit's check passed on GitHub. CI is the first gate; the local run
+   below is the confirmation, not the only signal.
+
+1. **Verify `origin/main` is green locally.** On the local checkout:
    ```bash
    cd PROJECTS/anymake/repo
    git fetch origin main
    git checkout main && git pull origin main
-   node .opencode/verify-plugin.mjs
+   npm run verify
+   node .opencode/validate-board-state.mjs .opencode/fixtures/board-state.valid.json
+   node .opencode/validate-board-state.mjs --expect-fail .opencode/fixtures/board-state.invalid.json
    ```
-   The last line must print `ALL CHECKS PASSED`. If it does not, **stop** — do not release a
-   broken HEAD.
+   `npm run verify` must print `ALL CHECKS PASSED`, and both fixture validations must exit 0
+   (the second is expected-fail — it confirms the schema still rejects a malformed board).
+   If any of them doesn't, **stop** — do not release a broken HEAD. The harness is the only
+   regression check this repo has; a red run means an instruction is broken, and instruction
+   bugs reach every running session silently.
+
+   > `node .opencode/verify-plugin.mjs` still works and is identical — `npm run verify` is
+   > just the documented entry point.
 
 2. **Move the stale cache aside** (non-destructive — creates a rollback point):
    ```bash
@@ -79,10 +92,25 @@ optional; the default release flow is: merge to `main` → cache-invalidation �
 
 ---
 
+## Before the merge: version and changelog
+
+A change to the instruction files *is* a change to the system's behavior — there is no code/docs
+split here (ADR-008). So a release that changes how an agent behaves should also:
+
+1. Add a `CHANGELOG.md` entry describing what changed and **why**, with behavior changes called
+   out as behavior changes rather than folded in among fixes. A future session reading
+   `PHASE_STATE.md` history uses this to understand where a rule came from.
+2. Bump the skill-suite version in `skills/anymake/SKILL.md`'s footer and `package.json`.
+
+Neither is enforced by the harness — they are judgment calls about whether a change is
+release-worthy. A typo fix is not; a new gate check is.
+
+---
+
 ## Rollback
 
-If the refreshed cache breaks sessions (it should not — step 1 verified `verify-plugin.mjs` is
-green on the released HEAD), restore the pre-release cache with one command:
+If the refreshed cache breaks sessions (it should not — step 1 verified the harness is green on
+the released HEAD), restore the pre-release cache with one command:
 ```bash
 mv ~/.cache/opencode/packages/anymake@git+https:/github.com/R3dy/Anymake.git.bak-<timestamp>/ \
    ~/.cache/opencode/packages/anymake@git+https:/github.com/R3dy/Anymake.git/

@@ -323,14 +323,15 @@ DISPATCH {
     artifacts: ["<absolute path to PROJECTS/[name]/BOARD.md>", "<absolute path to PROJECTS/[name]/docs/environment.md>"]
   },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Phase gate 4 (staging)"
 }
 ```
 
 - `PHRASE: launch it` → proceed to Phase 5
 - `NEEDS CHANGES` → address the listed gaps and re-run the proxy
-- Note: run `anymake-experience-check` against the staging URL **before** dispatching the proxy via `anymake-dispatch`, and point it at the resulting experience report(s) as an artifact — the proxy reads that as real evidence the critical path was actually driven, not just documented. What's left as a genuine, documented limitation of autonomous mode is narrower now: live-mode payment edge cases and purely subjective polish judgments a script can't express — not the whole end-to-end journey.
+- Note: run `anymake-experience-check` against the staging URL **before** dispatching the proxy via `anymake-dispatch`, and point it at the resulting experience report(s) as an artifact — the proxy reads that as real evidence the critical path was actually driven, not just documented. What's left as a genuine, documented limitation of autonomous mode is narrower now: live-mode payment edge cases and purely subjective polish judgments a script can't express — not the whole end-to-end journey. That remaining category is not self-certifying: a gate approving while waiving one of those judgments must name the **specific** judgment (not the category), say what was verified in its place, emit it as a `LIMITATION:` line in the verdict, and log it verbatim to BOARD.md's Gate Decisions table where it stays for the life of the project — the same discipline the `phase4-escalation-human-only` waiver already carries. A waiver that names no specific judgment is not a waiver; it is an undocumented gap, and the gate should return `NEEDS CHANGES`. Any `LIMITATION` from the Phase 2 prototype gate must also be carried forward here rather than swallowed by a passed verdict.
 
 ## Output
 

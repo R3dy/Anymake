@@ -150,7 +150,8 @@ DISPATCH {
     artifacts: ["<absolute path to PROJECTS/[name]/prototype/>", "<absolute path to PROJECTS/[name]/docs/02-planning/ux-design.md>"]
   },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Phase gate 2 (prototype)"
 }
 ```
@@ -286,7 +287,8 @@ DISPATCH {
     artifacts: ["<absolute paths to PROJECTS/[name]/docs/02-planning/prd.md, ux-design.md, architecture/ADR-001.md through ADR-007.md, monetization.md, MVP_SCOPE.md>"]
   },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Phase gate 2"
 }
 ```

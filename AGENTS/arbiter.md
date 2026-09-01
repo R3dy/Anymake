@@ -2,6 +2,42 @@
 
 The **Arbiter** is the one every other agent defers to: the authoritative rules for retries, escalations, gates, conflicts, and merges across the whole system (Phase 4 build loop and the post-launch agile flow alike). The Arbiter is not spawned — it is read. When any agent or skill references a policy, the version here wins.
 
+> **Pronoun convention.** In agent-instruction files, "you" addresses the agent
+> being instructed. Human approval is always written as "the user" or "the real
+> user," never "you." A rule that says "your review is required" is a bug if it
+> means the human's review — rewrite it, don't interpret it. This matters
+> because these files are read *by* the agent whose behavior they govern: an
+> instruction to "escalate to you" reads, to the agent following it, as an
+> instruction to escalate to itself.
+
+
+---
+
+## INV-018 Scope — What Counts as Dispatch
+
+INV-018 routes **all** sub-agent dispatch through the `anymake-dispatch` skill.
+This section is the authoritative definition of what that covers, so the
+boundary is a decision recorded once rather than re-litigated per file.
+
+**Read-only research delegation (e.g. to the host's generic Explore agent) is
+exempt from the dispatch chokepoint; any dispatch that produces a role-bearing
+deliverable (brief, code, verdict, plan, review) is not.**
+
+| Delegation | Through `anymake-dispatch`? | Why |
+|------------|-----------------------------|-----|
+| Planner, Worker, Validator, Experience Runner, Product Owner Proxy, Cartographer, Solution Architect, Plan Reviewer | **Required** | Each returns a role-bearing deliverable the system then acts on. The hardening (WRITE THE FILE FIRST, mandatory post-dispatch verification, canonical RETRY CONTEXT, the dispatch log line) exists because these deliverables gate real decisions. |
+| A broad codebase search handed to the host's generic research agent, purely to save context | **Exempt** | It returns findings the delegating agent then reasons about itself — no verdict, no artifact, no gate. There is no deliverable to verify and no retry budget to spend, so the hardening has nothing to harden. |
+
+The test is the **deliverable**, not the tool: if the result is a file, a
+verdict, or a decision another agent will act on without re-deriving it, it is
+role-bearing and goes through the skill. If the delegating agent still has to
+do the actual work with what comes back, it is research.
+
+An exempt delegation must say so explicitly at the call site, citing this
+section, so the exemption is visible to a reader and to the harness (which
+greps for unlisted references to the host's dispatch primitive). Silent
+exemptions read identically to violations.
+
 ---
 
 ## Model Tier Policy
@@ -50,10 +86,10 @@ A per-agent `opencode.json` override always wins over the tier env var for that 
 
 | Condition | Review requirement |
 |-----------|-------------------|
-| PR #1, #2, or #3 overall in Phase 4 | your review is required — always |
-| Story title or technical tasks contain "webhook" | your review is required — always, regardless of PR count |
-| Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | your review is required — always, regardless of PR count |
-| PR #4+, no webhook keyword, and no ADR touched | Autonomous merge after CI passes |
+| PR #1, #2, or #3 overall in Phase 4 | the real user's review is required — always |
+| Story implements an inbound third-party callback / event handler / delivery endpoint (webhook, callback, push receiver, OAuth redirect, payment return URL, external queue subscriber) | the real user's review is required — always, regardless of PR count. See §"Inbound third-party callback override" — matched by meaning, not by the word "webhook" |
+| Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | the real user's review is required — always, regardless of PR count |
+| PR #4+, no inbound third-party callback, and no ADR touched | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 
 PR count is cumulative across all Phase 4 stories. It is not reset per milestone.
@@ -148,14 +184,54 @@ Story ordering within a milestone follows the dependency graph. Stories with no 
 
 ## Special Override Rules
 
-**Webhook handler override:**
-Any story whose title or technical task list contains the word "webhook" requires your review of the PR regardless of the current PR count. The orchestrator checks for this keyword when evaluating the PR review rule after each validation PASS.
+**Inbound third-party callback override** (formerly the "webhook" keyword match):
+Any story implementing an **inbound callback, event handler, or delivery
+endpoint invoked by a third-party service** requires the real user's review of
+the PR regardless of the current PR count — regardless of naming. Webhooks are
+the leading example and the common case; so are callbacks, event handlers, push
+notification receivers, OAuth/SSO redirect and callback routes, payment-provider
+return URLs, queue and pub/sub subscribers fed by an external system, and
+polling consumers of an external event feed.
+
+The test is the **trust boundary**, not the vocabulary: does this code path
+execute in response to a request the project does not originate, carrying data
+the project did not author? If yes, it needs review. These handlers are singled
+out because they are authenticated differently from the rest of the app (shared
+secrets, signature verification, replay windows), they are reachable from the
+public internet by design, and a mistake in one is exploitable without any user
+account.
+
+The orchestrator evaluates this against the story title, its technical task
+list, and the brief's §6a — matching on meaning, not on the literal string
+"webhook". When it is genuinely unclear whether a story crosses that boundary,
+require the review: a needless review costs one round trip, a missed one ships
+an unreviewed public entry point.
 
 **ADR-touching override:**
-Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires your review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
+Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires the real user's review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
+
+**The security baseline — definition.**
+Several rules below and in other agent files turn on whether something is
+"covered by the security baseline." That phrase means exactly this, and nothing
+broader or narrower:
+
+> The **security baseline** is the union of (a) the Security Checklist in
+> `AGENTS/validator.md`, (b) the tiered checklists `anymake-security-review`
+> names as canonical — `AGENTS/validator.md` (per-PR), `PHASE_GUIDES/phase-4.md`
+> Step 4.5 (full pass), and the security items in
+> `TEMPLATES/launch-checklist.md` (pre-launch) — and (c) any additions the
+> project type's `PROJECT_TYPES/<id>/manifest.md` → Gate Criteria Deltas layers
+> on top. A manifest may **add** to the baseline or **replace** an item with a
+> type-appropriate equivalent; it may never remove the baseline's coverage of
+> authentication, authorization, secret handling, input validation, or data
+> exposure.
+
+Anywhere else in this repo, "the security baseline" is a pointer to this
+definition — never an independent judgment call about what feels
+security-relevant.
 
 **Security failure override:**
-Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
+Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to the real user.
 
 **Intent-conflict override:**
 Any validation in which the implementation contradicts an Active Decision
@@ -170,6 +246,79 @@ security override (always the real user, in every mode).
 An acceptance criterion that requires visual inspection, browser testing, terminal output inspection, or UX judgment cannot be checked by reading code or running the automated test suite — but that no longer means it defaults to a human. The Planner is required to translate every such criterion into a literal scenario in the task brief's §3a Experience Script; the Experience Runner then actually launches the app and drives it, and checks the real observed result against the scripted expectation (see Step 5a/5b in `AGENTS/orchestrator.md`). The Validator marks these criteria `DEFERRED (experience)` in its report — not `SKIP` — and does not escalate for them on that basis alone.
 
 The Validator only falls back to `SKIP (human-only)` → `ESCALATE` (gate type `phase4-escalation-human-only`) when a Human-Only criterion has **no** corresponding §3a scenario at all. That is a brief-authoring gap the Planner should have caught, not a category of criterion that is inherently unverifiable — and the Product Owner Proxy's evaluation of that gate (`AGENTS/product-owner-proxy.md`) must never resolve it by inspecting code and waiving the behavior; the correct action is almost always to send it back for the missing scenario. This is the specific mechanism that used to let "the agent said it's good to go" diverge from "I tested it and it wasn't": a human-only criterion could be waived on the strength of code merely existing, without anyone — human or agent — ever actually driving it. It cannot be waived on that basis anymore.
+
+---
+
+## Project-Type and Scope Guardrails
+
+Two checks that exist because the project type and the Phase 0 scope decision
+are both chosen once, early, and then silently govern which gates run for the
+rest of the build.
+
+### Commercial-signal check (ADVISORY — never blocking)
+
+Choosing `hobby` skips nearly the whole security checklist beyond literally
+committed secrets; `internal-tool` permanently skips monetization and legal
+requirements. Neither choice is ever re-examined, and nothing notices when a
+"hobby" project acquires paying customers.
+
+**The check:** when the project's own words describe commercial activity while
+`project_type` is `hobby` or `internal-tool`, surface a one-line prompt asking
+the real user to confirm the type. Signals, matched case-insensitively in
+`PROJECT.md`'s Problem, Solution, Target Audience, Revenue Model, and Success
+Definition sections: *charge, charging, pricing, price per, paying customer(s),
+paid tier, subscription, subscribe, MRR, ARR, revenue, monetize, monetization,
+billing, invoice, checkout, free trial, per seat, customers will pay*.
+For `internal-tool` additionally: *sign up, public launch, customers,
+marketing site, waitlist*.
+
+**The prompt** (exact shape — one line, then continue):
+
+```
+NOTE — possible project-type mismatch: PROJECT.md mentions [signal(s)] but
+project_type is [type], which skips [security checklist beyond committed
+secrets | monetization and legal requirements]. Confirm the type is right, or
+say "switch project type to [suggested]". Continuing as [type].
+```
+
+**Advisory means advisory.** It never blocks, never fails a gate, never changes
+`project_type`, and never repeats within the same gate evaluation. The heuristic
+has false positives by construction — a hobby project can legitimately mention
+what a commercial competitor charges — and switching type is a product decision,
+which is the real user's alone (`AGENTS.md`: no autonomous product decisions).
+A surfaced prompt the user does not answer is not an escalation; note it and
+proceed.
+
+### "Never building" scope check (BLOCKING)
+
+`PROJECT.md` → **Never Building** is the one scope decision the real user makes
+explicitly and permanently, and until now nothing ever checked a backlog against
+it. A story implementing an explicitly excluded feature is scope the user ruled
+out, not scope anyone forgot.
+
+**The check:** at `phase-3-approval` and `phase4-pr-review`, compare the
+backlog/story against every entry in `PROJECT.md`'s Never Building list. A match
+**fails the gate**, with a citation:
+
+```
+NEEDS CHANGES: Story [N.N] "[title]" implements "[feature]", which
+PROJECT.md's Never Building list excludes: "[verbatim Never Building entry]".
+Resolve by either (a) removing the story from the backlog, or (b) amending
+PROJECT.md's Never Building list through a Phase 0 scope amendment the real
+user approves. Do not proceed on the current backlog.
+```
+
+**Matching is by meaning, not string equality** — "Never building: a mobile app"
+excludes a story titled "React Native shell," and an exclusion of "user-to-user
+messaging" excludes "add comment threads." Judge whether a reasonable person
+reading the exclusion would consider this story an instance of it. When it is
+genuinely arguable, say so and let the real user decide (`ESCALATE TO USER`)
+rather than silently allowing or silently blocking.
+
+**This gate is not waivable in autonomous mode.** The Product Owner Proxy stands
+in for the user on judgment calls inside approved scope; it has no standing to
+re-open a scope boundary the user set. A Never Building match is a scope
+amendment, and scope amendments are the real user's.
 
 ---
 
@@ -228,7 +377,7 @@ Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect a
 | `NEEDS CHANGES` (round 1 or 2) | Re-spawn Architect with the review report; it resolves every numbered comment; fresh Reviewer next round |
 | `NEEDS CHANGES` (3rd time) | Stop the loop — escalate to user with the plan and unresolved comments. The Reviewer never lowers the bar to end a loop |
 | `ESCALATE` from Reviewer | Straight to the real user — never retried |
-| Security-relevant plan (auth, authz, tenant isolation, secrets, payments, webhooks) | Final approval is always the real user, in every mode |
+| Security-relevant plan (auth, authz, tenant isolation, secrets, payments, or any inbound third-party callback — see §"Inbound third-party callback override") | Final approval is always the real user, in every mode |
 | Intent conflict found in a plan | Intent conflict gate (see Intent Conflict Policy) before the plan may proceed — never resolved by Architect or Reviewer |
 
 **User phrases at the agile approval gate:**
@@ -263,9 +412,9 @@ is absolute — INV-008). The orchestrator monitors in-flight stories via
 | `🔵` | In Progress | Worker agent active |
 | `🟠` | In Validation | Validator agent active |
 | `🧪` | Experience Check | Experience Runner agent driving the app against the story's §3a script |
-| `👁` | Awaiting Review | PR open, waiting for you to approve |
+| `👁` | Awaiting Review | PR open, waiting for the real user to approve |
 | `✅` | Done | Merged to main |
-| `🚫` | Blocked | Escalated — awaiting you decision |
+| `🚫` | Blocked | Escalated — awaiting the real user's decision |
 
 ---
 

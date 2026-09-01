@@ -1,9 +1,17 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Anymake board-state.json",
-  "description": "The structured spine of the Anymake agile board. Agents append events to events[]; the orchestrator is the sole writer of the snapshot (stories[], in_flight, concurrency, updated). The hub (main agent) writes the optional `session` object once at session start and appends session-lifecycle events to session-log.jsonl (NOT to events[]) — see ADR-013. BOARD.md is a rendered projection of this file. The kanban UI reads it directly. One source of truth (INV-004).",
+  "description": "The structured spine of the Anymake agile board. Agents append events to events[]; the orchestrator is the sole writer of the snapshot (stories[], in_flight, concurrency, updated). The hub (main agent) writes the optional `session` object once at session start and appends session-lifecycle events to session-log.jsonl (NOT to events[]) — see ADR-013. BOARD.md is a rendered projection of this file. The kanban UI reads it directly. One source of truth (INV-004). Validate any instance with `node .opencode/validate-board-state.mjs <path>` (or `npm run validate-board`); AGENTS/orchestrator.md and skills/anymake-dispatch/SKILL.md require that run after every write.",
   "type": "object",
-  "required": ["project", "run_id", "updated", "concurrency", "in_flight", "stories", "events"],
+  "required": [
+    "project",
+    "run_id",
+    "updated",
+    "concurrency",
+    "in_flight",
+    "stories",
+    "events"
+  ],
   "properties": {
     "project": {
       "type": "string",
@@ -20,13 +28,17 @@
     },
     "concurrency": {
       "type": "object",
-      "required": ["max", "current"],
+      "required": [
+        "max",
+        "current"
+      ],
       "properties": {
         "max": {
           "type": "integer",
           "minimum": 1,
           "default": 3,
-          "description": "Maximum concurrent in-flight stories. max=1 reproduces today's sequential behavior."
+          "description": "Maximum concurrent in-flight stories. max=1 reproduces the older sequential behavior exactly. Bounded at 10: beyond that, host Agent/Task contention and merge-conflict rate dominate, and the orchestrator's stall detection stops being able to tell a slow story from a stuck one. Raise the ceiling here deliberately, with a note saying why — do not treat the bound as advisory.",
+          "maximum": 10
         },
         "current": {
           "type": "integer",
@@ -37,56 +49,161 @@
     },
     "in_flight": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Story IDs currently in progress (maintained by the orchestrator)"
     },
     "session": {
       "type": "object",
       "description": "Current session context. Written by the hub skill (the main agent) ONCE at session start (single read-modify-write) and updated in place on phase/step advance. The orchestrator does not touch this object. Absent during pure build-loop runs that don't surface a session (backward compatible). See ADR-013.",
       "properties": {
-        "id": { "type": "string", "description": "Session identifier (e.g. ISO timestamp + short random suffix)" },
-        "started": { "type": "string", "format": "date-time" },
-        "phase": { "type": ["string", "null"], "description": "Current phase (e.g. '2')" },
-        "step": { "type": ["string", "null"], "description": "Current step within the phase" }
+        "id": {
+          "type": "string",
+          "description": "Session identifier (e.g. ISO timestamp + short random suffix)"
+        },
+        "started": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Current phase (e.g. '2')"
+        },
+        "step": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Current step within the phase"
+        }
       }
     },
     "stories": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "title", "milestone", "status"],
+        "required": [
+          "id",
+          "title",
+          "milestone",
+          "status",
+          "touches_files"
+        ],
         "properties": {
-          "id": { "type": "string", "description": "Story ID (e.g. '3.1')" },
-          "title": { "type": "string" },
-          "milestone": { "type": "integer" },
+          "id": {
+            "type": "string",
+            "description": "Story ID (e.g. '3.1')"
+          },
+          "title": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "integer"
+          },
           "status": {
             "type": "string",
-            "enum": ["backlog", "ready", "in_progress", "in_validation", "experience", "awaiting_review", "done", "blocked"]
+            "enum": [
+              "backlog",
+              "ready",
+              "in_progress",
+              "in_validation",
+              "experience",
+              "awaiting_review",
+              "done",
+              "blocked"
+            ]
           },
-          "branch": { "type": ["string", "null"] },
-          "worktree": { "type": ["string", "null"] },
-          "pr": { "type": ["integer", "null"] },
+          "branch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "worktree": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pr": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "retries": {
             "type": "object",
             "properties": {
-              "planner": { "type": "integer", "default": 0 },
-              "worker": { "type": "integer", "default": 0 },
-              "validation": { "type": "integer", "default": 0 },
-              "experience": { "type": "integer", "default": 0 }
-            }
+              "planner": {
+                "type": "integer",
+                "default": 0,
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Planner re-dispatches. Arbiter: one re-dispatch for an incomplete brief, then escalate."
+              },
+              "worker": {
+                "type": "integer",
+                "default": 0,
+                "minimum": 0,
+                "maximum": 2,
+                "description": "Worker re-dispatches. Arbiter: 2 for failure_type=environment; 0 for implementation (immediate escalation). 2 is the loosest applicable ceiling."
+              },
+              "validation": {
+                "type": "integer",
+                "default": 0,
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Validation FAIL retries. Arbiter: 1 (straight back to the Worker, no Planner re-run), then escalate on the 2nd FAIL."
+              },
+              "experience": {
+                "type": "integer",
+                "default": 0,
+                "minimum": 0,
+                "maximum": 2,
+                "description": "Experience Runner retries. Arbiter: 1 for a FAIL verdict; 2 for an ESCALATE(environment-failure) re-dispatch of the runner itself. 2 is the loosest applicable ceiling."
+              }
+            },
+            "description": "Per-stage retry counters. The maximum on each field is the loosest ceiling that can apply to that stage under AGENTS/arbiter.md's Retry Policy Matrix. The POLICY, not the schema, decides which ceiling applies to which failure kind — e.g. a worker environment failure allows 2 re-dispatches while an implementation failure allows 0, and both increment the same 'worker' counter. A value within bounds is therefore necessary but not sufficient for policy compliance; a value over bounds is always a bug."
           },
           "touches_files": {
             "type": "array",
-            "items": { "type": "string" },
-            "description": "File paths the story's technical tasks will modify (emitted by the Planner for conflict detection)"
+            "items": {
+              "type": "string"
+            },
+            "description": "File paths the story's technical tasks will modify (emitted by the Planner in the task brief, used for parallel-dispatch conflict detection: two stories conflict iff their touches_files sets intersect). REQUIRED — an empty array is the explicit statement 'this story declares no file conflicts', which is a fact the orchestrator can act on. An absent field is not: it is indistinguishable from a Planner that never computed it, and silently reads as 'conflicts with nothing'.",
+            "default": []
           },
           "depends_on": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           },
-          "started": { "type": ["string", "null"], "format": "date-time" },
-          "last_event": { "type": ["string", "null"], "format": "date-time" },
-          "merged": { "type": ["string", "null"], "format": "date-time" }
+          "started": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_event": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "merged": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
         }
       }
     },
@@ -95,20 +212,72 @@
       "description": "Append-only event log. Agents append; the orchestrator reconciles the snapshot from this log. Lost appends are acceptable — the dispatch log line in BOARD.md's Run Log is the durable belt-and-suspenders record.",
       "items": {
         "type": "object",
-        "required": ["ts", "story", "agent", "type"],
+        "required": [
+          "ts",
+          "story",
+          "agent",
+          "type"
+        ],
         "properties": {
-          "ts": { "type": "string", "format": "date-time" },
-          "story": { "type": ["string", "null"], "description": "Story ID this event pertains to (null for session-lifecycle events — see ADR-013)" },
-          "agent": { "type": "string", "description": "Agent that emitted the event (worker, validator, experience-runner, orchestrator, planner, dispatch, hub)" },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "story": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Story ID this event pertains to (null for session-lifecycle events — see ADR-013)"
+          },
+          "agent": {
+            "type": "string",
+            "description": "Agent that emitted the event (worker, validator, experience-runner, orchestrator, planner, dispatch, hub)"
+          },
           "type": {
             "type": "string",
-            "enum": ["status_change", "dispatch", "dispatch_ok", "dispatch_fail", "retry", "escalate", "heartbeat", "log", "worktree_create", "worktree_cleanup", "session_start", "session_end", "phase_step", "artifact", "checkpoint", "escalation"]
+            "enum": [
+              "status_change",
+              "dispatch",
+              "dispatch_ok",
+              "dispatch_fail",
+              "retry",
+              "escalate",
+              "heartbeat",
+              "log",
+              "worktree_create",
+              "worktree_cleanup",
+              "session_start",
+              "session_end",
+              "phase_step",
+              "artifact",
+              "checkpoint",
+              "escalation"
+            ]
           },
-          "from": { "type": ["string", "null"] },
-          "to": { "type": ["string", "null"] },
-          "detail": { "type": "string" },
-          "session": { "type": "string", "description": "Session ID the event belongs to (present for session-lifecycle events, absent for build-loop events)" },
-          "artifact": { "type": "string", "description": "File path of the artifact produced (for artifact-type events)" }
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "session": {
+            "type": "string",
+            "description": "Session ID the event belongs to (present for session-lifecycle events, absent for build-loop events)"
+          },
+          "artifact": {
+            "type": "string",
+            "description": "File path of the artifact produced (for artifact-type events)"
+          }
         }
       }
     }

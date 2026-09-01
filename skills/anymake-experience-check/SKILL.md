@@ -55,13 +55,34 @@ request, synthesizes a minimal throwaway one for that single check.
    freshly synthesized ad hoc one. Confirm the interaction mode
    (`PROJECT_TYPES/<id>/manifest.md` → Experience Harness) matches what you're
    about to do.
-3. **Spawn `AGENTS/experience-runner.md` as a sub-agent** (the `Agent` tool) —
-   do not drive the app inline in this session. The observe-only separation
-   (the thing that drives the app is never the thing that decides to fix it)
-   holds here exactly as it does inside the automated loop. Pass it the
-   assembled script (as a task-brief-shaped file, or the standalone Experience
-   Script file directly — the agent accepts either), the target, and the
-   branch/checkout instructions if applicable.
+3. **Dispatch the Experience Runner through `anymake-dispatch`** — do not call
+   the Agent tool directly (INV-018), and do not drive the app inline in this
+   session. The runner returns a role-bearing verdict, so it is in scope per
+   `AGENTS/arbiter.md` §"INV-018 Scope". The observe-only separation (the thing
+   that drives the app is never the thing that decides to fix it) holds here
+   exactly as it does inside the automated loop.
+
+   ```
+   DISPATCH {
+     agent: "anymake-experience-runner",  purpose: "experience",
+     project_root: <absolute path to the checkout or worktree>,
+     inputs: {
+       experience_script: "<absolute path to the assembled script — a
+                            task-brief-shaped file, or a standalone Experience
+                            Script file; the agent accepts either>",
+       environment_doc: "<absolute path to docs/environment.md>",
+       target: "<local launch | staging URL | production URL>",
+       branch: "<branch to check out, or 'already running — do not launch'>"
+     },
+     output_artifact: "<absolute path to docs/04-implementation/experience-reports/<story-or-slug>.md>",
+     output_check: "grep -c -i 'VERDICT:' <path>  # report must have a VERDICT heading",
+     board_ref: "Story N.N | ad hoc experience check"
+   }
+   ```
+
+   The skill handles pre-dispatch prompt assembly, the dispatch, the mandatory
+   post-dispatch verification, and the log line. Do not report a verdict until
+   the skill returns OK and you can read the report.
 4. **Report the verdict** — PASS / FAIL / ESCALATE, with the same evidence
    shape as `TEMPLATES/experience-report.md` (screenshots, transcripts,
    captured responses, and — on FAIL — the file:line diagnosis).

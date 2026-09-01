@@ -51,8 +51,15 @@ Read before designing:
 - `PROJECT_TYPES/[project_type]/manifest.md` — success model, build order
 - The actual codebase — you must trace the real mechanism, not theorize from docs
 
-Delegate broad searches to a sub-agent (e.g. `Explore`) to keep your context
-clean — conclusions, not file dumps.
+Delegate broad searches to the host's generic research agent (e.g. `Explore`)
+to keep your context clean — conclusions, not file dumps.
+
+> **Exempt: research delegation (INV-018).** This is read-only research, not a
+> role-bearing dispatch — it returns findings you then reason about yourself, not
+> a brief, verdict, plan, or review the system acts on. It is therefore exempt
+> from the `anymake-dispatch` chokepoint per `AGENTS/arbiter.md` §"INV-018
+> Scope". Anything that produces a deliverable another agent consumes is **not**
+> exempt and goes through the skill.
 
 ---
 
