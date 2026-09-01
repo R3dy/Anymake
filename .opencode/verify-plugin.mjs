@@ -1314,5 +1314,89 @@ console.log('\n[22] Project-type + scope guardrails (Phase 6)');
   }
 }
 
+// 23. Autonomous-mode gate honesty (remediation Phase 7). An autonomous gate
+//     that approves while knowing it could not check something must say so IN
+//     THE VERDICT. The disclosures already existed — as prose in the gate's own
+//     documentation, where no consumer of the verdict ever reads them. A passed
+//     `VERDICT: APPROVED` looked identical whether the gate had checked
+//     everything or had quietly waived the hardest part.
+console.log('\n[23] Autonomous-mode gate honesty (LIMITATION + waiver discipline)');
+{
+  const proxy = fs.readFileSync(path.join(AGENTS_DIR, 'product-owner-proxy.md'), 'utf8');
+
+  const LIMITATION_LINE = 'LIMITATION: visual polish not verified — code-level checks only';
+  if (proxy.includes(LIMITATION_LINE)) {
+    ok('product-owner-proxy.md: prototype gate specifies the exact required LIMITATION string');
+  } else {
+    bad('product-owner-proxy.md: prototype gate does not specify the required LIMITATION string verbatim');
+  }
+  if (/APPROVED[^\n]*with no `?LIMITATION`? line is malformed|malformed[\s\S]{0,120}treat it as a failed gate/i.test(proxy)) {
+    ok('product-owner-proxy.md: an APPROVED missing its LIMITATION is malformed, not merely untidy');
+  } else {
+    bad('product-owner-proxy.md: must state that an APPROVED without a required LIMITATION is malformed / a failed gate');
+  }
+  if (/### The `LIMITATION` field/.test(proxy)) {
+    ok('product-owner-proxy.md: LIMITATION is a structured field in the canonical Verdict Output Format, not per-gate prose');
+  } else {
+    bad('product-owner-proxy.md: LIMITATION is not defined in the canonical Verdict Output Format');
+  }
+  // Downstream consumers must surface it rather than swallow it.
+  if (/carry (?:it |the line )?forward|Carry forward any upstream/i.test(proxy) &&
+      /Gate Decisions/i.test(proxy)) {
+    ok('product-owner-proxy.md: downstream consumers must carry LIMITATION forward onto BOARD.md');
+  } else {
+    bad('product-owner-proxy.md: nothing requires downstream consumers to surface the LIMITATION');
+  }
+  // Staging-review waiver: must name the SPECIFIC judgment and reach BOARD.md.
+  if (/[Nn]ame the specific judgment/.test(proxy) && /not the category/i.test(proxy)) {
+    ok('product-owner-proxy.md: staging waiver must name the specific judgment, not the category');
+  } else {
+    bad('product-owner-proxy.md: staging-review subjective-polish waiver is still self-certifying');
+  }
+  if (/Log it permanently to BOARD\.md|log(?:ged)? it verbatim to BOARD\.md/i.test(proxy)) {
+    ok('product-owner-proxy.md: staging waiver is logged permanently to BOARD.md, matching the human-only waiver');
+  } else {
+    bad('product-owner-proxy.md: staging waiver has no permanent BOARD.md logging requirement');
+  }
+  // BOARD.md must actually have somewhere for it to land, and say it is permanent.
+  const board = fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'BOARD.md'), 'utf8');
+  if (/Gate Decisions/.test(board) && /LIMITATION/.test(board) && /mandatory and permanent/i.test(board)) {
+    ok('TEMPLATES/BOARD.md: Gate Decisions table carries LIMITATION/waiver notes as mandatory and permanent');
+  } else {
+    bad('TEMPLATES/BOARD.md: no permanent home for LIMITATION and waiver notes');
+  }
+
+  // The exit-criterion fixture: a prototype approval that now carries a
+  // visible LIMITATION a human or the staging gate can act on.
+  const fixture = fs.readFileSync(
+    path.join(ROOT, '.opencode', 'fixtures', 'verdict.prototype-approved.md'), 'utf8');
+  const approved = /^VERDICT: APPROVED$/m.test(fixture);
+  const hasLimitation = fixture.includes(LIMITATION_LINE);
+  const namesWhat = /layout|typography|spacing|hierarchy/i.test(fixture);
+  if (approved && hasLimitation && namesWhat) {
+    ok('fixture verdict: an APPROVED prototype gate now carries an actionable LIMITATION naming what went unjudged');
+  } else {
+    bad(`fixture verdict is not the shape Phase 7 requires (approved=${approved}, limitation=${hasLimitation}, names-specifics=${namesWhat})`);
+  }
+
+  // anymake-iterate's emergency fast path: a checkable condition, logged verbatim.
+  const iterate = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-iterate', 'SKILL.md'), 'utf8');
+  const checkable = /live incident|currently returning errors|5xx|unreachable/i.test(iterate);
+  const notJustUrgency = /not implied by\s*\n?\s*urgency|"this is important" is not the condition/i.test(iterate);
+  const loggedVerbatim = /\*\*Log the condition verbatim\.\*\*|recorded\s*\n?\s*\*\*verbatim\*\*/i.test(iterate);
+  if (checkable && notJustUrgency && loggedVerbatim) {
+    ok('anymake-iterate: emergency fast path has a named, checkable condition, logged verbatim to the tracking issue');
+  } else {
+    if (!checkable) bad('anymake-iterate: fast path condition is still an undefined term ("production-down")');
+    if (!notJustUrgency) bad('anymake-iterate: fast path does not exclude mere urgency');
+    if (!loggedVerbatim) bad('anymake-iterate: fast path condition is not required to be logged verbatim');
+  }
+  if (/skips\s+\*planning\*,\s+never\s+\*verification\*/i.test(iterate)) {
+    ok('anymake-iterate: fast path explicitly skips planning, never verification');
+  } else {
+    bad('anymake-iterate: fast path does not state that verification still runs in full');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

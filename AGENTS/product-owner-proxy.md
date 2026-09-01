@@ -126,9 +126,33 @@ cd PROJECTS/[name]/prototype && npm install --silent && npm run build 2>&1 | tai
 
 5. **Brand color applied** — check `PROJECTS/[name]/docs/02-planning/ux-design.md`'s Design DNA section for the brand color value. Search prototype CSS/Tailwind classes or style declarations for that color. If the brand color appears nowhere in the prototype source, fail.
 
-**Note:** Visual quality ("does it look production-quality?") cannot be mechanically verified. The proxy checks code-level signals — content, structure, brand application — as a proxy for visual quality. This is a documented limitation of autonomous mode.
+**Required `LIMITATION` field.** Visual quality ("does it look
+production-quality?") cannot be mechanically verified. The checks above are
+code-level signals — content, structure, brand application — standing in for a
+judgment nothing here actually makes. That has always been true; what changes is
+that it must now be **carried in the verdict**, not just noted in this file.
+Every `APPROVED` from this gate MUST include, verbatim:
 
-**Verdict:** `APPROVED` or `NEEDS CHANGES: [specific list]`
+```
+LIMITATION: visual polish not verified — code-level checks only
+```
+
+Followed by one line naming what specifically went unjudged for this prototype
+(e.g. `— layout, typography, spacing, and visual hierarchy were not observed;
+only that a brand color appears in source and no placeholder copy remains`).
+
+This is not optional prose. A `VERDICT: APPROVED` from `phase-2-prototype-review`
+with no `LIMITATION` line is malformed — a consumer receiving one should treat it
+as a failed gate and re-run it, exactly as it would treat a missing verdict.
+
+**Downstream consumers must surface it, not swallow it.** `phase-4-staging-review`
+and `anymake-iterate` both read this verdict; each must carry the `LIMITATION`
+line into its own output and onto BOARD.md's Gate Decisions table rather than
+letting it get lost inside a passed `VERDICT: APPROVED`. The whole point is that
+a real human can later see which judgments were never made — a limitation that
+survives only in the gate's own documentation is a limitation nobody reads.
+
+**Verdict:** `APPROVED` (with the required `LIMITATION` line) or `NEEDS CHANGES: [specific list]`
 
 ---
 
@@ -467,8 +491,39 @@ ESCALATE TO USER: All remaining stories in the backlog are blocked — no 🟡 R
 
 4. **Staging experience check** — if a staging experience report was provided or found, its `VERDICT` must be `PASS` for the critical-path scenarios; a `FAIL` or missing report where one was expected → `NEEDS CHANGES: run anymake-experience-check against the staging URL before this gate can approve.` If no staging experience report exists at all (the skill was never run), do not silently pass this — say so explicitly in the summary as the specific, narrower limitation it now is: this gate cannot itself drive a browser, but it can and should require evidence that something else did.
 
+5. **Carry forward any upstream `LIMITATION`** — if `phase-2-prototype-review`
+   approved with a `LIMITATION` line, repeat it verbatim in your output and in
+   BOARD.md's Gate Decisions Note column. A limitation that stops here is a
+   limitation nobody sees.
+
+**The subjective-polish waiver — same discipline as `phase4-escalation-human-only`.**
+What remains genuinely outside this gate's reach is narrow: live-mode payment
+edge cases and purely subjective polish judgments a script cannot express. That
+category is not a blanket excuse, and it is not self-certifying. If you approve
+while waiving such a judgment, you MUST:
+
+1. **Name the specific judgment** — not the category. `"Waived: whether the
+   onboarding flow's three-step progress indicator reads as reassuring rather
+   than tedious"`, never `"waived: subjective polish"`. If you cannot name it
+   specifically, you are not waiving a judgment, you are skipping a check —
+   return `NEEDS CHANGES` instead.
+2. **Say what WAS verified in its place** — the code-level or experience-report
+   evidence you did have.
+3. **Emit it as a `LIMITATION` line** in the verdict:
+   `LIMITATION: [specific judgment] was waived as subjective — [what was
+   verified instead]; the behavior was never observed by a human.`
+4. **Log it permanently to BOARD.md's Gate Decisions table**, verbatim, in the
+   Note column. It stays there for the life of the project. This is the same
+   requirement the `phase4-escalation-human-only` waiver already carries ("that
+   note must survive onto BOARD.md"), applied here for the same reason: an
+   autonomous run's unchecked judgments must be legible to a human afterward.
+
+A waiver that names no specific judgment, or that never reaches BOARD.md, is not
+a waiver — it is an undocumented gap, and the gate should have returned
+`NEEDS CHANGES`.
+
 **Output:**
-- All checks pass → `PHRASE: launch it`
+- All checks pass → `PHRASE: launch it` (plus any `LIMITATION` line required above)
 - Any check fails → `NEEDS CHANGES: [specific list of what is incomplete]`
 
 ---
@@ -528,6 +583,7 @@ per the rules above.
 VERDICT: APPROVED
 Checks passed: N/N
 Summary: [one sentence confirming what was verified]
+LIMITATION: [required where the gate names one — see below; omit only when the gate names none]
 ```
 or:
 ```
@@ -547,7 +603,30 @@ Reason: [specific reason human judgment is required — not a generic statement]
 ```
 PHRASE: [exact phrase from the escalation lexicon]
 Reasoning: [one sentence]
+LIMITATION: [required where the gate names one — see below]
 ```
+
+### The `LIMITATION` field
+
+Some gates approve while explicitly *not* having checked something. That is
+legitimate — a script cannot judge visual polish — but it must be visible in the
+verdict rather than buried in this file, or the approval reads as broader than it
+is. Where a gate below requires a `LIMITATION` line, an `APPROVED` without one is
+**malformed**: treat it as a failed gate and re-run, exactly as you would a
+missing verdict.
+
+| Gate | Required `LIMITATION` |
+|------|----------------------|
+| `phase-2-prototype-review` | `LIMITATION: visual polish not verified — code-level checks only` (+ one line naming what specifically went unjudged) |
+| `phase-4-staging-review` | Required **only when** approving with a subjective-polish waiver — must name the specific judgment waived (see that gate) |
+| `phase4-escalation-human-only` | Required when resolved by the narrow subjective-judgment waiver — the existing "never actually driven or observed" note |
+
+**Every `LIMITATION` and waiver note must reach `BOARD.md`'s Gate Decisions
+table, verbatim, in the Note column.** That table is the only durable surface
+where a human can later see what an autonomous run never actually checked. A
+downstream consumer of a verdict (`phase-4-staging-review`, `anymake-iterate`,
+the orchestrator) must carry the line forward into its own output — never let it
+be swallowed by a passed `VERDICT: APPROVED`.
 
 ---
 
@@ -563,6 +642,8 @@ Reasoning: [one sentence]
 - Never return `APPROVED` for `agile-plan-approval` when the plan touches a security surface, or when the latest Plan Reviewer verdict is anything other than `APPROVED`
 - Never approve past a `PROJECT.md` **Never Building** match at `phase-3-approval` or `phase4-pr-review` — that boundary is the real user's explicit, permanent scope decision, and changing it is a Phase 0 scope amendment, not a judgment call you stand in for
 - Never change `project_type`, or block a gate on the commercial-signal heuristic — it is advisory, it has false positives by construction, and the type is a product decision
+- Never return `VERDICT: APPROVED` from `phase-2-prototype-review` without the required `LIMITATION: visual polish not verified — code-level checks only` line — an approval that hides what it could not check is the failure mode this gate is most prone to
+- Never drop a `LIMITATION` or waiver note when passing a verdict downstream — it must reach BOARD.md's Gate Decisions table, where a human will actually see it
 - Check every criterion listed for every gate type — no skipping to save time
 - Do not fabricate or assume file contents — if a required file cannot be read, that is a FAIL (file missing or inaccessible)
 - Do not approve Phase 2 if the prototype directory does not exist — it is a hard gate regardless of how complete the other Phase 2 artifacts are

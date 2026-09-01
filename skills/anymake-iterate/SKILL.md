@@ -55,12 +55,44 @@ A **user-reported** defect ("this button isn't working") goes through
 and independent plan review before any code. Jumping straight to a fix is the
 ad-hoc failure mode that skill exists to prevent.
 
-**Emergency fast path (explicit user request only):** for a production-down
-defect where the user explicitly asks to skip the plan-review loop, write one
-story with the repro + fix as acceptance criteria, run it through
-`anymake-build-loop` (security checklist still applies), deploy, confirm
-resolved — then backfill a tracking issue with the merge SHA and revert command.
-Don't let urgency skip validation.
+**Emergency fast path (explicit user request only).** This path skips the
+Solution Architect and Plan Reviewer entirely, so its entry condition has to be
+checkable rather than asserted. Both of the following must hold:
+
+1. **The user explicitly asks to skip the plan-review loop.** Not implied by
+   urgency, tone, or the word "urgent" — an explicit request.
+2. **A named, currently-true production condition**, at least one of:
+   - The project's error-tracking or monitoring tool is **showing a live
+     incident right now** — an open alert, a firing monitor, an error-rate
+     spike. Look at it; don't infer it.
+   - The user **states that production is currently returning errors to real
+     users** — not that it might, not that a bug exists, but that it is
+     happening now.
+   - Production is **returning 5xx or is unreachable** on a check you run
+     yourself against the production URL.
+   - A **data-loss or security-exposure** condition is live in production
+     (customer data being corrupted, or exposed, as we speak).
+
+If the second condition is not met, this is a normal bug — route it through
+`anymake-agile` and say so plainly: *"Production isn't currently down, so this
+goes through the normal plan-review loop. If you're seeing live errors, tell me
+what you're seeing and I'll take the fast path."* A serious bug that is not
+currently breaking production for real users is still a normal bug; "this is
+important" is not the condition.
+
+**Log the condition verbatim.** Whatever satisfied condition 2 — the alert name
+and timestamp, the user's exact words, the status code you observed — is
+recorded **verbatim** in the backfilled tracking issue, alongside the merge SHA
+and revert command. Not paraphrased, not summarized as "production was down."
+This is what makes the fast path auditable after the fact: someone reviewing the
+project later can see exactly what justified skipping plan review, and can tell
+a real incident from a habit.
+
+Then: write one story with the repro + fix as acceptance criteria, run it
+through `anymake-build-loop` (the security checklist still applies in full, and
+the Experience Runner still runs), deploy, confirm resolved, and backfill the
+tracking issue. Don't let urgency skip validation — the fast path skips
+*planning*, never *verification*.
 
 ## Periodic project-type re-check (advisory)
 
