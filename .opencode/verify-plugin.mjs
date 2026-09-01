@@ -926,5 +926,81 @@ console.log('\n[17] Kanban renders every fixture story into exactly one column')
   }
 }
 
+// 18. INV-018 chokepoint (remediation Phase 2). Greps every AGENTS/*.md and
+//     skills/*/SKILL.md for references to the host's raw dispatch primitive.
+//     `anymake-dispatch/SKILL.md` is the seam itself and is exempt wholesale;
+//     `AGENTS/orchestrator.md`'s Step 0 capability check legitimately names the
+//     tool to test for its presence. Everywhere else, a mention is only allowed
+//     when it is either (a) prohibitive ("do not call the Agent tool directly"),
+//     or (b) inside a paragraph carrying the explicit research-delegation
+//     exemption block, per AGENTS/arbiter.md §"INV-018 Scope".
+//     This is what would have caught anymake-build-loop and
+//     anymake-experience-check instructing the raw spawn.
+console.log('\n[18] INV-018 dispatch chokepoint (no unlisted raw Agent/Task spawns)');
+{
+  // The arbiter must actually carry the scope decision the call sites cite.
+  const arbiter = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8');
+  if (arbiter.includes('INV-018 Scope') &&
+      /read-only research delegation[\s\S]{0,200}exempt/i.test(arbiter)) {
+    ok('AGENTS/arbiter.md: carries the durable INV-018 scope decision');
+  } else {
+    bad('AGENTS/arbiter.md: missing the INV-018 scope section (the exemption must be a recorded decision, not implicit per-file wording)');
+  }
+
+  const PRIMITIVE = /\bAgent\s*\(|\bAgent\/(?:sub)?[Aa]gent tool|\bAgent\/Task tool|`Agent`\s*(?:\/\s*`?Task`?\s*)?tool|\bAgent tool\b|\bTask tool\b|\bsubagent tool\b/;
+  // Wording that makes the mention a prohibition rather than an instruction.
+  const PROHIBITIVE = /\b(?:never|do not|don't|not|rather than|instead of)\b[^.\n]{0,80}(?:call|use|spawn|invoke)/i;
+  const EXEMPT_MARKER = 'Exempt: research delegation (INV-018)';
+
+  const targets = [
+    ...fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => ({ rel: path.join('AGENTS', f), abs: path.join(AGENTS_DIR, f) })),
+    ...dirs.filter((d) => d !== 'anymake-dispatch')
+      .map((d) => ({ rel: path.join('skills', d, 'SKILL.md'), abs: path.join(SKILLS_DIR, d, 'SKILL.md') })),
+  ];
+
+  let violations = 0;
+  for (const { rel, abs } of targets) {
+    const lines = fs.readFileSync(abs, 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!PRIMITIVE.test(line)) continue;
+      // Allowed: the orchestrator's Step 0 capability check (it must name the
+      // tool to test whether the host provides it at all).
+      if (rel === 'AGENTS/orchestrator.md' && i < 25) continue;
+      // Test the prohibition across the wrapped line too — "do not call" and
+      // "the Agent tool directly" routinely land on separate markdown lines.
+      const joined = (lines[i - 1] || '') + ' ' + line;
+      if (PROHIBITIVE.test(joined)) continue;
+      // Allowed: a mention describing what the dispatch skill wraps, or the
+      // host's tool as a property of the environment rather than a call.
+      if (/anymake-dispatch|the skill (?:uses|wraps)|backend dispatch primitive|host'?s (?:Agent\/Task |dispatch )?(?:tool|primitive)|Wraps the host/i.test(joined)) continue;
+      // Allowed: inside an explicitly-marked research-delegation exemption.
+      const window = lines.slice(Math.max(0, i - 6), i + 8).join('\n');
+      if (window.includes(EXEMPT_MARKER)) continue;
+      bad(`${rel}:${i + 1}: names the host's raw dispatch primitive without routing through anymake-dispatch or citing the research exemption → ${line.trim().slice(0, 110)}`);
+      violations++;
+    }
+  }
+  if (violations === 0) ok(`INV-018: no unlisted raw dispatch instructions across ${targets.length} instruction files`);
+
+  // The two files the audit caught must now read like orchestrator.md does.
+  for (const skill of ['anymake-build-loop', 'anymake-experience-check']) {
+    const body = fs.readFileSync(path.join(SKILLS_DIR, skill, 'SKILL.md'), 'utf8');
+    if (body.includes('anymake-dispatch') && body.includes('INV-018')) {
+      ok(`skills/${skill}/SKILL.md: routes dispatch through anymake-dispatch (INV-018)`);
+    } else {
+      bad(`skills/${skill}/SKILL.md: does not route its spawns through anymake-dispatch`);
+    }
+  }
+  // The experience-check skill must carry a real DISPATCH request, matching
+  // Phase 1's corrected case-insensitive VERDICT grep.
+  const expCheck = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-experience-check', 'SKILL.md'), 'utf8');
+  if (/DISPATCH \{[\s\S]*?anymake-experience-runner[\s\S]*?output_check[\s\S]*?VERDICT:/.test(expCheck)) {
+    ok('skills/anymake-experience-check/SKILL.md: DISPATCH request carries output_artifact + a VERDICT output_check');
+  } else {
+    bad('skills/anymake-experience-check/SKILL.md: missing a DISPATCH request with output_check');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

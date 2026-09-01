@@ -44,9 +44,24 @@ or an existing repo). It does **not** run the phase machine — it builds a back
 | **Validator** | `AGENTS/validator.md` | Checks every acceptance criterion against the implementation, runs the security checklist, defers Human-Only criteria with §3a coverage to the Experience Runner rather than escalating them, returns PASS / FAIL / ESCALATE. |
 | **Experience Runner** | `AGENTS/experience-runner.md` | Checks out the branch, launches the real app per `docs/environment.md`, and executes every scenario in the task brief's §3a — clicking, typing, running commands, sending requests — comparing the actual observed result to the scripted expectation. Diagnoses failures with a file:line pointer; never edits code. Returns PASS / FAIL / ESCALATE. |
 
-**Each stage MUST be a separate sub-agent (the `Agent`/subagent tool).** Collapsing
-orchestrator + planner + worker + validator + experience runner into one context
-defeats the architecture — this is the cardinal anti-pattern.
+**Each stage MUST be a separate sub-agent, and every one of them is dispatched
+through the `anymake-dispatch` skill** (INV-018). For the Planner, Worker,
+Validator, and Experience Runner alike: assemble a `DISPATCH` request and invoke
+the skill — do not call the Agent tool directly. Each of these returns a
+role-bearing deliverable (brief, code, verdict), so each is in scope per
+`AGENTS/arbiter.md` §"INV-018 Scope". The skill supplies the pre-dispatch prompt
+assembly (WRITE THE FILE FIRST + pre-established facts), the mandatory
+post-dispatch `output_check`, the canonical RETRY CONTEXT on re-dispatch, and the
+dispatch log line — none of which a raw spawn gets. This applies to single
+dispatches exactly as it does to `dispatch_parallel`; the parallel mode is a
+loop over `DISPATCH` requests, not a separate path.
+
+`AGENTS/orchestrator.md` carries the exact `DISPATCH` request shape for each of
+the four stages, including each one's `output_artifact` and `output_check` —
+use those verbatim rather than composing new ones here.
+
+Collapsing orchestrator + planner + worker + validator + experience runner into
+one context defeats the architecture — this is the cardinal anti-pattern.
 
 ## How to run it
 
@@ -58,15 +73,16 @@ defeats the architecture — this is the cardinal anti-pattern.
 3. **Per iteration (team-lead loop):** the orchestrator reconciles
    `board-state.json`, monitors in-flight stories for stalls/fails, and
    dispatches ready non-conflicting stories up to `concurrency.max` (default 3)
-   concurrently. Each ready story gets: a Planner sub-agent to write the task
+   concurrently. Each ready story gets: a Planner dispatch to write the task
    brief (`TEMPLATES/task-brief.md` — story + acceptance criteria + the type's
    build order + patterns from `CONVENTIONS.md` + §3a Experience Script from
    `docs/environment.md` + `touches_files` for conflict detection); a
-   completeness check; then a Worker sub-agent in its own git worktree.
-4. **Per PR:** spawn a Validator sub-agent; it returns PASS / FAIL / ESCALATE
+   completeness check; then a Worker dispatch in its own git worktree. Every
+   one of these goes through `anymake-dispatch` (INV-018).
+4. **Per PR:** dispatch a Validator through `anymake-dispatch`; it returns PASS / FAIL / ESCALATE
    using `TEMPLATES/validation-report.md`.
-5. **Per Validator PASS (unless §3a is `N/A`):** spawn an Experience Runner
-   sub-agent; it launches the app and drives it through every §3a scenario,
+5. **Per Validator PASS (unless §3a is `N/A`):** dispatch an Experience Runner
+   through `anymake-dispatch`; it launches the app and drives it through every §3a scenario,
    returning PASS / FAIL / ESCALATE using `TEMPLATES/experience-report.md`. A
    story is not done on a Validator PASS alone.
 6. **Apply policies** (`AGENTS/arbiter.md`): retry matrix (per-story — a FAIL
@@ -109,4 +125,4 @@ Step 4.5 (security review) and 4.6 (staging review).
 - Letting the board drift from reality.
 - "No test suite" — every story with runtime-verifiable criteria gets automated tests.
 - Parallelizing stages within a story — each story's Planner → Worker → Validator → Experience Runner pipeline is strictly sequential. Parallelism is at the story level only (ADR-003 / INV-002).
-- Bypassing `anymake-dispatch` for parallel dispatch — `dispatch_parallel` is a mode OF the skill, not a raw Agent/Task call (INV-018).
+- Bypassing `anymake-dispatch` for **any** stage dispatch — Planner, Worker, Validator, and Experience Runner all go through the skill, single or parallel (`dispatch_parallel` is a mode OF the skill, not a raw Agent/Task call). INV-018; scope defined in `AGENTS/arbiter.md` §"INV-018 Scope".

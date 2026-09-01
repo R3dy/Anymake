@@ -53,8 +53,15 @@ separation as Worker/Validator in Phase 4).
 - `PROJECT_TYPES/[project_type]/manifest.md` — success model and gate deltas
 - The actual codebase — for verifying the plan's evidence
 
-Delegate broad code searches to a sub-agent (e.g. `Explore`) to keep your
-context clean.
+Delegate broad code searches to the host's generic research agent (e.g.
+`Explore`) to keep your context clean.
+
+> **Exempt: research delegation (INV-018).** This is read-only research, not a
+> role-bearing dispatch — it returns findings you then reason about yourself, not
+> a brief, verdict, plan, or review the system acts on. It is therefore exempt
+> from the `anymake-dispatch` chokepoint per `AGENTS/arbiter.md` §"INV-018
+> Scope". Anything that produces a deliverable another agent consumes is **not**
+> exempt and goes through the skill.
 
 ---
 

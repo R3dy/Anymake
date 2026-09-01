@@ -4,6 +4,33 @@ The **Arbiter** is the one every other agent defers to: the authoritative rules 
 
 ---
 
+## INV-018 Scope — What Counts as Dispatch
+
+INV-018 routes **all** sub-agent dispatch through the `anymake-dispatch` skill.
+This section is the authoritative definition of what that covers, so the
+boundary is a decision recorded once rather than re-litigated per file.
+
+**Read-only research delegation (e.g. to the host's generic Explore agent) is
+exempt from the dispatch chokepoint; any dispatch that produces a role-bearing
+deliverable (brief, code, verdict, plan, review) is not.**
+
+| Delegation | Through `anymake-dispatch`? | Why |
+|------------|-----------------------------|-----|
+| Planner, Worker, Validator, Experience Runner, Product Owner Proxy, Cartographer, Solution Architect, Plan Reviewer | **Required** | Each returns a role-bearing deliverable the system then acts on. The hardening (WRITE THE FILE FIRST, mandatory post-dispatch verification, canonical RETRY CONTEXT, the dispatch log line) exists because these deliverables gate real decisions. |
+| A broad codebase search handed to the host's generic research agent, purely to save context | **Exempt** | It returns findings the delegating agent then reasons about itself — no verdict, no artifact, no gate. There is no deliverable to verify and no retry budget to spend, so the hardening has nothing to harden. |
+
+The test is the **deliverable**, not the tool: if the result is a file, a
+verdict, or a decision another agent will act on without re-deriving it, it is
+role-bearing and goes through the skill. If the delegating agent still has to
+do the actual work with what comes back, it is research.
+
+An exempt delegation must say so explicitly at the call site, citing this
+section, so the exemption is visible to a reader and to the harness (which
+greps for unlisted references to the host's dispatch primitive). Silent
+exemptions read identically to violations.
+
+---
+
 ## Model Tier Policy
 
 Every spawned agent runs at one of three importance tiers, so a project can use a strong model for judgment calls and a cheaper one for high-volume mechanical execution, without losing the trust boundary each role already enforces. The tier is set once, directly in each agent's own file (`AGENTS/*.md` frontmatter, `tier: 1|2|3`) — not scattered across a separate config that could drift out of sync with what the agent actually does.
