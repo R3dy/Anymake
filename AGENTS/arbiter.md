@@ -78,9 +78,9 @@ A per-agent `opencode.json` override always wins over the tier env var for that 
 | Condition | Review requirement |
 |-----------|-------------------|
 | PR #1, #2, or #3 overall in Phase 4 | your review is required — always |
-| Story title or technical tasks contain "webhook" | your review is required — always, regardless of PR count |
+| Story implements an inbound third-party callback / event handler / delivery endpoint (webhook, callback, push receiver, OAuth redirect, payment return URL, external queue subscriber) | the real user's review is required — always, regardless of PR count. See §"Inbound third-party callback override" — matched by meaning, not by the word "webhook" |
 | Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | your review is required — always, regardless of PR count |
-| PR #4+, no webhook keyword, and no ADR touched | Autonomous merge after CI passes |
+| PR #4+, no inbound third-party callback, and no ADR touched | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 
 PR count is cumulative across all Phase 4 stories. It is not reset per milestone.
@@ -175,8 +175,28 @@ Story ordering within a milestone follows the dependency graph. Stories with no 
 
 ## Special Override Rules
 
-**Webhook handler override:**
-Any story whose title or technical task list contains the word "webhook" requires your review of the PR regardless of the current PR count. The orchestrator checks for this keyword when evaluating the PR review rule after each validation PASS.
+**Inbound third-party callback override** (formerly the "webhook" keyword match):
+Any story implementing an **inbound callback, event handler, or delivery
+endpoint invoked by a third-party service** requires the real user's review of
+the PR regardless of the current PR count — regardless of naming. Webhooks are
+the leading example and the common case; so are callbacks, event handlers, push
+notification receivers, OAuth/SSO redirect and callback routes, payment-provider
+return URLs, queue and pub/sub subscribers fed by an external system, and
+polling consumers of an external event feed.
+
+The test is the **trust boundary**, not the vocabulary: does this code path
+execute in response to a request the project does not originate, carrying data
+the project did not author? If yes, it needs review. These handlers are singled
+out because they are authenticated differently from the rest of the app (shared
+secrets, signature verification, replay windows), they are reachable from the
+public internet by design, and a mistake in one is exploitable without any user
+account.
+
+The orchestrator evaluates this against the story title, its technical task
+list, and the brief's §6a — matching on meaning, not on the literal string
+"webhook". When it is genuinely unclear whether a story crosses that boundary,
+require the review: a needless review costs one round trip, a missed one ships
+an unreviewed public entry point.
 
 **ADR-touching override:**
 Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires your review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
@@ -275,7 +295,7 @@ Governs the post-launch agile flow (`anymake-agile` skill): Solution Architect a
 | `NEEDS CHANGES` (round 1 or 2) | Re-spawn Architect with the review report; it resolves every numbered comment; fresh Reviewer next round |
 | `NEEDS CHANGES` (3rd time) | Stop the loop — escalate to user with the plan and unresolved comments. The Reviewer never lowers the bar to end a loop |
 | `ESCALATE` from Reviewer | Straight to the real user — never retried |
-| Security-relevant plan (auth, authz, tenant isolation, secrets, payments, webhooks) | Final approval is always the real user, in every mode |
+| Security-relevant plan (auth, authz, tenant isolation, secrets, payments, or any inbound third-party callback — see §"Inbound third-party callback override") | Final approval is always the real user, in every mode |
 | Intent conflict found in a plan | Intent conflict gate (see Intent Conflict Policy) before the plan may proceed — never resolved by Architect or Reviewer |
 
 **User phrases at the agile approval gate:**

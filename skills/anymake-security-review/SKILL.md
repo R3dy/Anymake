@@ -48,7 +48,10 @@ Return one of three, using the same lexicon as the Validator and Product Owner P
 - **PASS** — every applicable box checked. Safe to merge / proceed to staging / launch.
 - **FAIL** — one or more fixable issues. Return the specific items so they can be
   fixed (bounded by the retry policy in `AGENTS/arbiter.md`), then re-review.
-- **ESCALATE TO USER** — anything touching **auth, payments, or webhooks**, or a
+- **ESCALATE TO USER** — anything touching **auth, payments, or an inbound
+  third-party callback** (webhook, event handler, push receiver, OAuth redirect,
+  payment return URL, external queue subscriber — `AGENTS/arbiter.md`
+  §"Inbound third-party callback override" defines the trust-boundary test), or a
   finding you can't resolve. This always pauses for a human — **even in
   autonomous mode**. That override is absolute.
 

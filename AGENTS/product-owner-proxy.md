@@ -438,7 +438,9 @@ engineering review — that is the Plan Reviewer's job, already done.
 **Rules (apply in order — stop at first escalation match):**
 
 1. **Security-relevant plan** — if the plan touches authentication, authorization,
-   tenant isolation, secret handling, payments, or webhooks → `VERDICT: ESCALATE
+   tenant isolation, secret handling, payments, or any inbound third-party
+   callback (see `AGENTS/arbiter.md` §"Inbound third-party callback override")
+   → `VERDICT: ESCALATE
    TO USER: Plan for issue #[N] touches a security surface ([which]). Final
    approval belongs to the real user in every mode.`
 

@@ -319,9 +319,9 @@ All agents read `AGENTS/arbiter.md` before operating. It defines:
 **PR review policy:**
 | Condition | Normal mode | Autonomous mode |
 |-----------|-------------|----------------|
-| PR number ≤ 3 | Escalate to user for review | Spawn Product Owner Proxy to review |
-| Story involves webhooks | Escalate to user for review | Spawn Product Owner Proxy to review |
-| Story touches an Active Decision (ADR) | Escalate to user for review | Spawn Product Owner Proxy to review |
+| PR number ≤ 3 | Escalate to user for review | Dispatch Product Owner Proxy to review |
+| Story implements an inbound third-party callback (webhook, event handler, push receiver, OAuth redirect, payment return URL, external queue subscriber) | Escalate to user for review | Dispatch Product Owner Proxy to review |
+| Story touches an Active Decision (ADR) | Escalate to user for review | Dispatch Product Owner Proxy to review |
 | Security failure in validation | Escalate to user — always | Escalate to user — always (proxy not used) |
 | All other PRs | Orchestrator merges on Validator PASS | Orchestrator merges on Validator PASS |
 

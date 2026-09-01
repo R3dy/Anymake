@@ -292,7 +292,7 @@ When amending for retry, append the canonical RETRY CONTEXT block per `anymake-d
 
 Determine review requirement using `AGENTS/arbiter.md` PR review rules:
 - PR #1, #2, or #3 overall → your review is required
-- Story title or technical tasks contain the word "webhook" → your review is required regardless of PR count
+- Story implements an inbound third-party callback, event handler, or delivery endpoint → the real user's review is required regardless of PR count. Match on meaning, not on the literal word "webhook" — see `AGENTS/arbiter.md` §"Inbound third-party callback override" for the trust-boundary test and the full example list. If it is genuinely unclear, require the review.
 - The brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches → your review is required regardless of PR count (the planner already computed this into §8 — trust it, don't re-derive)
 - All other PRs → merge autonomously after CI passes
 
@@ -345,7 +345,7 @@ same way as `done`.
 👁 PR REVIEW REQUESTED — Story N.N: [Title]
 
 PR #[N]: [PR URL]
-Why your review: [PR #1/2/3 | webhook handler | touches ADR-N]
+Why review is required: [PR #1/2/3 | inbound third-party callback (webhook / OAuth redirect / payment return URL / external queue subscriber) | touches ADR-N]
 
 Validation result: PASS ✅
 All acceptance criteria satisfied. Security checks passed.
@@ -435,7 +435,7 @@ Read the proxy's returned phrase and act on it:
 
 ## PR Count Tracking
 
-Maintain a cumulative count of PRs merged during Phase 4 (not reset per milestone). Track in the Run Log. PRs #1, #2, #3 require your review. From #4 onward, merge autonomously unless the webhook or ADR-touching override applies.
+Maintain a cumulative count of PRs merged during Phase 4 (not reset per milestone). Track in the Run Log. PRs #1, #2, #3 require your review. From #4 onward, merge autonomously unless the inbound-third-party-callback or ADR-touching override applies.
 
 ---
 
