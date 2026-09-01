@@ -108,10 +108,56 @@ Run this for every story, regardless of the acceptance criteria content. A secur
 - [ ] User input is validated before processing (schema validation library called)
 - [ ] Database queries use parameterized queries (no string concatenation in SQL)
 - [ ] File upload validation present (if story involves uploads)
-- [ ] No secrets or API keys in committed code (scan for `sk_`, `pk_`, connection strings)
+- [ ] No secrets or API keys in committed code — see **Secret signatures** below
 - [ ] API responses do not expose stack traces or internal system fields
 
 Check each item against the code on the branch. Mark PASS, FAIL, or N/A (with reason).
+
+### Secret signatures
+
+A **non-exhaustive, extensible** list — treat it as a starting set, not a
+whitelist of the only things that count. A committed credential is a security
+FAIL (so: `ESCALATE`) whether or not it matches a pattern here. Report the
+file:line and the *kind* of secret; never paste the secret itself into the
+report.
+
+| Kind | Signature |
+|------|-----------|
+| Stripe-style API keys | `sk_live_`, `sk_test_`, `pk_live_`, `pk_test_`, `rk_live_` |
+| AWS | `AKIA`/`ASIA` + 16 uppercase alphanumerics; `aws_secret_access_key` |
+| Google / GCP | `AIza` + 35 chars; service-account JSON (`"type": "service_account"`, `"private_key":`) |
+| GitHub | `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`, `github_pat_` |
+| Slack | `xoxb-`, `xoxp-`, `xoxa-`, `xapp-` |
+| OpenAI / Anthropic | `sk-proj-`, `sk-ant-` |
+| JWTs | `eyJ` + base64url + two `.`-separated segments (a signed token committed as a literal — not the verification code) |
+| Bearer tokens | `Authorization: Bearer <literal>`, `Bearer ` followed by a long literal |
+| Private keys | `-----BEGIN (RSA\|EC\|OPENSSH\|PGP\|DSA)? ?PRIVATE KEY-----` |
+| Connection strings | `postgres://`, `mysql://`, `mongodb+srv://`, `redis://`, `amqp://` with embedded credentials |
+| Generic assignment | `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `access_key`, `client_secret`, `private_key` assigned a non-empty string literal that is not a placeholder |
+
+**High-entropy heuristic** (catches formats not listed above, which is the
+point): flag any string literal of 24+ characters that is base64/hex/base32-ish
+and has no natural-language structure, when it sits in a credential-shaped
+context — assigned to a name from the generic-assignment row, passed to an auth
+or client constructor, or placed in a header or connection URL. Expect false
+positives here (hashes, fixtures, minified blobs, test vectors); resolve them by
+reading the surrounding code, and record why each one is benign rather than
+silently dropping it.
+
+**Not a finding:** a documented placeholder (`sk_test_xxx`, `<YOUR_KEY_HERE>`,
+`changeme`), a value read from the environment, or a secret in a file the repo
+demonstrably ignores. Verify the ignore rule actually covers the path before
+accepting that last one — a `.env` committed before it was gitignored is still
+committed.
+
+**Also check:** `.env`, `.env.*`, credential files, and cloud config committed
+by this diff at all, and the diff's own history — a secret added in one commit
+and removed in a later one in the same branch is still in the branch's history
+and still leaked. Rotation, not just deletion, is the remedy; say so in the
+report.
+
+Extend this list when a project's stack introduces a new credential format —
+that is a `CONVENTIONS.md` entry and, if it generalizes, a change here.
 
 ---
 

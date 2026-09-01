@@ -59,9 +59,20 @@ Return one of three, using the same lexicon as the Validator and Product Owner P
 
 1. Scope it (one PR, or the whole product) and load the right checklist tier from its canonical source above.
 2. Read the code for each item — don't assume; trace inputs to sinks
-   (delegate broad searches to a sub-agent to keep context focused).
+   (delegate broad searches to the host's generic research agent to keep context
+   focused).
+
+   > **Exempt: research delegation (INV-018).** Read-only search that returns
+   > findings you reason about yourself, not a role-bearing deliverable — exempt
+   > per `AGENTS/arbiter.md` §"INV-018 Scope".
 3. Run available automated checks: dependency/vulnerability scan, secret scan,
-   static analysis if configured.
+   static analysis. **"If configured" is not a pass.** Where no tooling is
+   configured, you still owe the manual equivalent — the Secret signatures table
+   in `AGENTS/validator.md` (patterns plus the high-entropy heuristic) applied by
+   reading, and a manual look at dependency versions against known advisories —
+   and the report must say which checks were manual and that no automated
+   scanner ran. A repo with no tooling can reach PASS; it cannot reach PASS
+   silently, and "no scanner configured" is itself a finding worth recording.
 4. Record findings against each box in `TEMPLATES/validation-report.md` style.
 5. Emit the verdict; on FAIL list specific remediations; on security-sensitive
    findings, ESCALATE.
