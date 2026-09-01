@@ -1,6 +1,6 @@
 {
   "name": "anymake",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": ".opencode/plugins/anymake.js",
   "description": "Anymake — Agentic build system. Takes any software idea (SaaS, CLI, library, API, internal tool, static site, or hobby project) from raw concept to a finished, shipped result.",

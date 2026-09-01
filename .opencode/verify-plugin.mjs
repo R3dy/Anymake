@@ -1398,5 +1398,91 @@ console.log('\n[23] Autonomous-mode gate honesty (LIMITATION + waiver discipline
   }
 }
 
+// 24. Build-loop dry-run (remediation Phase 8). [15] proves each output_check
+//     matches its TEMPLATE. That is necessary but not sufficient: agents write
+//     deliverables, not templates. This runs the orchestrator's real greps
+//     against fixture deliverables in the shape an agent actually produces —
+//     a completed brief with a filled §3a and an appended RESULT, a validation
+//     FAIL, an intent-conflict ESCALATE, and an experience PASS.
+console.log('\n[24] Build-loop dry-run (output_checks against real deliverables)');
+{
+  const FIX = path.join(ROOT, '.opencode', 'fixtures', 'build-loop');
+  // Pull the live patterns out of orchestrator.md — if someone edits a grep
+  // there, this dry-run follows it rather than testing a stale copy.
+  const orch = fs.readFileSync(path.join(AGENTS_DIR, 'orchestrator.md'), 'utf8');
+  const byAgent = {};
+  for (const m of orch.matchAll(/DISPATCH \{([\s\S]*?)\n\}/g)) {
+    const agent = m[1].match(/agent:\s*"([^"]+)"/)?.[1];
+    const check = m[1].match(/output_check:\s*"([^"]+)"/)?.[1];
+    if (agent && check && !byAgent[agent]) byAgent[agent] = check;
+  }
+
+  const runCheck = (check, file) => {
+    const cmd = check.replace(/<[^>]*>/g, path.join(FIX, file));
+    const argv = [];
+    let cur = '', quoted = false, started = false;
+    for (const c of cmd) {
+      if (c === "'") { quoted = !quoted; started = true; continue; }
+      if (!quoted && c === '#' && !started) break;
+      if (!quoted && /\s/.test(c)) { if (started) { argv.push(cur); cur = ''; started = false; } continue; }
+      cur += c; started = true;
+    }
+    if (started) argv.push(cur);
+    try {
+      return parseInt(execFileSync(argv[0], argv.slice(1), { encoding: 'utf8' }).trim().split('\n').pop(), 10) || 0;
+    } catch (e) { if (e.status === 1) return 0; throw e; }
+  };
+
+  const CASES = [
+    ['anymake-planner', 'task-brief-story-3.1.md', 'a completed brief with a filled §3a Experience Script'],
+    ['anymake-worker', 'task-brief-story-3.1.md', 'the same brief after the Worker appended its RESULT'],
+    ['anymake-validator', 'validation-report-story-3.2.md', 'a validation report with VERDICT: FAIL'],
+    ['anymake-validator', 'validation-report-story-3.3.md', 'a validation report with VERDICT: ESCALATE (intent-conflict)'],
+    ['anymake-experience-runner', 'experience-report-story-3.1.md', 'an experience report with VERDICT: PASS'],
+  ];
+  for (const [agent, file, desc] of CASES) {
+    const check = byAgent[agent];
+    if (!check) { bad(`dry-run: no output_check found in orchestrator.md for ${agent}`); continue; }
+    const hits = runCheck(check, file);
+    if (hits > 0) {
+      ok(`dry-run: ${agent}'s output_check passes on ${desc} (${hits} hit${hits === 1 ? '' : 's'})`);
+    } else {
+      bad(`dry-run: ${agent}'s output_check FAILS on a valid deliverable — ${desc} (${file}). This is the exact bug Phase 1 fixed; it has regressed.`);
+    }
+  }
+
+  // The Validator check must fire on every verdict, not only PASS — an
+  // output_check that only matched approvals would hide FAIL and ESCALATE
+  // deliverables as "missing", turning real failures into spurious retries.
+  const vCheck = byAgent['anymake-validator'];
+  const fail = runCheck(vCheck, 'validation-report-story-3.2.md');
+  const esc = runCheck(vCheck, 'validation-report-story-3.3.md');
+  if (fail > 0 && esc > 0) {
+    ok('dry-run: the Validator output_check confirms a verdict LANDED regardless of whether it was PASS, FAIL, or ESCALATE');
+  } else {
+    bad('dry-run: the Validator output_check does not fire on non-PASS verdicts — a FAIL or ESCALATE report would read as a missing deliverable');
+  }
+
+  // The two deliberately-broken stories must carry the failure modes the plan
+  // asks the dry-run to exercise.
+  const f32 = fs.readFileSync(path.join(FIX, 'validation-report-story-3.2.md'), 'utf8');
+  const f33 = fs.readFileSync(path.join(FIX, 'validation-report-story-3.3.md'), 'utf8');
+  if (/VERDICT: FAIL/.test(f32)) ok('dry-run fixture: story 3.2 exercises the validation-FAIL retry path');
+  else bad('dry-run fixture: story 3.2 is not a validation FAIL');
+  if (/VERDICT: ESCALATE/.test(f33) && /intent-conflict/.test(f33)) {
+    ok('dry-run fixture: story 3.3 exercises the intent-conflict escalation path');
+  } else {
+    bad('dry-run fixture: story 3.3 is not an intent-conflict escalation');
+  }
+  // And a deliberately-broken board write must still be caught.
+  let rejected = false;
+  try {
+    execFileSync('node', [path.join(ROOT, '.opencode', 'validate-board-state.mjs'),
+      path.join(ROOT, '.opencode', 'fixtures', 'board-state.invalid.json')], { encoding: 'utf8' });
+  } catch (e) { rejected = e.status === 1; }
+  if (rejected) ok('dry-run: a deliberately-broken board-state.json write is rejected by schema validation');
+  else bad('dry-run: a broken board-state.json write was NOT rejected');
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);
