@@ -122,12 +122,27 @@ the "would an original team member object?" gate — it catches changes that are
 *correct* against their acceptance criteria but *contradict the system's intent*.
 
 Read the story's **Intent Constraints** (task brief §6a) and the project's intent
-layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`). For each listed ADR and
-invariant, check the implementation on the branch:
+layer (`docs/DECISIONS.md`, `docs/INVARIANTS.md`). Check the implementation on
+the branch against **every decision and invariant listed in §6a, plus any other
+Active Decision or invariant the change plausibly touches even if the Planner
+didn't list it.**
 
-- [ ] No Active Decision in `DECISIONS.md` is contradicted by this change
-- [ ] No invariant in `INVARIANTS.md` (especially those named in §6a) is broken
+§6a is the Planner's best guess at the relevant surface, made before the code
+existed. You are reading the actual diff, so you know things the Planner could
+not. An omission from §6a is not a licence to skip a contradiction you can see
+— the Cartographer maintains the intent layer precisely so a change can be
+checked against the whole project's intent, not just the slice someone
+predicted.
+
+"Plausibly touches" in practice: scan `DECISIONS.md`'s Active entries and
+`INVARIANTS.md` in full, and check any whose subject matter overlaps a file,
+module, data model, external integration, or user-facing behavior this diff
+changes. You are not re-litigating decisions the diff never approaches.
+
+- [ ] No Active Decision in `DECISIONS.md` is contradicted by this change — §6a's list first, then any other Active Decision the diff plausibly touches
+- [ ] No invariant in `INVARIANTS.md` is broken — those named in §6a first, then any other the diff plausibly touches
 - [ ] The change does not undercut the project type's success model
+- [ ] If you found a contradiction with something §6a did **not** list, say so explicitly in the report — that is a brief-quality signal the Planner needs, separate from the verdict itself
 
 **A contradiction with no superseding decision is an automatic `ESCALATE`** — not
 a FAIL. Like security, intent conflicts are not the Worker's to resolve: changing
