@@ -62,6 +62,36 @@ story with the repro + fix as acceptance criteria, run it through
 resolved — then backfill a tracking issue with the merge SHA and revert command.
 Don't let urgency skip validation.
 
+## Periodic project-type re-check (advisory)
+
+Project type is chosen once in Phase 0 and then silently governs which gates
+run forever. This loop is where a project's real nature shows up over time — a
+`hobby` project that has acquired public hosting, sign-ups, or paying users is
+no longer the thing whose gates were skipped.
+
+Once per loop entry (not once per issue), check:
+
+- Does the deploy config show **public hosting** — a public URL, a hosted
+  platform, DNS/TLS, or an open sign-up path — while `project_type` is `hobby`
+  or `internal-tool`?
+- Do recent issues or the backlog describe **charging, pricing, subscriptions,
+  or paying customers** while the type is `hobby` or `internal-tool`?
+
+If either fires, surface one line and continue:
+
+```
+NOTE — project_type is [type], but [public hosting at <URL> | commercial
+signals in <issue/backlog ref>] suggests otherwise. That type skips [security
+checklist beyond committed secrets | monetization and legal requirements].
+Worth reconsidering — say "switch project type to [suggested]" if so.
+Continuing as [type].
+```
+
+**Advisory only.** Never auto-switch `project_type`, never block the loop, never
+repeat it more than once per loop entry. Changing project type is a product
+decision, and product decisions are the user's (`AGENTS.md`: no autonomous
+product decisions). See `AGENTS/arbiter.md` §"Commercial-signal check".
+
 ## Guardrails
 
 - **Still gated.** New scope goes through an approval (human or proxy) before

@@ -249,6 +249,79 @@ The Validator only falls back to `SKIP (human-only)` → `ESCALATE` (gate type `
 
 ---
 
+## Project-Type and Scope Guardrails
+
+Two checks that exist because the project type and the Phase 0 scope decision
+are both chosen once, early, and then silently govern which gates run for the
+rest of the build.
+
+### Commercial-signal check (ADVISORY — never blocking)
+
+Choosing `hobby` skips nearly the whole security checklist beyond literally
+committed secrets; `internal-tool` permanently skips monetization and legal
+requirements. Neither choice is ever re-examined, and nothing notices when a
+"hobby" project acquires paying customers.
+
+**The check:** when the project's own words describe commercial activity while
+`project_type` is `hobby` or `internal-tool`, surface a one-line prompt asking
+the real user to confirm the type. Signals, matched case-insensitively in
+`PROJECT.md`'s Problem, Solution, Target Audience, Revenue Model, and Success
+Definition sections: *charge, charging, pricing, price per, paying customer(s),
+paid tier, subscription, subscribe, MRR, ARR, revenue, monetize, monetization,
+billing, invoice, checkout, free trial, per seat, customers will pay*.
+For `internal-tool` additionally: *sign up, public launch, customers,
+marketing site, waitlist*.
+
+**The prompt** (exact shape — one line, then continue):
+
+```
+NOTE — possible project-type mismatch: PROJECT.md mentions [signal(s)] but
+project_type is [type], which skips [security checklist beyond committed
+secrets | monetization and legal requirements]. Confirm the type is right, or
+say "switch project type to [suggested]". Continuing as [type].
+```
+
+**Advisory means advisory.** It never blocks, never fails a gate, never changes
+`project_type`, and never repeats within the same gate evaluation. The heuristic
+has false positives by construction — a hobby project can legitimately mention
+what a commercial competitor charges — and switching type is a product decision,
+which is the real user's alone (`AGENTS.md`: no autonomous product decisions).
+A surfaced prompt the user does not answer is not an escalation; note it and
+proceed.
+
+### "Never building" scope check (BLOCKING)
+
+`PROJECT.md` → **Never Building** is the one scope decision the real user makes
+explicitly and permanently, and until now nothing ever checked a backlog against
+it. A story implementing an explicitly excluded feature is scope the user ruled
+out, not scope anyone forgot.
+
+**The check:** at `phase-3-approval` and `phase4-pr-review`, compare the
+backlog/story against every entry in `PROJECT.md`'s Never Building list. A match
+**fails the gate**, with a citation:
+
+```
+NEEDS CHANGES: Story [N.N] "[title]" implements "[feature]", which
+PROJECT.md's Never Building list excludes: "[verbatim Never Building entry]".
+Resolve by either (a) removing the story from the backlog, or (b) amending
+PROJECT.md's Never Building list through a Phase 0 scope amendment the real
+user approves. Do not proceed on the current backlog.
+```
+
+**Matching is by meaning, not string equality** — "Never building: a mobile app"
+excludes a story titled "React Native shell," and an exclusion of "user-to-user
+messaging" excludes "add comment threads." Judge whether a reasonable person
+reading the exclusion would consider this story an instance of it. When it is
+genuinely arguable, say so and let the real user decide (`ESCALATE TO USER`)
+rather than silently allowing or silently blocking.
+
+**This gate is not waivable in autonomous mode.** The Product Owner Proxy stands
+in for the user on judgment calls inside approved scope; it has no standing to
+re-open a scope boundary the user set. A Never Building match is a scope
+amendment, and scope amendments are the real user's.
+
+---
+
 ## Escalation Phrase Lexicon
 
 These are the exact phrases you use to unblock the orchestrator. The orchestrator only acts on these phrases — it does not infer intent from context.

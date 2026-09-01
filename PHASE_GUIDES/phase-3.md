@@ -186,6 +186,7 @@ You review epics and backlog. Key questions:
 - Are acceptance criteria specific enough to verify?
 - Does every story with user-observable behavior have an Experience Script, and does every Human-Only-style criterion have a matching scenario in it?
 - Is Monetization in Milestone 4 or earlier?
+- **Does any story implement something `PROJECT.md`'s "Never Building" list excludes?** Check the backlog against that list explicitly — it is the one scope boundary the user set permanently in Phase 0, and this is the last gate before it becomes code. A match blocks the gate: either drop the story, or amend the Never Building list as a Phase 0 scope amendment. See `AGENTS/arbiter.md` §'"Never building" scope check' — match by meaning, not by matching words.
 
 You say "solutioning complete, start building" → proceed to Phase 4.
 

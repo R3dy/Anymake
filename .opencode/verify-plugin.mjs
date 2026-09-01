@@ -1229,5 +1229,90 @@ console.log('\n[21] Pronoun convention ("you" = the agent; the human is "the rea
   }
 }
 
+// 22. Project-type and scope guardrails (remediation Phase 6). These are new
+//     BEHAVIOR, not bug fixes: the advisory can start asking questions at a
+//     previously-silent gate, and the Never Building check can start failing
+//     one. So the checks here assert both that the rules exist AND that the
+//     advisory's advisory-ness is stated everywhere it appears — an "advisory"
+//     heuristic that quietly hardens into a block is worse than none.
+console.log('\n[22] Project-type + scope guardrails (Phase 6)');
+{
+  const arbiter = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8');
+  if (/## Project-Type and Scope Guardrails/.test(arbiter)) {
+    ok('AGENTS/arbiter.md: guardrails defined once, centrally');
+  } else {
+    bad('AGENTS/arbiter.md: missing the Project-Type and Scope Guardrails section');
+  }
+  if (/ADVISORY — never blocking/i.test(arbiter) && /never (?:auto-)?block/i.test(arbiter)) {
+    ok('AGENTS/arbiter.md: commercial-signal check is stated as advisory and non-blocking');
+  } else {
+    bad('AGENTS/arbiter.md: commercial-signal check does not state that it never blocks');
+  }
+  if (/scope check \(BLOCKING\)/i.test(arbiter) && /not waivable in autonomous mode/i.test(arbiter)) {
+    ok('AGENTS/arbiter.md: Never Building check is blocking and not proxy-waivable');
+  } else {
+    bad('AGENTS/arbiter.md: Never Building check must be stated as blocking and non-waivable');
+  }
+
+  // Every site the plan requires the advisory to appear.
+  for (const rel of ['PHASE_GUIDES/phase-0.md', 'AGENTS/product-owner-proxy.md',
+                     'skills/anymake-iterate/SKILL.md', 'skills/anymake-deploy/SKILL.md']) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const hasCheck = /commercial-signal check|project-type re-check|project_type is \[type\]/i.test(body);
+    const saysAdvisory = /advisory/i.test(body);
+    const saysNoAutoSwitch = /never (?:auto-)?(?:switch|change) (?:the )?`?project_type`?|never change `project_type`/i.test(body);
+    if (hasCheck && saysAdvisory && saysNoAutoSwitch) {
+      ok(`${rel}: carries the advisory type check, stated as advisory and never auto-switching`);
+    } else {
+      if (!hasCheck) bad(`${rel}: missing the project-type advisory check`);
+      else if (!saysAdvisory) bad(`${rel}: type check does not say it is advisory`);
+      else bad(`${rel}: type check does not forbid auto-switching project_type`);
+    }
+  }
+
+  // The blocking check must be at BOTH gates the plan names, plus the human gate.
+  for (const [rel, gate] of [
+    ['AGENTS/product-owner-proxy.md', 'proxy gates'],
+    ['PHASE_GUIDES/phase-3.md', 'the phase-3 human gate'],
+  ]) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    if (/Never Building/i.test(body)) ok(`${rel}: Never Building check present at ${gate}`);
+    else bad(`${rel}: no Never Building scope check at ${gate}`);
+  }
+  const proxy = fs.readFileSync(path.join(AGENTS_DIR, 'product-owner-proxy.md'), 'utf8');
+  const proxyGateCount = (proxy.match(/Never Building/gi) || []).length;
+  if (proxyGateCount >= 2) {
+    ok(`AGENTS/product-owner-proxy.md: Never Building checked at both phase-3-approval and phase4-pr-review (${proxyGateCount} references)`);
+  } else {
+    bad('AGENTS/product-owner-proxy.md: Never Building must be checked at BOTH phase-3-approval and phase4-pr-review');
+  }
+  if (/Never approve past a `?PROJECT\.md`? \*\*Never Building\*\* match/i.test(proxy)) {
+    ok('AGENTS/product-owner-proxy.md: "never approve past a Never Building match" is in the must-never list');
+  } else {
+    bad('AGENTS/product-owner-proxy.md: missing the Never Building entry in its must-never list');
+  }
+
+  // Fixture behavior: the heuristic must separate these two, or it is useless.
+  // Mirrors the arbiter's documented signal list.
+  const SIGNALS = /\b(charge|charging|charges|pricing|paying customers?|paid tier|subscriptions?|subscribe|MRR|ARR|monetize|monetization|billing|invoice|checkout|free trial|per seat)\b/gi;
+  const score = (file) => {
+    const body = fs.readFileSync(path.join(ROOT, '.opencode', 'fixtures', file), 'utf8')
+      .split('\n').filter((l) => !l.trim().startsWith('<!--') && !/^\s{5}/.test(l)).join('\n');
+    return new Set((body.match(SIGNALS) || []).map((m) => m.toLowerCase())).size;
+  };
+  const legit = score('project.hobby-legit.md');
+  const mislabeled = score('project.hobby-mislabeled.md');
+  if (mislabeled > legit && mislabeled >= 3) {
+    ok(`commercial-signal heuristic separates the fixtures: mislabeled-as-hobby ${mislabeled} distinct signals vs. legitimately-hobby ${legit}`);
+  } else {
+    bad(`commercial-signal heuristic does not separate the fixtures (mislabeled ${mislabeled}, legit ${legit}) — it would fire on both or neither`);
+  }
+  if (legit <= 2) {
+    ok(`legitimately-hobby fixture stays below the noise floor (${legit} incidental signal(s)) — the advisory is the right severity for this`);
+  } else {
+    bad(`legitimately-hobby fixture trips ${legit} signals — proof the heuristic must stay advisory, never blocking`);
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

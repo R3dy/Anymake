@@ -56,6 +56,31 @@ The word "deploy" means different things per type:
    metrics dashboard.
 7. **Record** the release (version/tag, changelog) and update `PHASE_STATE.md`.
 
+## Project-type re-check before production (advisory)
+
+Production is the moment a `hobby` or `internal-tool` project stops being
+private in practice. Before deploying, if `project_type` is `hobby` or
+`internal-tool` and this deploy involves **public hosting** — a public URL,
+DNS/TLS, an open sign-up path, or a platform serving unauthenticated traffic —
+surface one line and continue:
+
+```
+NOTE — deploying project_type [type] to public hosting at [URL]. That type
+skips [the security checklist beyond committed secrets | monetization and legal
+requirements], which assumed private/personal use. Worth reconsidering the type
+before this goes live — say "switch project type to [suggested]" if so.
+Continuing as [type].
+```
+
+**Advisory only** — never auto-switch `project_type` and never block the deploy. It
+is a prompt to reconsider, not a gate. See `AGENTS/arbiter.md`
+§"Commercial-signal check".
+
+Note what this is *not*: a substitute for the pre-launch security gate. That
+gate (Step 5.1) runs on its own terms for every type, and this note does not
+change which checks it applies — only whether the user still thinks the type is
+right.
+
 ## Rollback
 
 Every production deploy must have a known rollback: previous release pinned,
