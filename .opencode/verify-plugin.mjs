@@ -1002,5 +1002,76 @@ console.log('\n[18] INV-018 dispatch chokepoint (no unlisted raw Agent/Task spaw
   }
 }
 
+// 19. Absolute-claim drift (remediation Phase 3). Root AGENTS.md summarizes ten
+//     detailed AGENTS/*.md specs. An absolute claim ("must never ...", "must
+//     ...") that appears only in the summary is drift: it either contradicts
+//     the spec or invents a rule the spec never states. Both are how
+//     "Orchestrator must never run two stories concurrently" outlived the
+//     concurrency model that replaced it.
+//
+//     Not NLP: each claim's distinctive content words must appear in the role's
+//     own file or in the arbiter (which roles defer to). A claim below the
+//     overlap threshold is reported for a human to reconcile — it is a prompt
+//     to check, and the fix is to update whichever file is stale.
+console.log('\n[19] Absolute-claim drift (AGENTS.md "must"/"never" rules trace to a spec)');
+{
+  const agentsMd = fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8');
+  const arbiterBody = fs.readFileSync(path.join(AGENTS_DIR, 'arbiter.md'), 'utf8').toLowerCase();
+
+  // AGENTS.md role heading -> the detailed file it summarizes.
+  const ROLE_FILES = {
+    'Orchestrator': 'orchestrator.md',
+    'Planner': 'planner.md',
+    'Worker': 'worker.md',
+    'Validator': 'validator.md',
+    'Experience Runner': 'experience-runner.md',
+    'Product Owner Proxy': 'product-owner-proxy.md',
+    'Cartographer': 'cartographer.md',
+    'Solution Architect': 'solution-architect.md',
+    'Plan Reviewer': 'plan-reviewer.md',
+  };
+  const STOP = new Set(['that','this','with','from','into','than','then','when','what','which','your','their','have','been','does','doing','make','made','only','also','even','just','same','such','they','them','there','here','over','under','without','before','after','because','while','about','never','always','must','not','the','and','for','its','it','a','an','of','to','in','on','is','are','be','or','by','as','at','one','two','all','any','own','per','via','see','use','used','using','something','anything','instead','rather','those','these','other','more','most','less','each','every','some','both','again','still','yet','way','thing','things','like','unless','into']);
+  const contentWords = (text) => [...new Set(
+    text.toLowerCase()
+      .replace(/`[^`]*`/g, ' ')            // drop code spans (paths, symbols)
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !STOP.has(w))
+  )];
+
+  const OVERLAP_MIN = 0.5;
+  let checked = 0;
+  let drifted = 0;
+
+  for (const [role, file] of Object.entries(ROLE_FILES)) {
+    const specPath = path.join(AGENTS_DIR, file);
+    if (!fs.existsSync(specPath)) { bad(`AGENTS.md summarizes ${role}, but AGENTS/${file} does not exist`); continue; }
+    const spec = fs.readFileSync(specPath, 'utf8').toLowerCase();
+
+    // The "**<Role> must never:**" / "**<Role> must:**" bullet lists.
+    const listRe = new RegExp(`\\*\\*${role} must(?: never)?:\\*\\*\\n((?:- .*\\n)+)`, 'g');
+    for (const m of agentsMd.matchAll(listRe)) {
+      for (const line of m[1].split('\n').filter((l) => l.startsWith('- '))) {
+        const claim = line.slice(2).trim();
+        const words = contentWords(claim);
+        if (words.length < 3) continue;      // too short to judge
+        checked++;
+        const hits = words.filter((w) => spec.includes(w) || arbiterBody.includes(w));
+        const overlap = hits.length / words.length;
+        if (overlap < OVERLAP_MIN) {
+          const missing = words.filter((w) => !hits.includes(w));
+          bad(`AGENTS.md: "${role} must..." rule does not trace to AGENTS/${file} or arbiter.md (${Math.round(overlap * 100)}% of terms found; unmatched: ${missing.slice(0, 6).join(', ')}) → "${claim.slice(0, 95)}"`);
+          drifted++;
+        }
+      }
+    }
+  }
+  if (checked === 0) {
+    bad('AGENTS.md: parsed no "must"/"must never" rules — the parser is broken or the rules were removed');
+  } else if (drifted === 0) {
+    ok(`AGENTS.md: all ${checked} absolute role rules trace back to their detailed spec or the arbiter`);
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);
