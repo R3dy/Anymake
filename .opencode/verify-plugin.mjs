@@ -1073,5 +1073,101 @@ console.log('\n[19] Absolute-claim drift (AGENTS.md "must"/"never" rules trace t
   }
 }
 
+// 20. Board-state schema enforcement (remediation Phase 4). The schema is the
+//     only mechanical constraint on the taskboard — there is deliberately no
+//     locking and no database (that would make the board a runtime dependency
+//     and break ADR-008). So the constraints it does carry have to be real, and
+//     the validator that applies them has to actually reject a bad board.
+console.log('\n[20] board-state schema constraints + validate-board-state.mjs');
+{
+  const schema = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'board-state.schema.json'), 'utf8'));
+
+  const conc = schema.properties.concurrency.properties.max;
+  if (typeof conc.maximum === 'number' && conc.maximum >= 1) {
+    ok(`board-state.schema.json: concurrency.max is bounded (1..${conc.maximum}), not unlimited`);
+  } else {
+    bad('board-state.schema.json: concurrency.max has no maximum — unbounded parallelism is schema-permitted');
+  }
+
+  const storyItems = schema.properties.stories.items;
+  if ((storyItems.required || []).includes('touches_files')) {
+    ok('board-state.schema.json: touches_files is required (an absent field is not the same fact as [])');
+  } else {
+    bad('board-state.schema.json: touches_files is optional — "no declared conflicts" is indistinguishable from "never computed"');
+  }
+  if (Array.isArray(storyItems.properties.touches_files.default)) {
+    ok('board-state.schema.json: touches_files defaults to []');
+  } else {
+    bad('board-state.schema.json: touches_files has no [] default');
+  }
+
+  const retries = storyItems.properties.retries;
+  const unbounded = Object.entries(retries.properties)
+    .filter(([, f]) => typeof f.maximum !== 'number').map(([k]) => k);
+  if (unbounded.length === 0) {
+    ok('board-state.schema.json: every retries.* field has a maximum matching an arbiter policy ceiling');
+  } else {
+    bad('board-state.schema.json: unbounded retries fields: ' + unbounded.join(', '));
+  }
+  if (/policy.{0,40}not the schema|schema.{0,40}decides/is.test(retries.description || '')) {
+    ok('board-state.schema.json: retries description notes the policy, not the schema, picks the ceiling');
+  } else {
+    bad('board-state.schema.json: retries description must note that policy decides which ceiling applies');
+  }
+
+  // The validator itself: it must accept the good fixture and reject the bad one.
+  const validator = path.join(ROOT, '.opencode', 'validate-board-state.mjs');
+  if (!fs.existsSync(validator)) {
+    bad('.opencode/validate-board-state.mjs does not exist');
+  } else {
+    const run = (fixture, expectValid) => {
+      const f = path.join(ROOT, '.opencode', 'fixtures', fixture);
+      let status = 0;
+      let out = '';
+      try {
+        out = execFileSync('node', [validator, f], { encoding: 'utf8' });
+      } catch (e) { status = e.status; out = (e.stdout || '') + (e.stderr || ''); }
+      const isValid = status === 0;
+      if (isValid === expectValid) {
+        ok(`validate-board-state.mjs: ${fixture} → ${isValid ? 'VALID' : 'INVALID'} as expected`);
+      } else {
+        bad(`validate-board-state.mjs: ${fixture} → ${isValid ? 'VALID' : 'INVALID'}, expected the opposite\n${out.split('\n').slice(0, 6).join('\n')}`);
+      }
+      return out;
+    };
+    run('board-state.valid.json', true);
+    const out = run('board-state.invalid.json', false);
+    // Each seeded defect must be individually reported, not just "invalid".
+    for (const [label, needle] of [
+      ['concurrency.max ceiling', 'exceeds the maximum of 10'],
+      ['missing touches_files', 'missing required property "touches_files"'],
+      ['retry ceiling', 'retries/worker'],
+      ['unknown status', 'is not one of'],
+    ]) {
+      if (out.includes(needle)) ok(`validate-board-state.mjs: reports ${label}`);
+      else bad(`validate-board-state.mjs: did not report ${label} on the invalid fixture`);
+    }
+  }
+
+  // The instruction files must actually tell an agent to run it — an enforcement
+  // script nobody is told to run is not enforcement (ADR-008: the agent runs it,
+  // no background service does).
+  for (const rel of ['AGENTS/orchestrator.md', 'skills/anymake-dispatch/SKILL.md']) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    if (body.includes('validate-board-state.mjs')) {
+      ok(`${rel}: instructs running validate-board-state.mjs after a board write`);
+    } else {
+      bad(`${rel}: never tells the agent to validate board-state.json`);
+    }
+  }
+  const dispatchBody = fs.readFileSync(path.join(SKILLS_DIR, 'anymake-dispatch', 'SKILL.md'), 'utf8');
+  if (/schema failure is treated the same as a failed `?output_check/i.test(dispatchBody)) {
+    ok('skills/anymake-dispatch/SKILL.md: a schema failure carries the same weight as a failed output_check');
+  } else {
+    bad('skills/anymake-dispatch/SKILL.md: missing the "schema failure == failed output_check" rule');
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

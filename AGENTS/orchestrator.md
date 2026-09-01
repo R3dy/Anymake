@@ -80,7 +80,12 @@ Before each loop iteration, reconcile the structured taskboard:
 4. Update `concurrency.current` = `len(in_flight)`
 5. Update `updated` to the current ISO-8601 timestamp
 6. Write the reconciled `board-state.json` back
-7. Render `BOARD.md` from the snapshot (the markdown is a projection — INV-004)
+7. **Validate it:** `node <plugin root>/.opencode/validate-board-state.mjs
+   <project_root>/.anymake/board-state.json`. A schema failure is treated
+   exactly like a failed `output_check` — do not dispatch against a malformed
+   board. Repair it (the `BOARD.md` Run Log is the durable record you repair
+   from) and re-validate before continuing the loop.
+8. Render `BOARD.md` from the snapshot (the markdown is a projection — INV-004)
 
 The orchestrator is the **sole writer** of the snapshot (`stories[]`,
 `in_flight`, `concurrency`, `updated`) and of `events[]` (build-loop events
