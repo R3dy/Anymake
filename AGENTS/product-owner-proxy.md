@@ -234,8 +234,22 @@ longer permits.
    it with a PASS before this story can proceed.` This is the correct action in
    nearly every case — the fix is writing the scenario, not skipping it.
 3. **The one legitimate waiver** — the criterion is not mechanically scriptable
-   even in principle (a genuinely subjective aesthetic judgment with no
-   checkable observable, e.g. "the color palette feels premium"). Confirm the
+   even in principle: a genuinely subjective aesthetic judgment with **no
+   checkable observable at all**. The test is whether *any* literal action →
+   checkable expected result could express it, not whether writing one would be
+   tedious. Almost every criterion that feels subjective decomposes into
+   something checkable, and when it does, the waiver does not apply:
+
+   | Genuinely subjective — waiver may apply | Decomposes into a §3a scenario — waiver does NOT apply |
+   |---|---|
+   | "The color palette feels premium" | "The primary button uses the brand accent token, not a default blue" |
+   | "The empty state feels welcoming rather than broken" | "The empty state renders an illustration, a one-line explanation, and a primary CTA" |
+   | "The copy sounds like our brand" | "No screen shows lorem ipsum or placeholder copy" |
+   | "The animation feels smooth" | "The modal opens with a transition and no layout shift" |
+   | "The dashboard doesn't feel cluttered" | "The dashboard renders at 375px wide with no horizontal scroll and no overlapping elements" |
+
+   If you can write the right-hand column for the criterion in front of you,
+   send it back for that scenario instead of waiving it. Confirm the
    relevant component/route/handler exists and is actually wired up and
    reachable (not merely present as dead code), then return `PHRASE: resume`
    with an explicit, permanent note for the board: `"Waived — criterion is not
