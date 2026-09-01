@@ -2,6 +2,15 @@
 
 The **Arbiter** is the one every other agent defers to: the authoritative rules for retries, escalations, gates, conflicts, and merges across the whole system (Phase 4 build loop and the post-launch agile flow alike). The Arbiter is not spawned — it is read. When any agent or skill references a policy, the version here wins.
 
+> **Pronoun convention.** In agent-instruction files, "you" addresses the agent
+> being instructed. Human approval is always written as "the user" or "the real
+> user," never "you." A rule that says "your review is required" is a bug if it
+> means the human's review — rewrite it, don't interpret it. This matters
+> because these files are read *by* the agent whose behavior they govern: an
+> instruction to "escalate to you" reads, to the agent following it, as an
+> instruction to escalate to itself.
+
+
 ---
 
 ## INV-018 Scope — What Counts as Dispatch
@@ -77,9 +86,9 @@ A per-agent `opencode.json` override always wins over the tier env var for that 
 
 | Condition | Review requirement |
 |-----------|-------------------|
-| PR #1, #2, or #3 overall in Phase 4 | your review is required — always |
+| PR #1, #2, or #3 overall in Phase 4 | the real user's review is required — always |
 | Story implements an inbound third-party callback / event handler / delivery endpoint (webhook, callback, push receiver, OAuth redirect, payment return URL, external queue subscriber) | the real user's review is required — always, regardless of PR count. See §"Inbound third-party callback override" — matched by meaning, not by the word "webhook" |
-| Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | your review is required — always, regardless of PR count |
+| Task brief's Intent Constraints (§6a) list any Active Decision (ADR) this story touches | the real user's review is required — always, regardless of PR count |
 | PR #4+, no inbound third-party callback, and no ADR touched | Autonomous merge after CI passes |
 | CI failing on any PR | Do not merge — treat as environment failure, escalate |
 
@@ -199,7 +208,7 @@ require the review: a needless review costs one round trip, a missed one ships
 an unreviewed public entry point.
 
 **ADR-touching override:**
-Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires your review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
+Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires the real user's review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
 
 **The security baseline — definition.**
 Several rules below and in other agent files turn on whether something is
@@ -222,7 +231,7 @@ definition — never an independent judgment call about what feels
 security-relevant.
 
 **Security failure override:**
-Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
+Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to the real user.
 
 **Intent-conflict override:**
 Any validation in which the implementation contradicts an Active Decision
@@ -330,9 +339,9 @@ is absolute — INV-008). The orchestrator monitors in-flight stories via
 | `🔵` | In Progress | Worker agent active |
 | `🟠` | In Validation | Validator agent active |
 | `🧪` | Experience Check | Experience Runner agent driving the app against the story's §3a script |
-| `👁` | Awaiting Review | PR open, waiting for you to approve |
+| `👁` | Awaiting Review | PR open, waiting for the real user to approve |
 | `✅` | Done | Merged to main |
-| `🚫` | Blocked | Escalated — awaiting you decision |
+| `🚫` | Blocked | Escalated — awaiting the real user's decision |
 
 ---
 

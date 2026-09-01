@@ -1169,5 +1169,65 @@ console.log('\n[20] board-state schema constraints + validate-board-state.mjs');
   }
 }
 
+// 21. Pronoun collision (remediation Phase 5). Agent-instruction files are
+//     read BY the agent they instruct, so "you" must mean that agent and
+//     nothing else. Where "you" silently meant the human, an instruction to
+//     "escalate to you" read, to the agent following it, as an instruction to
+//     escalate to itself — and "your review is required" read as self-approval,
+//     which is exactly the builder-is-not-the-approver boundary (INV-002) the
+//     whole architecture exists to hold.
+console.log('\n[21] Pronoun convention ("you" = the agent; the human is "the real user")');
+{
+  // Phrasings where "you"/"your" can only mean the human. Each is a real
+  // instance that existed in this repo, not a hypothetical.
+  const COLLISIONS = [
+    /\byour review is required\b/i,
+    /\bawaiting your review\b/i,
+    /\bawaiting you decision\b/i,
+    /\buntil you approve\b/i,
+    /\bwaiting for you to approve\b/i,
+    /\bescalat(?:e|ed|ing) to you\b/i,
+    /\bgo(?:es)? (?:directly )?to you\b/i,
+    /\bthey always go to you\b/i,
+    /\binteract with you\b/i,
+    /\bnotify you\b/i,
+    /\brequire your review\b/i,
+    /\ba you notification\b/i,
+  ];
+  const files = [
+    ...fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => ({ rel: path.join('AGENTS', f), abs: path.join(AGENTS_DIR, f) })),
+    { rel: 'AGENTS.md', abs: path.join(ROOT, 'AGENTS.md') },
+  ];
+  let hits = 0;
+  for (const { rel, abs } of files) {
+    const lines = fs.readFileSync(abs, 'utf8').split('\n');
+    lines.forEach((line, i) => {
+      // The convention statement itself quotes the bad forms in order to ban them.
+      if (/Pronoun convention/i.test(lines.slice(Math.max(0, i - 8), i + 1).join('\n'))) return;
+      for (const re of COLLISIONS) {
+        if (re.test(line)) {
+          bad(`${rel}:${i + 1}: "you" here means the human — write "the real user" → ${line.trim().slice(0, 100)}`);
+          hits++;
+          break;
+        }
+      }
+    });
+  }
+  if (hits === 0) ok(`no human-meaning "you" across ${files.length} agent-instruction files`);
+
+  // The convention must be stated where agents will read it.
+  for (const rel of ['AGENTS.md', 'AGENTS/arbiter.md']) {
+    // Normalize markdown line wrapping (and blockquote markers) before matching:
+    // the convention sentence spans lines in both files.
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8')
+      .replace(/\n>?\s*/g, ' ');
+    if (/"you" addresses the agent being instructed/i.test(body) && /the real user/i.test(body)) {
+      ok(`${rel}: states the pronoun convention`);
+    } else {
+      bad(`${rel}: does not state the pronoun convention`);
+    }
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

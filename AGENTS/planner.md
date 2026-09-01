@@ -83,7 +83,7 @@ This is the translation step that makes the Experience Runner possible: turning
   behavior change (pure schema, an invisible refactor). If the story has any
   UI, CLI, API, or public-call surface, it needs scenarios.
 
-**§8 review requirement.** Per `AGENTS/arbiter.md`: your review is required if this is PR #1, #2, or #3 overall; if the story title or technical tasks contain "webhook"; **or if the Intent Constraints (§6a) you just filled list any Active Decision (ADR)** — the ADR-touching trigger applies regardless of PR count. Otherwise: autonomous merge after CI passes.
+**§8 review requirement.** Per `AGENTS/arbiter.md`: the real user's review is required if this is PR #1, #2, or #3 overall; if the story implements an inbound third-party callback, event handler, or delivery endpoint (webhook, OAuth redirect, payment return URL, external queue subscriber — match on meaning, not the literal word "webhook"; see `AGENTS/arbiter.md` §"Inbound third-party callback override"); **or if the Intent Constraints (§6a) you just filled list any Active Decision (ADR)** — the ADR-touching trigger applies regardless of PR count. Otherwise: autonomous merge after CI passes.
 
 ---
 
