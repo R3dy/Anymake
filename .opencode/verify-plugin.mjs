@@ -519,13 +519,40 @@ console.log('\n[11] Zero-build kanban monitor');
       if (extLink) bad('dashboard/kanban.html: has external <link href=> (violates ADR-008)');
       if (extImport) bad('dashboard/kanban.html: has bare import (violates ADR-008)');
     }
-    // (b) 7 column keys present
-    const colKeys = ['backlog', 'ready', 'in_progress', 'in_validation', 'experience', 'done', 'blocked'];
-    const missingCols = colKeys.filter((k) => !kb.includes(k));
-    if (missingCols.length === 0) {
-      ok('dashboard/kanban.html: all 7 column keys present');
+    // (b) Every story status in the schema has a column. Derived from
+    //     board-state.schema.json, NOT hardcoded — a status added to the schema
+    //     without a matching column now fails CI instead of silently vanishing
+    //     from the board. (`awaiting_review` — the one state where a human is
+    //     supposed to be watching — was missing exactly this way.)
+    const schemaForCols = JSON.parse(
+      fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'board-state.schema.json'), 'utf8'));
+    const statusEnum =
+      schemaForCols.properties.stories.items.properties.status.enum;
+    // Parse the COLUMNS array's declared keys rather than substring-matching the
+    // whole file: 'experience' appears in kanban.html for other reasons too.
+    const columnsBlock = kb.match(/var COLUMNS = \[([\s\S]*?)\];/)?.[1] || '';
+    const declaredCols = [...columnsBlock.matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]);
+    const missingCols = statusEnum.filter((k) => !declaredCols.includes(k));
+    const extraCols = declaredCols.filter((k) => !statusEnum.includes(k));
+    if (missingCols.length === 0 && extraCols.length === 0) {
+      ok(`dashboard/kanban.html: a column for every one of the schema's ${statusEnum.length} story statuses`);
     } else {
-      bad('dashboard/kanban.html: missing columns: ' + missingCols.join(', '));
+      if (missingCols.length) bad('dashboard/kanban.html: schema statuses with no column: ' + missingCols.join(', '));
+      if (extraCols.length) bad('dashboard/kanban.html: columns with no matching schema status: ' + extraCols.join(', '));
+    }
+    // (b2) BOARD.md's Status Legend must cover the same set, so the markdown
+    //      projection and the JSON spine never drift apart either.
+    const boardTmpl = fs.readFileSync(path.join(ROOT, 'TEMPLATES', 'BOARD.md'), 'utf8');
+    const legendGaps = statusEnum.filter((k) => {
+      const label = k.replace(/_/g, ' ');
+      // Prefix match: the legend may use a longer human label
+      // ('experience' -> 'Experience Check').
+      return !new RegExp(`\\| ${label}\\b`, 'i').test(boardTmpl);
+    });
+    if (legendGaps.length === 0) {
+      ok('TEMPLATES/BOARD.md: Status Legend covers every schema story status');
+    } else {
+      bad('TEMPLATES/BOARD.md: Status Legend missing: ' + legendGaps.join(', '));
     }
     // (c) polling fetch present (setInterval or self-scheduling setTimeout with backoff)
     if (kb.includes('fetch(') && (kb.includes('setInterval') || kb.includes('setTimeout'))) {
@@ -865,6 +892,37 @@ console.log('\n[16] Stale-summary drift (AGENTS.md vs. the specs it summarizes)'
       }
     }
     if (!failed) ok(`drift/${a.topic}: ${a.target} consistent with ${a.trigger.file}`);
+  }
+}
+
+// 17. Kanban render against a real fixture (remediation Phase 1 exit criterion).
+//     Runs the dashboard's actual column-filter logic over a hand-built
+//     board-state.json and asserts every story lands in exactly one column.
+//     `awaiting_review` — the single status where a human is supposed to be
+//     watching — used to land in zero.
+console.log('\n[17] Kanban renders every fixture story into exactly one column');
+{
+  const kb = fs.readFileSync(path.join(ROOT, 'dashboard', 'kanban.html'), 'utf8');
+  const columnsBlock = kb.match(/var COLUMNS = \[([\s\S]*?)\];/)?.[1] || '';
+  const cols = [...columnsBlock.matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]);
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(ROOT, '.opencode', 'fixtures', 'board-state.valid.json'), 'utf8'));
+
+  // Mirror of kanban.html's render() filter: `s.status === col.key`.
+  let unplaced = 0;
+  for (const story of fixture.stories) {
+    const landed = cols.filter((k) => story.status === k);
+    if (landed.length === 1) {
+      ok(`fixture story ${story.id} (${story.status}) → column '${landed[0]}'`);
+    } else {
+      bad(`fixture story ${story.id} (${story.status}) lands in ${landed.length} columns — it would ${landed.length === 0 ? 'vanish from' : 'be duplicated on'} the board`);
+      unplaced++;
+    }
+  }
+  if (!fixture.stories.some((s) => s.status === 'awaiting_review')) {
+    bad('.opencode/fixtures/board-state.valid.json: no awaiting_review story — the regression this fixture exists to catch is untested');
+  } else if (unplaced === 0) {
+    ok('fixture covers awaiting_review (the status that used to have no column)');
   }
 }
 

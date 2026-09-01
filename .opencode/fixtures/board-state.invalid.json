@@ -1,0 +1,26 @@
+{
+  "project": "fixture-broken",
+  "run_id": "run-002",
+  "updated": "2026-08-29T12:00:00Z",
+  "concurrency": { "max": 999, "current": 0 },
+  "in_flight": [],
+  "stories": [
+    {
+      "id": "9.1",
+      "title": "Story with no declared touches_files and an out-of-policy retry count",
+      "milestone": 9,
+      "status": "in_progress",
+      "retries": { "worker": 7, "validation": 4, "experience": 3 }
+    },
+    {
+      "id": "9.2",
+      "title": "Story with a status the schema does not define",
+      "milestone": 9,
+      "status": "almost_done",
+      "touches_files": []
+    }
+  ],
+  "events": [
+    { "ts": "2026-08-29T12:00:00Z", "story": "9.1", "agent": "worker", "type": "teleport", "detail": "not a real event type" }
+  ]
+}

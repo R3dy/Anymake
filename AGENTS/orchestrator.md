@@ -151,7 +151,7 @@ DISPATCH {
   agent: "anymake-planner",  purpose: "brief",  project_root: <absolute project root>,
   inputs: { story_id: "N.N", pr_number: N, output_path: "<absolute path to task-briefs/story-N.N.md>" },
   output_artifact: "<absolute path to task-briefs/story-N.N.md>",
-  output_check: "grep -c '## §3a' <path>  # brief must have an Experience Script section",
+  output_check: "grep -c '## 3a\. Experience Script' <path>  # brief must have an Experience Script section",
   board_ref: "Story N.N"
 }
 ```
@@ -187,7 +187,7 @@ DISPATCH {
   agent: "anymake-worker",  purpose: "build",  project_root: <absolute project root>,
   inputs: { task_brief: "<absolute path to task-briefs/story-N.N.md>" },
   output_artifact: "<absolute path to task-briefs/story-N.N.md>  # the worker appends its RESULT section here",
-  output_check: "grep -c '## RESULT' <path>  # worker must have written its RESULT section",
+  output_check: "grep -c '## 10\. RESULT' <path>  # worker must have written its RESULT section",
   board_ref: "Story N.N"
 }
 ```
@@ -220,7 +220,7 @@ DISPATCH {
     branch: "story/N.N-[slug]",  pr_number: N
   },
   output_artifact: "<absolute path to docs/04-implementation/validation-reports/story-N.N.md>",
-  output_check: "grep -c 'verdict:' <path>  # report must have a verdict field",
+  output_check: "grep -c -i 'VERDICT:' <path>  # report must have a VERDICT heading",
   board_ref: "Story N.N"
 }
 ```
@@ -306,7 +306,8 @@ DISPATCH {
     task_brief: "<absolute path to task-briefs/story-N.N.md>"
   },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>  # proxy decision must be recorded",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Story N.N"
 }
 ```
@@ -390,7 +391,8 @@ DISPATCH {
     task_brief: "<path if applicable>"
   },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Story N.N"
 }
 ```

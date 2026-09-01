@@ -101,7 +101,8 @@ DISPATCH {
   agent: "anymake-product-owner-proxy",  purpose: "proxy-gate",  project_root: <absolute path>,
   inputs: { gate_type: "phase-0-approval", artifacts: ["<absolute path to PROJECTS/[name]/PROJECT.md>"] },
   output_artifact: "BOARD.md  # proxy decision recorded on the board",
-  output_check: "grep -c 'proxy' <path to BOARD.md>",
+  output_check: "grep -c -E 'VERDICT: (APPROVED|NEEDS CHANGES|ESCALATE TO USER)|PHRASE: ' <path to BOARD.md>  # a real, structured verdict must be recorded in BOARD.md's Gate Decisions table — this confirms the dispatch produced a verdict, NOT that the verdict was favorable; branch on the verdict text below",
+  output_artifact_note: "The caller reads the recorded verdict and acts on it: APPROVED/approved -> proceed; NEEDS CHANGES -> send back with the proxy's specific list; ESCALATE TO USER -> stop and surface to the real user.",
   board_ref: "Phase gate 0"
 }
 ```

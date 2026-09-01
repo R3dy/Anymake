@@ -1,0 +1,80 @@
+{
+  "project": "fixture-project",
+  "run_id": "run-001",
+  "updated": "2026-08-29T12:00:00Z",
+  "concurrency": { "max": 3, "current": 2 },
+  "in_flight": ["3.2", "3.3"],
+  "session": {
+    "id": "2026-08-29T11:00:00Z-a1b2",
+    "started": "2026-08-29T11:00:00Z",
+    "phase": "4",
+    "step": "4.3"
+  },
+  "stories": [
+    {
+      "id": "3.1",
+      "title": "Story paused for human PR review",
+      "milestone": 3,
+      "status": "awaiting_review",
+      "branch": "story/3.1-pr-review",
+      "worktree": ".anymake/worktrees/story-3.1",
+      "pr": 4,
+      "retries": { "planner": 0, "worker": 0, "validation": 0, "experience": 0 },
+      "touches_files": ["src/billing/webhook.ts"],
+      "depends_on": [],
+      "started": "2026-08-29T11:10:00Z",
+      "last_event": "2026-08-29T11:55:00Z",
+      "merged": null
+    },
+    {
+      "id": "3.2",
+      "title": "Story mid-build",
+      "milestone": 3,
+      "status": "in_progress",
+      "branch": "story/3.2-build",
+      "worktree": ".anymake/worktrees/story-3.2",
+      "pr": null,
+      "retries": { "planner": 0, "worker": 1, "validation": 0, "experience": 0 },
+      "touches_files": ["src/ui/dashboard.tsx"],
+      "depends_on": [],
+      "started": "2026-08-29T11:30:00Z",
+      "last_event": "2026-08-29T11:58:00Z",
+      "merged": null
+    },
+    {
+      "id": "3.3",
+      "title": "Story in validation",
+      "milestone": 3,
+      "status": "in_validation",
+      "branch": "story/3.3-validate",
+      "worktree": ".anymake/worktrees/story-3.3",
+      "pr": null,
+      "retries": { "planner": 0, "worker": 0, "validation": 1, "experience": 0 },
+      "touches_files": ["src/api/reports.ts"],
+      "depends_on": [],
+      "started": "2026-08-29T11:40:00Z",
+      "last_event": "2026-08-29T11:59:00Z",
+      "merged": null
+    },
+    {
+      "id": "3.4",
+      "title": "Story not yet unblocked",
+      "milestone": 3,
+      "status": "backlog",
+      "branch": null,
+      "worktree": null,
+      "pr": null,
+      "retries": { "planner": 0, "worker": 0, "validation": 0, "experience": 0 },
+      "touches_files": [],
+      "depends_on": ["3.1"],
+      "started": null,
+      "last_event": null,
+      "merged": null
+    }
+  ],
+  "events": [
+    { "ts": "2026-08-29T11:10:00Z", "story": "3.1", "agent": "orchestrator", "type": "worktree_create", "detail": "story-3.1" },
+    { "ts": "2026-08-29T11:50:00Z", "story": "3.1", "agent": "dispatch", "type": "dispatch_ok", "detail": "validate — validation-reports/story-3.1.md — attempt 1" },
+    { "ts": "2026-08-29T11:55:00Z", "story": "3.1", "agent": "orchestrator", "type": "status_change", "from": "experience", "to": "awaiting_review", "detail": "PR #4 open — webhook handler, real user review required" }
+  ]
+}

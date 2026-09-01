@@ -93,6 +93,37 @@
 
 ---
 
+## Gate Decisions
+
+Every phase gate and PR review decided by the Product Owner Proxy (autonomous
+mode) or by the real user is recorded here, verbatim. This is the durable
+record the `anymake-dispatch` post-dispatch `output_check` verifies: the check
+confirms **a real, structured verdict landed** — it does *not* confirm the
+verdict was favorable. The caller still reads the verdict text and branches on
+it (`APPROVED` → proceed; `NEEDS CHANGES` → send back; `ESCALATE TO USER` →
+stop and surface to the real user).
+
+| Time | Gate | Decided by | Verdict | Note |
+|------|------|-----------|---------|------|
+| [time] | phase-0-approval | proxy | VERDICT: APPROVED | — |
+| [time] | phase-2-prototype-review | proxy | VERDICT: APPROVED | LIMITATION: visual polish not verified — code-level checks only |
+| [time] | phase4-pr-review — Story 3.1 | proxy | PHRASE: approved | — |
+| [time] | phase-3-approval | proxy | VERDICT: NEEDS CHANGES | Backlog story 5.2 matches PROJECT.md "Never building" |
+| [time] | phase4-escalation-intent-conflict — Story 4.3 | proxy | VERDICT: ESCALATE TO USER | Security surface — real user required |
+
+> Rows above are format examples — replace them with real decisions. Every row
+> must carry a full `VERDICT: ...` or `PHRASE: ...` token exactly as the proxy
+> returned it. A bare mention of the word "proxy" is not a decision record.
+>
+> **Waiver and limitation notes are mandatory and permanent.** If a gate
+> approved while waiving a judgment it could not make (visual polish, a
+> subjective staging call, a human-only criterion satisfied by reading code),
+> the Note column must name the specific judgment waived. That note stays on
+> this board for the life of the project — it is the only surface where a real
+> human can later see what was never actually checked.
+
+---
+
 ## Escalations
 
 *(No active escalations)*

@@ -289,6 +289,7 @@ var COLUMNS = [
   { key: 'in_progress',      label: 'In Progress',      color: '#3b82f6' },
   { key: 'in_validation',    label: 'In Validation',    color: '#f97316' },
   { key: 'experience',       label: 'Experience',       color: '#a855f7' },
+  { key: 'awaiting_review',  label: 'Awaiting Review',  color: '#38bdf8' },
   { key: 'done',             label: 'Done',             color: '#22c55e' },
   { key: 'blocked',          label: 'Escalated',        color: '#ef4444' }
 ];
@@ -434,9 +435,7 @@ function render(data) {
     var body = document.getElementById('body-' + col.key);
     body.innerHTML = '';
     var matches = stories.filter(function(s) {
-      return s.status === col.key ||
-        (col.key === 'blocked' && s.status === 'blocked') ||
-        (col.key === 'done' && s.status === 'done');
+      return s.status === col.key;
     });
     document.getElementById('count-' + col.key).textContent = matches.length;
     if (matches.length === 0) {
