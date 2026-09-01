@@ -1,7 +1,18 @@
-// Verification harness: exercises the Anymake plugin's hooks the way OpenCode
-// would, and validates that every skill is discoverable with valid frontmatter.
-// Run: node .opencode/verify-plugin.mjs   (delete after — not part of the plugin)
+// Anymake regression harness.
+//
+// This repo is markdown-as-source-of-truth (ADR-008): no build step, no runtime,
+// no test suite. This script IS the regression check. It exercises the plugin's
+// hooks the way OpenCode would, validates that every skill is discoverable with
+// valid frontmatter, and — critically — checks the instruction files against
+// each other and against the templates they reference, so a broken
+// cross-reference fails in CI instead of during a live build loop.
+//
+// Run: node .opencode/verify-plugin.mjs   (or `npm run verify`)
+// CI:  .github/workflows/verify.yml runs this on every push and PR.
+//
+// When you fix an instruction bug, add the assertion that would have caught it.
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { AnymakePlugin } from './plugins/anymake.js';
@@ -646,6 +657,214 @@ console.log('\n[14] RELEASE.md (cache-invalidation procedure)');
     } else {
       bad('RELEASE.md: missing restart step');
     }
+  }
+}
+
+// 15. Cross-reference integrity (remediation Phase 0) — every `output_check`
+//     grep in a DISPATCH block is EXECUTED against the real template file the
+//     dispatched agent writes. A check that can never match its own template is
+//     a check that fails every valid deliverable, which is worse than no check:
+//     it turns every success into a spurious retry/escalation.
+//     This is what would have caught the three broken greps in the 2026-08-29
+//     audit (`## §3a`, `## RESULT`, `verdict:`) and the `grep -c 'proxy'`
+//     tautology.
+console.log('\n[15] Cross-reference integrity (output_check greps run against real templates)');
+{
+  // Which template each dispatched agent's deliverable is shaped by. The
+  // output_check must match against THIS file, because this is the file the
+  // agent copies its structure from.
+  const AGENT_TEMPLATE = {
+    'anymake-planner': 'TEMPLATES/task-brief.md',
+    'anymake-worker': 'TEMPLATES/task-brief.md',
+    'anymake-validator': 'TEMPLATES/validation-report.md',
+    'anymake-experience-runner': 'TEMPLATES/experience-report.md',
+    'anymake-product-owner-proxy': 'TEMPLATES/BOARD.md',
+    'anymake-cartographer': 'TEMPLATES/system-map.md',
+    'anymake-solution-architect': 'TEMPLATES/dev-plan.md',
+    'anymake-plan-reviewer': 'TEMPLATES/plan-review.md',
+  };
+
+  // Split a shell-ish command into argv, respecting single quotes. Trailing
+  // `# comment` (outside quotes) is dropped.
+  const tokenize = (cmd) => {
+    const argv = [];
+    let cur = '';
+    let quoted = false;
+    let started = false;
+    for (let i = 0; i < cmd.length; i++) {
+      const c = cmd[i];
+      if (c === "'") { quoted = !quoted; started = true; continue; }
+      if (!quoted && c === '#' && !started) break;          // start-of-token comment
+      if (!quoted && /\s/.test(c)) {
+        if (started) { argv.push(cur); cur = ''; started = false; }
+        continue;
+      }
+      cur += c; started = true;
+    }
+    if (started) argv.push(cur);
+    return argv;
+  };
+
+  // Collect (sourceFile, agent, output_check) triples from every DISPATCH block.
+  const dispatchSources = [
+    ...fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.md')).map((f) => path.join('AGENTS', f)),
+    ...fs.readdirSync(path.join(ROOT, 'PHASE_GUIDES')).filter((f) => f.endsWith('.md')).map((f) => path.join('PHASE_GUIDES', f)),
+  ];
+  const checks = [];
+  for (const rel of dispatchSources) {
+    const body = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    // Each ```-fenced (or bare) DISPATCH { ... } block.
+    for (const m of body.matchAll(/DISPATCH \{([\s\S]*?)\n\}/g)) {
+      const block = m[1];
+      const agent = block.match(/agent:\s*"([^"]+)"/)?.[1];
+      const check = block.match(/output_check:\s*"([^"]+)"/)?.[1];
+      const line = body.slice(0, m.index).split('\n').length;
+      if (agent && check) checks.push({ rel, agent, check, line });
+    }
+  }
+
+  if (checks.length === 0) {
+    bad('cross-reference: found no DISPATCH blocks with an output_check — the parser is broken');
+  } else {
+    ok(`cross-reference: parsed ${checks.length} DISPATCH output_check(s) from ${dispatchSources.length} instruction files`);
+  }
+
+  for (const { rel, agent, check, line } of checks) {
+    const tmplRel = AGENT_TEMPLATE[agent];
+    if (!tmplRel) { bad(`${rel}:${line}: DISPATCH agent '${agent}' has no known deliverable template`); continue; }
+    const tmplPath = path.join(ROOT, tmplRel);
+    if (!fs.existsSync(tmplPath)) { bad(`${rel}:${line}: template ${tmplRel} does not exist`); continue; }
+
+    if (!check.startsWith('grep')) {
+      // Non-grep checks (wc -l, gh pr view, ls) can't be run against a template.
+      ok(`${rel}:${line}: ${agent} — non-grep check, skipped ('${check.split(/\s+/)[0]}')`);
+      continue;
+    }
+    // Substitute the <path ...> placeholder with the real template path.
+    const cmd = check.replace(/<[^>]*>/g, tmplPath);
+    const argv = tokenize(cmd);
+    if (argv[0] !== 'grep') { bad(`${rel}:${line}: could not parse output_check: ${check}`); continue; }
+
+    let count = 0;
+    let ran = false;
+    try {
+      const out = execFileSync('grep', argv.slice(1), { encoding: 'utf8' });
+      count = parseInt(out.trim().split('\n').pop(), 10) || 0;
+      ran = true;
+    } catch (e) {
+      // grep exits 1 on "no match" — that is a real result, not an error.
+      if (e.status === 1) { count = 0; ran = true; }
+      else bad(`${rel}:${line}: output_check failed to execute (${e.message.split('\n')[0]}): ${check}`);
+    }
+    if (!ran) continue;
+    if (count > 0) {
+      ok(`${rel}:${line}: ${agent} — output_check matches ${tmplRel} (${count} hit${count === 1 ? '' : 's'})`);
+    } else {
+      bad(`${rel}:${line}: ${agent} — output_check NEVER matches its own template ${tmplRel}: ${check}`);
+    }
+  }
+
+  // A check that matches ANY text on the page proves nothing about the outcome.
+  // `grep -c 'proxy'` on BOARD.md was exactly this: a NEEDS CHANGES entry and an
+  // APPROVED entry satisfy it identically.
+  for (const { rel, check, line } of checks) {
+    const pattern = check.match(/grep[^']*'([^']*)'/)?.[1];
+    if (!pattern) continue;
+    const TAUTOLOGICAL = ['proxy', 'decision', 'result', 'story', 'board'];
+    if (TAUTOLOGICAL.includes(pattern.toLowerCase())) {
+      bad(`${rel}:${line}: output_check '${pattern}' is a tautology — it cannot distinguish outcomes. Match a structured verdict token instead.`);
+    }
+  }
+}
+
+// 16. Stale-summary drift (remediation Phase 0) — an allow-listed set of named
+//     assertions that the root AGENTS.md summary does not contradict the
+//     detailed AGENTS/*.md files and schema it summarizes. This is deliberately
+//     NOT general NLP: each entry names one topic, one trigger, and one
+//     forbidden/required claim. Add an entry whenever a summary/detail
+//     contradiction is found, so it can never come back silently.
+console.log('\n[16] Stale-summary drift (AGENTS.md vs. the specs it summarizes)');
+{
+  const read = (rel) => {
+    const p = path.join(ROOT, rel);
+    return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null;
+  };
+
+  const DRIFT_ASSERTIONS = [
+    {
+      topic: 'concurrency model',
+      // If the orchestrator makes parallel dispatch configurable...
+      trigger: { file: 'AGENTS/orchestrator.md', contains: 'concurrency.max' },
+      // ...AGENTS.md must not still claim stories are strictly serial.
+      target: 'AGENTS.md',
+      forbidden: [
+        'never run two stories concurrently',
+        'run two stories concurrently',
+        'Running two Worker',
+      ],
+      why: 'AGENTS/orchestrator.md makes parallel story dispatch the default (concurrency.max, default 3). AGENTS.md must not contradict it.',
+    },
+    {
+      topic: 'board-state.json in the Phase 4 summary',
+      trigger: { file: 'TEMPLATES/board-state.schema.json', contains: 'in_flight' },
+      target: 'AGENTS.md',
+      required: ['board-state.json', 'worktree', 'concurrency'],
+      why: 'The Phase 4 build loop runs on board-state.json + worktrees. AGENTS.md summarizing Phase 4 without naming them describes a model that no longer exists.',
+    },
+    {
+      topic: 'precedence rule',
+      trigger: { file: 'AGENTS.md', contains: 'AGENTS/' },
+      target: 'AGENTS.md',
+      required: ['the detailed file wins'],
+      why: 'AGENTS.md must state that a detailed AGENTS/*.md file wins on conflict, so future one-sided edits fail safe instead of ambiguous.',
+    },
+    {
+      topic: 'worker build order is manifest-derived',
+      trigger: { file: 'AGENTS/worker.md', contains: 'build order' },
+      target: 'AGENTS.md',
+      required: ['manifest-derived'],
+      why: 'The 7-layer build order is the SaaS default, not an invariant — AGENTS.md must qualify it at the point of the list.',
+    },
+    {
+      topic: 'dispatch chokepoint',
+      trigger: { file: 'skills/anymake-dispatch/SKILL.md', contains: 'INV-018' },
+      target: 'AGENTS.md',
+      required: ['anymake-dispatch'],
+      why: 'INV-018 routes all dispatch through anymake-dispatch; the contract file must name the chokepoint.',
+    },
+    {
+      topic: 'pronoun convention',
+      trigger: { file: 'AGENTS.md', contains: 'you' },
+      target: 'AGENTS.md',
+      required: ['the real user'],
+      why: '"You" addresses the agent being instructed; human approval must be written as "the user" / "the real user".',
+    },
+  ];
+
+  for (const a of DRIFT_ASSERTIONS) {
+    const trig = read(a.trigger.file);
+    if (trig === null) { bad(`drift/${a.topic}: trigger file ${a.trigger.file} missing`); continue; }
+    if (!trig.includes(a.trigger.contains)) {
+      ok(`drift/${a.topic}: trigger not present in ${a.trigger.file} — assertion not applicable`);
+      continue;
+    }
+    const body = read(a.target);
+    if (body === null) { bad(`drift/${a.topic}: target file ${a.target} missing`); continue; }
+    const lower = body.toLowerCase();
+    let failed = false;
+    for (const f of a.forbidden || []) {
+      if (lower.includes(f.toLowerCase())) {
+        bad(`drift/${a.topic}: ${a.target} still contains "${f}" — ${a.why}`);
+        failed = true;
+      }
+    }
+    for (const r of a.required || []) {
+      if (!lower.includes(r.toLowerCase())) {
+        bad(`drift/${a.topic}: ${a.target} does not mention "${r}" — ${a.why}`);
+        failed = true;
+      }
+    }
+    if (!failed) ok(`drift/${a.topic}: ${a.target} consistent with ${a.trigger.file}`);
   }
 }
 

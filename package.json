@@ -4,7 +4,22 @@
   "type": "module",
   "main": ".opencode/plugins/anymake.js",
   "description": "Anymake — Agentic build system. Takes any software idea (SaaS, CLI, library, API, internal tool, static site, or hobby project) from raw concept to a finished, shipped result.",
-  "keywords": ["opencode", "plugin", "skill", "saas", "cli", "library", "anymake", "builder", "agentic"],
+  "scripts": {
+    "verify": "node .opencode/verify-plugin.mjs",
+    "validate-board": "node .opencode/validate-board-state.mjs",
+    "test": "node .opencode/verify-plugin.mjs"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "skill",
+    "saas",
+    "cli",
+    "library",
+    "anymake",
+    "builder",
+    "agentic"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/R3dy/Anymake.git"
