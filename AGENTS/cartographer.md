@@ -85,7 +85,8 @@ changed, preserve history (never delete a superseded decision), and update the
    status. Where an ADR has already been superseded, place it under *Superseded
    Decisions* and link the replacement. Do not invent ADRs — if a significant
    as-built decision has no ADR, record it as drift (step 5), not as a fake ADR.
-4. **Distill invariants.** From the ADRs, PRD NFRs, the security baseline, and
+4. **Distill invariants.** From the ADRs, PRD NFRs, the security baseline
+   (defined in `AGENTS/arbiter.md` §"The security baseline — definition"), and
    the type's success model, write the non-negotiable behaviors into
    INVARIANTS.md with stable IDs and where each is enforced in code.
 5. **Reconcile drift.** Compare as-built reality against the planned ADRs and

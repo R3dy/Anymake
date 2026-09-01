@@ -364,7 +364,9 @@ Results.
 
 1. **Security-related conflict** — if the contradicted ADR/invariant concerns
    authentication, authorization, tenant isolation, secret handling, payments, or
-   any item the security baseline covers → `ESCALATE TO USER: Intent conflict on a
+   any item the security baseline covers (as defined in `AGENTS/arbiter.md`
+   §"The security baseline — definition" — not your own read of what seems
+   security-relevant) → `ESCALATE TO USER: Intent conflict on a
    security-relevant decision ([ADR/INV id]). Overriding it requires the real user.
    [paste the decision and its original rationale]`. Never auto-approve.
 

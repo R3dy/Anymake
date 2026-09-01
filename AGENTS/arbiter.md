@@ -181,6 +181,26 @@ Any story whose title or technical task list contains the word "webhook" require
 **ADR-touching override:**
 Any story whose task brief lists an Active Decision in Intent Constraints (§6a) requires your review of the PR regardless of the current PR count — risk tracks architectural surface, not just how early in the build it happened. The planner computes this into the brief's §8 review requirement when it fills §6a; the orchestrator trusts that computation rather than re-deriving it.
 
+**The security baseline — definition.**
+Several rules below and in other agent files turn on whether something is
+"covered by the security baseline." That phrase means exactly this, and nothing
+broader or narrower:
+
+> The **security baseline** is the union of (a) the Security Checklist in
+> `AGENTS/validator.md`, (b) the tiered checklists `anymake-security-review`
+> names as canonical — `AGENTS/validator.md` (per-PR), `PHASE_GUIDES/phase-4.md`
+> Step 4.5 (full pass), and the security items in
+> `TEMPLATES/launch-checklist.md` (pre-launch) — and (c) any additions the
+> project type's `PROJECT_TYPES/<id>/manifest.md` → Gate Criteria Deltas layers
+> on top. A manifest may **add** to the baseline or **replace** an item with a
+> type-appropriate equivalent; it may never remove the baseline's coverage of
+> authentication, authorization, secret handling, input validation, or data
+> exposure.
+
+Anywhere else in this repo, "the security baseline" is a pointer to this
+definition — never an independent judgment call about what feels
+security-relevant.
+
 **Security failure override:**
 Any security check failure in a validation report produces a verdict of ESCALATE, not FAIL. Security failures never go back to the worker for retry — they always go to you.
 
