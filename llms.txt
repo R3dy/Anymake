@@ -4,7 +4,9 @@
 
 ## What Anymake is
 
-Anymake is an AI skill for [OpenCode.ai](https://opencode.ai) that guides product development through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, requiring user approval at every phase gate, and autonomously building the product in Phase 4 with a three-tier agent system.
+Anymake is an AI skill for [OpenCode.ai](https://opencode.ai) that guides product development through six disciplined phases — Foundation, Discovery, Planning, Solutioning, Implementation, and Launch — producing a concrete artifact at every step, requiring user approval at every phase gate, and autonomously building the product in Phase 4 with a five-stage agent system.
+
+Anymake is markdown-as-source-of-truth (ADR-008): no build step, no runtime, no service. The instruction files *are* the system, which is why they have a regression suite (`npm run verify`) that runs in CI on every push.
 
 **Install:**
 ```json
@@ -21,7 +23,10 @@ Add to `~/.config/opencode/opencode.json`, then restart OpenCode.
 - **One step per session** — Prevents scope creep; every session ends with a clear artifact and named next action
 - **PHASE_STATE.md** — The system's bookmark; records current phase, step, last artifact, and next action
 - **PARKING_LOT.md** — Scope requests that arrive mid-phase; logged, never acted on without a new gate
-- **BOARD.md** — Live agile board updated after every Phase 4 agent action
+- **BOARD.md** — Live agile board updated after every Phase 4 agent action; a rendered projection of `board-state.json`, not a separate source
+- **board-state.json** — The structured taskboard spine (`.anymake/board-state.json`, schema in `TEMPLATES/board-state.schema.json`). The orchestrator is its sole writer; agents append events; the kanban dashboard reads it directly
+- **Worktree isolation** — Each story builds in its own git worktree, so concurrent stories never collide on a shared checkout
+- **Project types** — `saas`, `hobby`, `cli`, `library`, `api-service`, `internal-tool`, `static-site`, `agentic-harness`. The type is chosen at project creation, stored in `PHASE_STATE.md`, and drives the phase map, build order, and gate criteria (`PROJECT_TYPES/<id>/manifest.md`)
 
 ## The six phases
 
@@ -34,21 +39,29 @@ Add to `~/.config/opencode/opencode.json`, then restart OpenCode.
 
 ## Phase 4 agent system
 
-Three-tier autonomous build loop in `AGENTS/`:
+Five-stage autonomous build loop in `AGENTS/`. **Stories run in parallel; stages within a story do not** — each story's Planner → Worker → Validator → Experience Runner pipeline is strictly sequential, while different non-conflicting stories are dispatched concurrently up to `concurrency.max` (default 3). Two stories conflict iff their `touches_files` sets intersect or one depends on the other. `concurrency.max: 1` reproduces sequential behavior.
 
-- **Orchestrator** — Reads backlog and dependency graph, manages BOARD.md, dispatches Workers and Validators one story at a time, enforces PR policy, escalates to user only when blocked
-- **Worker** — Receives one story via task brief, implements in strict layer order (Schema → Migration → API → Frontend → Tests), commits each layer, opens a PR
-- **Validator** — Checks every acceptance criterion, runs the security checklist and the intent-consistency check (no Active Decision or invariant contradicted), returns PASS / FAIL / ESCALATE
+- **Orchestrator** — Team lead. Reconciles `board-state.json`, renders BOARD.md from it, dispatches ready non-conflicting stories concurrently, watches for stalls, applies the retry matrix per story, enforces PR policy, escalates only when blocked. Never writes code or authors brief content
+- **Planner** — Translates one approved story (plus ADRs, the intent layer, and `CONVENTIONS.md`) into a self-contained task brief including a literal §3a Experience Script and `touches_files`. Never writes code
+- **Worker** — Receives the approved brief, implements in the layer order from that brief (manifest-derived per project type; SaaS default Schema → Migration → API → Component → Page → Integration → Test), commits each layer, opens a PR — all inside the story's own git worktree
+- **Validator** — Checks every acceptance criterion, runs the security checklist, and runs the intent-consistency check against every decision/invariant listed in §6a *plus any other the change plausibly touches*. Returns PASS / FAIL / ESCALATE
+- **Experience Runner** — Launches the real app on the story's branch and drives it against the §3a script, comparing observed to expected step by step. A Validator PASS alone never clears a story. Observes and diagnoses; never edits code
 - **Cartographer** (post-launch, read-only) — maps the as-built code to intent and maintains the engineering-intent layer (`docs/SYSTEM_MAP.md`, `DECISIONS.md`, `INVARIANTS.md`) that `anymake-agile` checks future changes against
 - **Solution Architect** (post-launch) — reviews the full project and writes the Development Plan for one tracked issue; never touches code
 - **Plan Reviewer** (post-launch) — fresh-context adversarial review of each Development Plan; approves, demands changes, or escalates before anything is built
-- **Arbiter** — the shared rulebook every agent defers to (not spawned, read): retry matrix (max 2 environment retries, max 1 implementation retry), PR review rules (PRs 1–3 always require user review; webhooks/payments always require user review), escalation phrase lexicon, failure classification, intent conflict policy, agile plan review policy
+- **Product Owner Proxy** — autonomous-mode gate evaluator; applies strict per-gate criteria and returns APPROVED / NEEDS CHANGES / ESCALATE TO USER. Security failures always escalate to the real user
+- **Arbiter** — the shared rulebook every agent defers to (not spawned, read): retry matrix, PR review rules (PRs 1–3; any inbound third-party callback — webhook, OAuth redirect, payment return URL, queue subscriber; any ADR-touching story), escalation phrase lexicon, failure classification, intent conflict policy, agile plan review policy, model tier policy, the INV-018 dispatch scope, the definition of "the security baseline", and the project-type / "Never Building" scope guardrails
+
+**All dispatch goes through the `anymake-dispatch` skill** (INV-018) — never a raw Agent/Task call. The skill adds pre-dispatch prompt assembly (WRITE THE FILE FIRST), a mandatory post-dispatch deliverable check, canonical retry context, and a dispatch log line. It is also the only place the host runtime is named, so porting to another harness is a one-section change. Read-only research delegation is the single documented exemption.
 
 ## Skill suite
 
 Anymake is a plugin that ships a **hub** skill (`anymake`) plus focused **companion** skills the hub delegates to at the right phase/step (each also usable standalone):
 
-- **anymake-build-loop** — the three-tier Orchestrator → Worker → Validator build engine (Phase 4.3)
+- **anymake-build-loop** — the five-stage Orchestrator → Planner → Worker → Validator → Experience Runner build engine (Phase 4.3)
+- **anymake-dispatch** — the single chokepoint for all sub-agent dispatch (INV-018); the host-portability seam
+- **anymake-experience-setup** — builds the testing harness: Experience Scripts across a backlog, coverage audit, `docs/environment.md` (Phase 3.2b)
+- **anymake-experience-check** — uses the testing harness on demand: drive a story, PR, or staging/production URL outside the build loop
 - **anymake-design-system** — design system + Prototype Sprint + prototype-gate audit (Phase 2.2b)
 - **anymake-security-review** — per-PR, full, and pre-launch security checklists (Phase 4.5, pre-launch)
 - **anymake-deploy** — staging + production deployment, env/secrets, monitoring, rollback (Phase 4 staging, Phase 5.2)
@@ -61,12 +74,46 @@ See `skills/README.md` for the full map.
 
 ## Autonomous mode (yolo)
 
-Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Proxy** sub-agent (`AGENTS/product-owner-proxy.md`) at each phase gate instead of waiting for human approval. The proxy applies strict per-gate criteria and returns APPROVED, specific required changes, or ESCALATE TO USER. Security failures always escalate to the real user regardless of mode. Autonomous mode is recorded in `PHASE_STATE.md` as `autonomous_mode: true`.
+Activated by adding `--yolo` to any project trigger. Dispatches a **Product Owner Proxy** sub-agent (`AGENTS/product-owner-proxy.md`) at each phase gate instead of waiting for human approval. The proxy applies strict per-gate criteria and returns APPROVED, specific required changes, or ESCALATE TO USER. Autonomous mode is recorded in `PHASE_STATE.md` as `autonomous_mode: true`.
+
+What autonomous mode cannot do, by design:
+
+- **Security failures always escalate to the real user**, in every mode. Absolute, no exception
+- **A gate that can't check something must say so.** Approving while waiving a judgment requires a `LIMITATION:` line in the verdict naming what specifically went unverified, logged permanently to BOARD.md's Gate Decisions table. An `APPROVED` that hides an unchecked judgment is malformed
+- **It cannot reopen a scope boundary.** A story matching `PROJECT.md`'s "Never Building" list fails the gate; only a Phase 0 scope amendment the real user approves can change that
+- **It cannot change `project_type`** — that's a product decision. Where a project's own words suggest the type is wrong (a `hobby` project with pricing and paying customers), the system surfaces a one-line advisory and continues; it never switches or blocks
+- **It cannot substitute code for evidence.** A Human-Only criterion is satisfied by an Experience Runner PASS, never by confirming the relevant code exists
+
+## Verification
+
+This repo has no build step and no runtime, so the instruction files are checked against each
+other instead:
+
+```bash
+npm run verify            # the regression harness — 24 check groups, zero dependencies
+npm run validate-board    # validate a board-state.json against the schema
+```
+
+`.github/workflows/verify.yml` runs it on every push and PR. Among other things it executes every
+dispatch verification command against the real template it targets (a check that can never match
+its own template fails every valid deliverable), enforces the dispatch chokepoint, checks that
+root `AGENTS.md` doesn't contradict the detailed specs it summarizes, confirms the dashboard has a
+column for every schema story status, and dry-runs the build loop against fixture deliverables.
+
+The repo convention: **every instruction fix ships with the assertion that would have caught it.**
+
+## Precedence
+
+`AGENTS.md` is a summary. Wherever it and a detailed `AGENTS/*.md` file disagree, **the detailed
+file wins**; `AGENTS/arbiter.md` is authoritative on all shared policy. In agent-instruction files,
+"you" addresses the agent being instructed — the human is always "the user" or "the real user."
 
 ## Key files
 
 - [skills/anymake/SKILL.md](skills/anymake/SKILL.md) — Skill definition (loaded by OpenCode plugin)
-- [AGENTS.md](AGENTS.md) — Full agent guide: hierarchy, rules, file conventions, anti-patterns
+- [AGENTS.md](AGENTS.md) — Agent contract: hierarchy, rules, file conventions, anti-patterns (summary; detailed files win)
+- [CHANGELOG.md](CHANGELOG.md) — What changed in each version and why
+- [RELEASE.md](RELEASE.md) — Getting a merge to `main` into running sessions
 - [.opencode/INSTALL.md](.opencode/INSTALL.md) — Detailed installation and troubleshooting
 - [PHASE_GUIDES/phase-0.md](PHASE_GUIDES/phase-0.md) — Foundation phase guide
 - [PHASE_GUIDES/phase-1.md](PHASE_GUIDES/phase-1.md) — Discovery phase guide
@@ -75,11 +122,17 @@ Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Pr
 - [PHASE_GUIDES/phase-4.md](PHASE_GUIDES/phase-4.md) — Implementation phase guide (includes agent activation)
 - [PHASE_GUIDES/phase-5.md](PHASE_GUIDES/phase-5.md) — Launch phase guide
 - [AGENTS/orchestrator.md](AGENTS/orchestrator.md) — Orchestrator agent instructions (includes autonomous mode handling)
+- [AGENTS/planner.md](AGENTS/planner.md) — Planner agent instructions (story → self-contained task brief)
 - [AGENTS/worker.md](AGENTS/worker.md) — Worker agent instructions
+- [AGENTS/experience-runner.md](AGENTS/experience-runner.md) — Launches and drives the real app against a story's Experience Script
 - [AGENTS/validator.md](AGENTS/validator.md) — Validator agent instructions
 - [AGENTS/product-owner-proxy.md](AGENTS/product-owner-proxy.md) — Product Owner Proxy instructions (autonomous mode gate evaluator)
 - [AGENTS/cartographer.md](AGENTS/cartographer.md) — Cartographer instructions (read-only; maintains the engineering-intent layer)
-- [AGENTS/arbiter.md](AGENTS/arbiter.md) — Retry, PR review, escalation policies, and autonomous mode policy
+- [AGENTS/solution-architect.md](AGENTS/solution-architect.md) — Agile flow: Development Plan for one tracked issue
+- [AGENTS/plan-reviewer.md](AGENTS/plan-reviewer.md) — Agile flow: fresh-context adversarial plan review
+- [AGENTS/arbiter.md](AGENTS/arbiter.md) — The shared rulebook: retries, PR review, escalation lexicon, intent conflicts, model tiers, INV-018 dispatch scope, the security-baseline definition, project-type and scope guardrails
+- [skills/anymake-dispatch/SKILL.md](skills/anymake-dispatch/SKILL.md) — The dispatch chokepoint and host-portability seam
+- [PROJECT_TYPES/README.md](PROJECT_TYPES/README.md) — The eight project-type profiles
 - [TEMPLATES/project.md](TEMPLATES/project.md) — Phase 0 artifact template
 - [TEMPLATES/prd.md](TEMPLATES/prd.md) — PRD template
 - [TEMPLATES/ux-design.md](TEMPLATES/ux-design.md) — UX design system template
@@ -96,3 +149,9 @@ Activated by adding `--yolo` to any project trigger. Spawns a **Product Owner Pr
 - [TEMPLATES/system-map.md](TEMPLATES/system-map.md) — Engineering-intent layer: as-built system map
 - [TEMPLATES/decisions.md](TEMPLATES/decisions.md) — Engineering-intent layer: living decision index
 - [TEMPLATES/invariants.md](TEMPLATES/invariants.md) — Engineering-intent layer: non-negotiable behaviors
+- [TEMPLATES/experience-script.md](TEMPLATES/experience-script.md) — Literal interaction-script format (§3a)
+- [TEMPLATES/experience-report.md](TEMPLATES/experience-report.md) — Experience Runner report template
+- [TEMPLATES/environment.md](TEMPLATES/environment.md) — `docs/environment.md` template; what the Experience Runner reads to launch the app
+- [TEMPLATES/board-state.schema.json](TEMPLATES/board-state.schema.json) — The taskboard spine's schema
+- [dashboard/README.md](dashboard/README.md) — Zero-build live kanban board
+- [.opencode/verify-plugin.mjs](.opencode/verify-plugin.mjs) — The regression harness

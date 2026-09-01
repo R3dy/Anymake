@@ -106,17 +106,32 @@ PROJECTS/[name]/
 
 ## Phase 4: Multi-Agent Build Loop
 
-Phase 4, Step 4.3 runs an autonomous five-stage agent system that builds your entire backlog without you having to manage individual tasks:
+Phase 4, Step 4.3 runs an autonomous five-stage agent system that builds your entire backlog without you having to manage individual tasks.
+
+**Stories run in parallel; stages within a story do not.** The Orchestrator works
+like an agile team lead — dispatching every ready, non-conflicting story up to
+`concurrency.max` (default 3), watching for stalls, re-dispatching on failure,
+escalating when blocked. Each story's own pipeline (Planner → Worker → Validator
+→ Experience Runner) stays strictly sequential, and each story builds in its own
+**git worktree** so concurrent work never collides on a shared checkout. Set
+`concurrency.max: 1` for the older one-at-a-time behavior.
 
 ```
-Orchestrator
-  ├── reads backlog + dependency graph
-  ├── manages BOARD.md (live status for every story)
-  ├── dispatches a Planner agent per story and approves the brief for completeness
-  ├── dispatches Worker agents from the approved brief
-  ├── dispatches Validator agents after each PR
-  ├── dispatches Experience Runner agents after each Validator PASS
+Orchestrator  (team lead)
+  ├── reconciles .anymake/board-state.json — the structured taskboard spine
+  ├── renders BOARD.md from it (the markdown is a projection, not the source)
+  ├── dispatches ready, non-conflicting stories concurrently (up to concurrency.max)
+  ├── dispatches a Planner per story and approves the brief for completeness
+  ├── dispatches a Worker into that story's own git worktree
+  ├── dispatches a Validator after each PR
+  ├── dispatches an Experience Runner after each Validator PASS
   └── escalates to you only when blocked
+
+  Every one of those dispatches goes through the anymake-dispatch skill
+  (INV-018) — never a raw Agent/Task call. The skill adds the pre-dispatch
+  prompt, a mandatory deliverable check, structured retry context, and a
+  dispatch log line. It is also the one place the host runtime is named, so
+  porting Anymake to another harness is a single-section change.
 
 Planner (per story)
   ├── translates the approved story + ADRs + intent layer + CONVENTIONS.md
@@ -124,8 +139,9 @@ Planner (per story)
   │   the Orchestrator never authors this itself
   └── never writes code or opens a PR
 
-Worker (per story)
-  ├── implements in strict order: Schema → Migration → API → Frontend
+Worker (per story, in its own worktree)
+  ├── implements in the strict layer order from its brief (manifest-derived;
+  │   SaaS default: Schema → Migration → API → Component → Page → Integration → Test)
   ├── commits each layer separately (one commit per layer)
   └── opens a PR when the story is complete
 
@@ -147,11 +163,16 @@ A Validator `PASS` alone does not clear a story for PR review — see
 
 **PR review policy:**
 - PRs #1–3 always require your review
-- Any PR touching webhooks or payment flows requires your review
+- Any PR implementing an **inbound third-party callback** requires your review — webhooks, OAuth/SSO redirects, payment return URLs, push receivers, external queue subscribers. The test is the trust boundary (does this run in response to a request you didn't originate, carrying data you didn't author?), not the word "webhook"
 - Any PR touching an Active Decision (ADR) requires your review, regardless of PR count
-- All other PRs: Orchestrator merges on Validator PASS
+- Any story matching `PROJECT.md`'s **"Never Building"** list fails the gate outright — that boundary can only be changed by a Phase 0 scope amendment you approve
+- All other PRs: Orchestrator merges on Validator PASS **and** Experience Runner PASS
 
-**Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action. You can see every story's status, the full run log, and any escalations at a glance.
+**Board visibility:** `PROJECTS/[name]/BOARD.md` is updated after every agent action.
+
+You can see every story's status, the full run log, gate decisions, and any escalations at a glance. For a live view, `dashboard/kanban.sh` serves a zero-build kanban board that reads `board-state.json` directly — one column per story status, plus a session-activity panel.
+
+**Gate honesty:** when an autonomous gate approves while knowing it couldn't check something — visual polish, a subjective judgment — it must say so in the verdict as a `LIMITATION:` line, and that line is logged permanently to BOARD.md's Gate Decisions table. An approval that hides what it couldn't check is treated as malformed.
 
 **Model tiers (optional):** every spawned agent — Planner, Worker, Validator, Experience Runner, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Experience Runner, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Point each tier at a model either per-agent in your own `opencode.json` (`agent.<name>.model` — schema-safe, no shell setup) or with three environment variables (`ANYMAKE_MODEL_TIER1/2/3`, applies to a whole tier at once); unset either and that agent just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
 
@@ -264,14 +285,27 @@ each companion is also useful on its own. See `skills/README.md` for the full ma
 | `anymake-brownfield` | Reverse-engineer Phase 0–3 artifacts from existing code | In place of Phase 0 |
 | `anymake-iterate` | Post-launch loop: triage, metrics→epics, releases | Phase 5.6 onward |
 | `anymake-agile` | The single post-launch pipeline for bugs & feature/change requests: intake → GitHub issue → architect plan (intent-layer checked) → independent plan review → traceable build → reporter verification | "X isn't working" / any add/change/remove on a built product |
+| `anymake-dispatch` | The single chokepoint for **all** sub-agent dispatch (INV-018): pre-dispatch prompt assembly, mandatory deliverable verification, canonical retry context, dispatch logging — and the one place the host runtime is named | Whenever any agent spawns another |
 | `anymake-new-type` | Scaffold a new project-type profile | Extending the system |
 
 ## Repository Layout
 
 ```
+.github/workflows/
+└── verify.yml              # CI: runs the regression harness on every push and PR
+
 .opencode/
 ├── INSTALL.md              # Detailed installation instructions
-└── plugins/anymake.js # OpenCode plugin bootstrap
+├── plugins/anymake.js      # OpenCode plugin bootstrap
+├── verify-plugin.mjs       # The regression harness (npm run verify) — 24 check groups
+├── validate-board-state.mjs # Validates a board-state.json against the schema
+└── fixtures/               # Fixtures the harness asserts against (board states,
+                            #   PROJECT.md variants, build-loop deliverables)
+
+dashboard/
+├── kanban.html             # Zero-build live board — reads board-state.json directly
+├── kanban.sh               # Per-project launcher (localhost-only)
+└── README.md               # Launch instructions
 
 AGENTS/
 ├── orchestrator.md         # Orchestrator agent instructions
@@ -282,12 +316,17 @@ AGENTS/
 ├── cartographer.md         # Read-only agent that maps code→intent (intent layer)
 ├── solution-architect.md   # Agile flow: writes the Development Plan for a tracked issue
 ├── plan-reviewer.md        # Agile flow: fresh-context adversarial plan review
-└── arbiter.md             # Retry matrix, escalation rules, failure classification, agile review policy
+├── product-owner-proxy.md  # Autonomous-mode gate evaluator (every phase gate + Phase 4 pause points)
+└── arbiter.md              # The shared rulebook: retry matrix, PR review policy, escalation
+                            #   lexicon, failure classification, intent-conflict policy, model
+                            #   tiers, INV-018 dispatch scope, the security-baseline definition,
+                            #   and the project-type / "Never Building" scope guardrails
 
 skills/                     # The skill suite (registered with OpenCode)
 ├── README.md               # Suite map: hub + companions
 ├── anymake/SKILL.md        # Hub skill — methodology + router (auto-loaded)
-├── anymake-build-loop/     # Phase 4.3 four-stage build engine
+├── anymake-build-loop/     # Phase 4.3 five-stage build engine
+├── anymake-dispatch/       # The single chokepoint for all sub-agent dispatch (INV-018)
 ├── anymake-brownfield/     # Onboard an existing codebase
 ├── anymake-experience-setup/ # Builds the testing harness: Experience Scripts + docs/environment.md (3.2b)
 ├── anymake-experience-check/ # Uses the testing harness on demand: drives a story/PR/staging URL
@@ -331,15 +370,24 @@ TEMPLATES/
 ├── system-map.md           # Intent layer: as-built system map (Cartographer)
 ├── decisions.md            # Intent layer: living decision index (Cartographer)
 ├── invariants.md           # Intent layer: non-negotiable behaviors (Cartographer)
+├── board-state.schema.json # Phase 4: the taskboard spine's schema (BOARD.md projects from it)
 └── commit-message.md       # Conventional commit guidelines
 
-skills/anymake/SKILL.md     # Main skill definition (loaded by OpenCode plugin)
-package.json                # npm metadata
+docs/audits/                # Point-in-time audits and their remediation plans
+
+AGENTS.md                   # The agent contract (summary; detailed AGENTS/*.md files win)
+CHANGELOG.md                # What changed in each version, and why
+RELEASE.md                  # Getting a merge to main into running sessions
+package.json                # npm metadata + `npm run verify` / `npm run validate-board`
 ```
 
 ## Design Decisions
 
-**Build order is invariant.** Workers always implement in this order: Schema → Migration → API → Component → Page → Integration → Test. Skipping layers is not allowed — it creates hidden dependencies that cause silent failures later.
+**Build order is manifest-derived, and skipping a layer is not allowed.** Each project type's `manifest.md` sets its own Phase 4 build order; the SaaS default is Schema → Migration → API → Component → Page → Integration → Test. What is invariant is that the Worker follows the order in its brief and skips no layer that applies — skipping creates hidden dependencies that fail silently later. A `library` or `cli` project has a different order, not a violated one.
+
+**Markdown is the source of truth — so markdown gets a test suite.** There is no build step and no runtime (ADR-008): the instruction files *are* the system. That makes an instruction bug indistinguishable from a code bug in impact and much easier to miss, so `npm run verify` is the regression suite — 24 check groups, ~190 assertions, zero dependencies, run in CI on every push. It executes each dispatch verification command against the real template it targets, enforces the dispatch chokepoint, checks the summary contract against the specs it summarizes, and dry-runs the build loop against fixture deliverables. **Every instruction fix ships with the assertion that would have caught it.**
+
+**Enforcement stays inside the no-runtime constraint.** Where a rule needed teeth, it got a schema constraint plus an on-demand check an agent is told to run (`validate-board-state.mjs`) — never a lock, a daemon, or a database. Real file locking on the taskboard was considered and rejected: it would make the board a runtime dependency.
 
 **Scope is a hard boundary.** Anything that arrives mid-phase goes to `PARKING_LOT.md`. Nothing gets built outside the approved scope without a new phase gate. This prevents the most common AI-assisted dev failure: the "while I'm in here..." spiral.
 
@@ -354,6 +402,37 @@ Anymake began as an exploration of the [BMAD-METHOD](https://github.com/bmad-cod
 ## License
 
 MIT — see [package.json](package.json).
+
+## Contributing
+
+This repo is instructions, not code — but the instructions have a test suite,
+and it runs in CI on every push and PR.
+
+```bash
+npm run verify           # the regression harness — must print ALL CHECKS PASSED
+npm run validate-board   # validate a board-state.json against the schema
+node .opencode/validate-board-state.mjs PROJECTS/<name>/.anymake/board-state.json
+```
+
+`npm run verify` is zero-dependency Node (no install step). It checks skill and
+agent discovery, plugin hooks and model tiers, that every path reference
+resolves, that every dispatch verification command actually matches the template
+it targets, that no file instructs a raw sub-agent spawn outside the dispatch
+chokepoint, that root `AGENTS.md` doesn't contradict the specs it summarizes,
+that the dashboard has a column for every schema status, and more.
+
+Two conventions matter when changing anything here:
+
+1. **Every instruction fix ships with the assertion that would have caught it.**
+   Markdown is the source of truth, so a broken instruction is a broken build —
+   add the check to `.opencode/verify-plugin.mjs` in the same change.
+2. **Wherever `AGENTS.md` and a detailed `AGENTS/*.md` file disagree, the
+   detailed file wins.** Update both, or update the detailed one — never only
+   the summary. Check [19] flags summary rules that don't trace to a spec.
+
+Behavior changes (a gate that starts asking questions, a check that starts
+finding more) belong in `CHANGELOG.md` as behavior changes, not as fixes.
+`RELEASE.md` covers getting a merge to `main` into running sessions.
 
 ## Issues & Contributions
 

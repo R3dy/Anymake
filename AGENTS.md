@@ -393,6 +393,49 @@ These are the rendered symbols. The machine-readable statuses are
 
 ---
 
+## Verifying the System
+
+This repo has no build step, no runtime, and no application code (ADR-008) — the
+instruction files *are* the system. A broken instruction is therefore a broken
+build, and it reaches every running session silently. So the instructions are
+checked against each other:
+
+```bash
+npm run verify            # the regression harness — 24 check groups, zero dependencies
+npm run validate-board    # validate a board-state.json against its schema
+```
+
+`.github/workflows/verify.yml` runs `npm run verify` on every push and PR. It
+checks skill and agent discovery, plugin hooks and model-tier binding, that every
+path reference resolves — and, specifically because these were real bugs:
+
+- **Cross-reference integrity** — every dispatch `output_check` is *executed*
+  against the real template the dispatched agent writes. A check that can never
+  match its own template fails every valid deliverable, which is worse than no
+  check. Tautological patterns (ones that match any text on the page) are
+  rejected too.
+- **Dispatch chokepoint** — no file may instruct a raw `Agent`/`Task` spawn
+  outside `anymake-dispatch`, except with an explicit research-delegation
+  exemption marker.
+- **Summary/detail drift** — this file must not contradict the detailed specs it
+  summarizes, and every absolute "must"/"never" rule here must trace back to one.
+- **Schema/UI agreement** — the kanban dashboard must have a column for every
+  story status the schema defines, and BOARD.md's legend must cover the same set.
+- **Build-loop dry-run** — the live `output_check` greps are run against fixture
+  deliverables in the shape an agent actually produces, including a validation
+  FAIL and an intent-conflict ESCALATE.
+
+**The rule when changing anything here: every instruction fix ships with the
+assertion that would have caught it.** A fix without a check is a fix that will
+regress unnoticed, because nothing else in this repo would ever notice.
+
+Enforcement additions stay inside the no-runtime constraint: a schema constraint
+plus an on-demand script an agent is told to run, never a lock, a daemon, or a
+database. Real file locking on the taskboard was considered and rejected for
+exactly that reason — see `CHANGELOG.md`.
+
+---
+
 ## Behavioral Rules for All Agents
 
 1. **Recommend, don't list.** "I recommend X because Y" — not "here are 5 options."
@@ -419,6 +462,10 @@ These are the rendered symbols. The machine-readable statuses are
 - Marking a story done on a Validator `PASS` alone, without an Experience Runner `PASS` (or an explicit §3a: N/A) — a passing test suite is not the same claim as "a person clicked through it and it worked"
 - Waiving a Human-Only criterion because the relevant code exists, instead of routing it to a §3a scenario the Experience Runner can actually verify
 - Modifying `PHASE_GUIDES/`, `AGENTS/`, or `TEMPLATES/` during a build
+- Writing a dispatch `output_check` without confirming the pattern actually appears in the deliverable's template — a check that never matches turns every success into a spurious retry
+- Approving an autonomous gate that waived a judgment without recording a `LIMITATION` naming what went unverified — an approval that hides what it couldn't check is worse than a `NEEDS CHANGES`
+- Building a story that `PROJECT.md`'s "Never Building" list excludes — that boundary changes only through a Phase 0 scope amendment the user approves
+- Fixing an instruction bug without adding the harness assertion that would have caught it
 
 ---
 
@@ -436,7 +483,14 @@ These are the rendered symbols. The machine-readable statuses are
 | `AGENTS/cartographer.md` | Cartographer instructions (read-only; maintains the engineering-intent layer) |
 | `AGENTS/solution-architect.md` | Solution Architect instructions (agile flow — writes the Development Plan for a tracked issue; never codes) |
 | `AGENTS/plan-reviewer.md` | Plan Reviewer instructions (agile flow — fresh-context adversarial plan review; approves/rejects/escalates) |
-| `AGENTS/arbiter.md` | Retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy |
+| `AGENTS/arbiter.md` | The shared rulebook: retry matrix, PR policy, escalation phrases, failure classification, intent conflict policy, agile plan review policy, autonomous mode policy, model tier policy, **INV-018 dispatch scope**, **the security-baseline definition**, and the **project-type / "Never Building" scope guardrails** |
+| `skills/anymake-dispatch/SKILL.md` | The single chokepoint for all sub-agent dispatch (INV-018) — pre-dispatch prompt assembly, mandatory deliverable verification, canonical RETRY CONTEXT, dispatch logging; also the only place the host runtime is named |
+| `TEMPLATES/board-state.schema.json` | The Phase 4 taskboard spine's schema — BOARD.md is a projection of it, the kanban reads it directly |
+| `.opencode/verify-plugin.mjs` | The regression harness (`npm run verify`) — this repo's only regression check |
+| `.opencode/validate-board-state.mjs` | Validates a `board-state.json` against the schema; a failure is treated like a failed `output_check` |
+| `dashboard/kanban.html` + `kanban.sh` | Zero-build live board, one column per schema story status |
+| `CHANGELOG.md` | What changed in each version and why, with behavior changes called out as such |
+| `RELEASE.md` | Getting a merge to `main` into running sessions (cache invalidation) |
 | `PHASE_GUIDES/phase-4.md` | Full Phase 4 implementation guide (includes agent activation steps) |
 | `TEMPLATES/task-brief.md` | Template the Planner fills to brief each Worker (§3a is the Experience Script) |
 | `TEMPLATES/experience-script.md` | Format for the literal, driveable interaction script (§3a) — one scenario per acceptance-criteria group |
