@@ -66,6 +66,15 @@ offline mode — it requires fetching `session-log.jsonl` over HTTP.)
   Shows "No session history" when `session-log.jsonl` is absent or the `?log=`
   param is omitted.
 - **Cards**: story ID, title, branch, PR#, retry count, last-event age
+- **Solo session card**: when `board-state.json` has a `session` object but no
+  build-loop state (`stories` empty, no `run_id`), the In Progress column
+  renders one derived pseudo-card (session id, current step, "solo session"
+  badge, started age) so solo sessions are visible on the board. It disappears
+  as soon as a real build-loop run takes over. Display-only — the dashboard
+  never writes. When the session log shows the session has ended, the card is
+  removed — the board never claims in-progress work for a dead session.
+  Offline drag-drop mode has no session log; there the card renders from
+  board-state alone (deliberate static-inspection mode).
 - **Header**: run ID, concurrency (current/max), last-updated timestamp, and
   session context (Session ID, Phase, Step) when `board-state.json` has a
   `session` object

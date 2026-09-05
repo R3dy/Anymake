@@ -154,6 +154,13 @@ header .badge.offline { color: var(--ready); border-color: var(--ready); }
   color: var(--blocked);
   margin-top: 4px;
 }
+/* Solo session pseudo-card (#37) */
+.card.solo-card .solo-badge { color: var(--in_progress); }
+@keyframes solo-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.55); }
+  100% { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+}
+.card.solo-pulse { animation: solo-pulse 1.2s ease-out 2; }
 
 footer {
   border-top: 1px solid var(--border);
@@ -297,6 +304,10 @@ var BACKOFF_MS = 15000; // back off to 15s when files are missing (404)
 var boardUrl = null;
 var logUrl = null;
 var lastUpdated = null;
+var lastSessionSig = ''; // #37 — session signature for the render gate
+var lastBoardData = null; // #37 — last fetched board data; log poller reconciles from this
+var lastSoloTitle = null; // #37 — last solo-card title, for the advance pulse
+var sessionEvents = []; // #37 — parsed session-log events; liveness source
 var lastLogSize = -1;
 var pollTimer = null;
 var logPollTimer = null;
@@ -304,7 +315,11 @@ var logPollTimer = null;
 function init() {
   var params = new URLSearchParams(location.search);
   boardUrl = params.get('board');
-  logUrl = params.get('log') || (boardUrl ? boardUrl.replace(/board-state\.json$/, 'session-log.jsonl') : null);
+  logUrl = params.get('log') || (boardUrl && /board-state\.json$/.test(boardUrl)
+    ? boardUrl.replace(/board-state\.json$/, 'session-log.jsonl')
+    : null); // #37 fix: only derive the log URL from a board-state.json board —
+             // replace() with no match returns the original string, which made
+             // logUrl = the board URL itself (double-fetch + bogus sessionEvents)
   if (boardUrl) {
     setBadge('live', 'LIVE');
     startPolling();
@@ -352,8 +367,13 @@ function fetchBoard() {
     })
     .then(function(data) {
       if (!data) return;
-      if (data.updated !== lastUpdated) {
+      lastBoardData = data; // #37 — module-side copy; the log poller reconciles from this
+      var sessionSig = data.session
+        ? [data.session.id, data.session.started, data.session.phase, data.session.step].join('|')
+        : '';
+      if (data.updated !== lastUpdated || sessionSig !== lastSessionSig) {
         lastUpdated = data.updated;
+        lastSessionSig = sessionSig;
         render(data);
       }
       scheduleBoardPoll(POLL_MS);
@@ -429,6 +449,8 @@ function renderColumns() {
 function render(data) {
   var stories = data.stories || [];
   var events = data.events || [];
+  var sess = data.session || null;
+  var showSoloCard = stories.length === 0 && !data.run_id && !!sess && !sessionEnded(sess);
 
   COLUMNS.forEach(function(col) {
     var body = document.getElementById('body-' + col.key);
@@ -438,18 +460,28 @@ function render(data) {
         (col.key === 'blocked' && s.status === 'blocked') ||
         (col.key === 'done' && s.status === 'done');
     });
-    document.getElementById('count-' + col.key).textContent = matches.length;
-    if (matches.length === 0) {
+    var total = matches.length + (col.key === 'in_progress' && showSoloCard ? 1 : 0);
+    document.getElementById('count-' + col.key).textContent = total;
+    if (total === 0) {
       body.innerHTML = '<div class="empty-msg">No stories</div>';
     }
     matches.forEach(function(s) {
       body.appendChild(createCard(s, events));
     });
+    if (col.key === 'in_progress' && showSoloCard) {
+      var sc = buildSoloCard(sess);
+      var t = sess.step || sess.phase || 'Working…';
+      if (lastSoloTitle !== null && lastSoloTitle !== t) {
+        sc.classList.add('solo-pulse');
+        setTimeout(function() { sc.classList.remove('solo-pulse'); }, 2600);
+      }
+      lastSoloTitle = t;
+      body.appendChild(sc);
+    }
   });
 
   var meta = document.getElementById('meta');
   var concurrency = data.concurrency || {};
-  var sess = data.session || null;
   window.__sessionObj = sess;
   var sessHtml = '';
   if (sess) {
@@ -529,6 +561,40 @@ function createCard(s, events) {
   return card;
 }
 
+function buildSoloCard(sess) {
+  var card = document.createElement('div');
+  card.className = 'card solo-card';
+  card.id = 'solo-card';
+
+  var id = document.createElement('div');
+  id.className = 'id';
+  id.textContent = sess.id || 'solo session';
+  card.appendChild(id);
+
+  var title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = sess.step || sess.phase || 'Working…';
+  card.appendChild(title);
+
+  var info = document.createElement('div');
+  info.className = 'info';
+
+  var badge = document.createElement('span');
+  badge.className = 'solo-badge';
+  badge.textContent = 'solo session';
+  info.appendChild(badge);
+
+  if (sess.started) {
+    var started = document.createElement('span');
+    started.className = 'age';
+    started.textContent = relativeTime(sess.started);
+    info.appendChild(started);
+  }
+  card.appendChild(info);
+
+  return card;
+}
+
 function relativeTime(iso) {
   if (!iso) return '';
   var then = new Date(iso);
@@ -564,6 +630,8 @@ function fetchSessionLog() {
       for (var i = 0; i < lines.length; i++) {
         try { events.push(JSON.parse(lines[i])); } catch (e) { /* skip malformed */ }
       }
+      sessionEvents = events; // #37 — liveness source
+      if (lastBoardData) render(lastBoardData); // #37 — reconcile board when the log changed
       renderSessionPanel(events);
       scheduleLogPoll(POLL_MS);
     })
@@ -571,6 +639,12 @@ function fetchSessionLog() {
       renderSessionPanel([]);
       scheduleLogPoll(BACKOFF_MS);
     });
+}
+
+function sessionEnded(sess) {
+  return sessionEvents.some(function(e) {
+    return e.type === 'session_end' && e.session === sess.id;
+  });
 }
 
 function renderSessionPanel(events) {
