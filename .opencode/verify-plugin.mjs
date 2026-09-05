@@ -599,6 +599,37 @@ console.log('\n[11] Zero-build kanban monitor');
   }
 }
 
+// 11b. Solo session pseudo-card (GH #37) — dashboard/kanban.html renders a
+//      display-only derived card from the session object when no build-loop
+//      state exists; liveness derived from the session log; read-only kept.
+console.log('\n[11b] Solo session pseudo-card (#37)');
+{
+  const kanbanPath = path.join(ROOT, 'dashboard', 'kanban.html');
+  if (!fs.existsSync(kanbanPath)) {
+    bad('dashboard/kanban.html does not exist');
+  } else {
+    const kb = fs.readFileSync(kanbanPath, 'utf8');
+    if (kb.includes('solo-card')) ok('dashboard/kanban.html: pseudo-card class present');
+    else bad('dashboard/kanban.html: missing pseudo-card class');
+    if (kb.includes('solo session')) ok('dashboard/kanban.html: solo session badge text present');
+    else bad('dashboard/kanban.html: missing solo session badge text');
+    if (kb.includes('showSoloCard')) ok('dashboard/kanban.html: suppression guard variable present');
+    else bad('dashboard/kanban.html: missing suppression guard variable');
+    if (kb.includes('stories.length === 0') && kb.includes('!data.run_id')) ok('dashboard/kanban.html: suppression rule terms present');
+    else bad('dashboard/kanban.html: missing suppression rule terms');
+    if (kb.includes('buildSoloCard')) ok('dashboard/kanban.html: pseudo-card builder present');
+    else bad('dashboard/kanban.html: missing pseudo-card builder');
+    if (kb.includes('solo-pulse') && kb.includes('@keyframes')) ok('dashboard/kanban.html: advance pulse animation present');
+    else bad('dashboard/kanban.html: missing pulse animation');
+    if (kb.includes('sessionEnded')) ok('dashboard/kanban.html: session liveness check present');
+    else bad('dashboard/kanban.html: missing session liveness check');
+    if (kb.includes('lastBoardData')) ok('dashboard/kanban.html: liveness reconciliation buffer present');
+    else bad('dashboard/kanban.html: missing liveness reconciliation buffer');
+    if (kb.includes('.test(boardUrl)')) ok('dashboard/kanban.html: log URL derived only from board-state.json boards (#37 build fix)');
+    else bad('dashboard/kanban.html: missing log URL derivation guard');
+  }
+}
+
 // 12. Per-project dashboard launcher (Story C.1 / #31) — kanban.sh exists,
 //     is executable, uses python3 http.server, binds 127.0.0.1, references
 //     board-state.json + session-log.jsonl
