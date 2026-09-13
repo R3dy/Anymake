@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# A fake `opencode`, mimicking the real CLI's surface closely enough to test the
+# adapter offline — including the two behaviors that produced real bugs:
+#
+#   1. --help and `run --help` write to STDERR and exit 0. A reader that takes
+#      stdout-on-success sees an empty string and concludes the flags do not exist.
+#   2. `export` writes JSON to STDOUT and its "Exporting session:" chatter to STDERR.
+#      A reader that merges the streams gets chatter appended after the JSON and
+#      JSON.parse fails on the trailing garbage.
+#
+# Both are why evals/selftest.mjs drives this instead of trusting a code read.
+set -u
+SESSION="ses_stub000000000000000000000"
+
+case "${1:-}" in
+  --version) echo "1.18.29"; exit 0 ;;
+  --help)
+    cat >&2 <<'EOF'
+Commands:
+  opencode run [message..]     run opencode with a message
+  opencode export [sessionID]  export session data as JSON
+  opencode session             manage sessions
+EOF
+    exit 0 ;;
+  run)
+    if [ "${2:-}" = "--help" ]; then
+      cat >&2 <<'EOF'
+opencode run [message..]
+Options:
+  -c, --continue     continue the last session
+  -s, --session      session id to continue
+      --format       format: default (formatted) or json (raw JSON events)
+      --dir          directory to run in
+      --agent        agent to use
+EOF
+      exit 0
+    fi
+    echo "{\"type\":\"text\",\"timestamp\":1700000000000,\"sessionID\":\"$SESSION\",\"text\":\"READY\"}"
+    exit 0 ;;
+  export)
+    echo "Exporting session: $SESSION" >&2          # chatter on stderr, JSON on stdout
+    cat <<EOF
+{
+  "info": { "id": "$SESSION", "agent": "build", "cost": 0.0123,
+    "model": { "id": "test-model", "providerID": "test" },
+    "tokens": { "input": 100, "output": 20, "reasoning": 5, "cache": { "read": 40, "write": 0 } },
+    "time": { "created": 1700000000000, "updated": 1700000009000 } },
+  "messages": [
+    { "info": { "role": "user", "id": "msg_1", "time": { "created": 1700000000000 } }, "parts": [] },
+    { "info": { "role": "assistant", "id": "msg_2", "agent": "anymake-worker",
+        "modelID": "test-model", "providerID": "test", "cost": 0.0123,
+        "tokens": { "input": 100, "output": 20, "reasoning": 5, "cache": { "read": 40, "write": 0 } },
+        "time": { "created": 1700000000000, "completed": 1700000009000 } },
+      "parts": [
+        { "type": "reasoning", "text": "thinking about story-3.4" },
+        { "type": "text", "text": "VERDICT: PASS for story-3.4" },
+        { "type": "tool", "tool": "read", "state": { "status": "completed",
+            "input": { "filePath": "AGENTS/worker.md" }, "output": "xxxxxxxx",
+            "time": { "start": 1700000001000, "end": 1700000001200 } } },
+        { "type": "tool", "tool": "write", "state": { "status": "completed",
+            "input": { "filePath": "task-brief-story-3.4.md" }, "output": "ok",
+            "time": { "start": 1700000002000, "end": 1700000002100 } } },
+        { "type": "subtask", "agent": "anymake-validator", "description": "validate story-3.4" }
+      ] }
+  ]
+}
+EOF
+    exit 0 ;;
+  session)
+    echo "Session ID                      Title      Updated"
+    echo "$SESSION  stub       9:00 PM"
+    exit 0 ;;
+  providers) echo "0 credentials"; exit 0 ;;
+  *) echo "opencode: unsupported in the stub: $*" >&2; exit 2 ;;
+esac
