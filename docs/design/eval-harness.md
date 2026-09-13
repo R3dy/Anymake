@@ -6,7 +6,7 @@
 the Anymake system, across project types, scenario classes, and model
 configurations, and produces a composite-scored HTML report.
 **Companion mockup:** `docs/design/eval-report-mockup.html` (open it — the
-report spec in §7 is easier to read after you have clicked through the shape).
+report spec in §8 is easier to read after you have clicked through the shape).
 
 ---
 
@@ -19,8 +19,17 @@ node evals/run.mjs --scenario s1-cli-greenfield
 # the standard sweep: every scenario class × every model config in the matrix
 node evals/run.mjs --suite standard --matrix evals/matrix/default.json --repeats 3
 
+# does this feature earn its keep? one component removed, everything else identical
+node evals/run.mjs --suite ablation --ablate no-experience-runner --repeats 2
+
+# the staircase: bare model → +phases → +planner → +validator → +experience → full
+node evals/run.mjs --suite staircase --scenario s1-cli --repeats 2
+
 # re-score and re-render an old run without re-running any agents
 node evals/run.mjs --score runs/2026-09-13T09-02-run-041 --baseline runs/2026-09-06T...
+
+# serve the report with trace detail (traces are too large to inline)
+bash evals/report/serve.sh runs/2026-09-13T09-02-run-041
 
 # open the report
 open runs/2026-09-13T09-02-run-041/report.html
@@ -41,9 +50,15 @@ about this repo:
 | Q2 | **Which model config runs Anymake best, per dollar?** | The model-tier feature (`AGENTS/arbiter.md` → Model Tier Policy) is a cost/quality bet with no evidence behind it. "Cheapen the generator, not the checker" is a hypothesis. |
 | Q3 | **Does a change to the instructions make the system better or worse?** | `npm run verify` checks that the markdown is internally consistent. Nothing checks that the markdown *builds better software*. This harness is the outer loop to `verify-plugin.mjs`'s inner loop. |
 | Q4 | **Which of the honor-system rules actually hold under autonomy?** | `docs/audits/2026-08-29-instruction-deviation-audit.md` §3 lists a dozen "must never" rules with zero mechanical enforcement. A rule nobody has ever seen violated and a rule nobody has ever checked look identical. |
+| Q5 | **Which parts of Anymake earn their keep — and which should be deleted?** | Every phase, stage, gate and artifact costs tokens and context. None of them has ever been priced against what it returns, and a feature that makes the system *worse* is indistinguishable from one that makes it better until you remove it and measure. |
 
-Every design decision below serves one of those four. If a proposed metric
+Every design decision below serves one of those five. If a proposed metric
 serves none of them, it does not ship.
+
+Q5 is the one that changes the shape of the tool. A harness built only for Q1–Q4
+produces a scorecard; Q5 needs an **instrument** — full agent traces, per-feature
+cost accounting, and the ability to remove one component and re-measure. That is
+what §7 is, and it is the part to build if you only build part of this.
 
 ### The one measurement that matters most
 
@@ -75,7 +90,7 @@ splitting Worker from Validator.
   scores badly here, and that is correct.
 - **Not a replacement for `npm run verify`.** That stays the fast, free,
   every-push check. This is slow and costs money; it runs nightly/pre-release.
-- **Not a CI blocker on the first build.** It becomes one (§10.3) only once
+- **Not a CI blocker on the first build.** It becomes one (§11.3) only once
   variance is characterized and a baseline exists.
 - **Not a human-eval substitute.** Judged metrics are reported separately from
   mechanical ones and never dominate the composite (§6.9).
@@ -101,7 +116,7 @@ evals/run.mjs                 CLI + scheduler
 ```
 
 Every piece is zero-dependency Node ESM, matching `.opencode/verify-plugin.mjs`
-and `.opencode/validate-board-state.mjs`. See §10.1 for why that constraint is
+and `.opencode/validate-board-state.mjs`. See §11.1 for why that constraint is
 load-bearing and not just taste.
 
 ### 3.2 The cell and the arena
@@ -260,6 +275,13 @@ Five sources, ranked by how much they can be trusted:
 | Git + the `gh` ledger | commits per layer, branch names, worktree lifecycle, PR open/merge times, issue label transitions | High |
 | Post-run mechanical checks | placeholder scan, secret scan, schema validation, test-tampering diff, dependency audit | High |
 | LLM judges (§3.7) | fidelity mapping, design-consistency, root-cause correctness | **Lowest** — always segregated in the composite |
+
+The first source does double duty: the same per-message record that prices a run
+is also the **agent trace** every diagnostic in §7 is built from — reasoning
+where the host exposes it, every tool call, every file read, every skill
+invocation. Capturing it in full from the first day costs nothing extra and is
+not recoverable later, so §7's instruments depend on getting §3.6 right, not on
+any new collector.
 
 The board snapshotter is worth calling out: polling `.anymake/board-state.json`
 every few seconds turns the run into a **time series** rather than a final state.
@@ -505,7 +527,7 @@ Two subtleties that make or break this pillar:
 |----|--------|--------|-----------|---------|
 | `EFF-01` | Total tokens (in / out / cache-read / cache-write) | usage stream | budget band | all |
 | `EFF-02` | Total USD — host-reported where available, price-table fallback, else "tokens only" | usage stream | budget band | all |
-| `EFF-03` | Wall-clock and **agent-active** time (both; see §9) | timestamps | budget band | all |
+| `EFF-03` | Wall-clock and **agent-active** time (both; see §10) | timestamps | budget band | all |
 | `EFF-04` | Spend attribution — by phase, by agent role, by tier | usage × dispatch log | informational | all |
 | `EFF-05` | Unit economics — $/done-story, $/passing-oracle-test, tokens/artifact | derived | budget band | all |
 | `EFF-06` | **Rework tax** — share of spend on retries, re-plans, re-reviews and discarded work | usage × board series | inverted ratio | all |
@@ -565,7 +587,7 @@ This mirrors exactly how the system handles its own type variation
 Product Owner Proxy must not fail a gate for it"). A `cli` project has no
 prototype gate, so `FID-08` doesn't apply, so a CLI run isn't quietly penalized
 for lacking one. The report shows, per cell, exactly which metrics were dropped
-and what the weights became — the derivation is always visible, per §7.2.
+and what the weights became — the derivation is always visible, per §8.2.
 
 ### 6.3 Measuring equally across project types
 
@@ -641,7 +663,7 @@ Two headline numbers, always side by side:
 Both matter and neither alone answers Q2. A tiered config that scores 78 at a
 third of the price of an all-frontier config scoring 84 is very likely the right
 default, and only the pair of numbers shows that. The report plots the efficiency
-frontier explicitly (§7.1).
+frontier explicitly (§8.1).
 
 ### 6.7 Derived alarms
 
@@ -679,7 +701,286 @@ judgment, and should be read with more caution than a mechanically-dominated one
 
 ---
 
-## 7. The report
+## 7. Developer diagnostics — what to change, and where
+
+Everything above makes runs *comparable*. None of it tells you what to fix, and
+none of it tells you whether a given piece of Anymake is pulling its weight.
+This section is the part you actually work from.
+
+It exists because the honest form of the question is uncomfortable: **some of
+this system is probably making things worse.** A phase that produces a document
+nobody reads, a checking stage that never catches anything the next stage
+wouldn't have, a 41 KB summary file re-read every session — each of those costs
+real tokens, real latency, and real context budget, and each looks exactly like
+a feature until you measure it. A harness that only produces a composite score
+lets you see that a change helped or hurt; it does not let you see *which part*
+of the system to cut. So four instruments sit on top of the trace:
+
+| Instrument | Answers |
+|------------|---------|
+| **Component ledger** (§7.3) + **ablation** (§7.4) | Does this feature earn its keep? What happens if I delete it? |
+| **Checking-stage yield** (§7.5) | Does this reviewer catch anything the next one wouldn't? |
+| **Instruction attention & yield** (§7.6) | Which files are load-bearing, which are expensive, which are dead? |
+| **Defect attribution** (§7.7) → **fix list** (§7.8) | When it went wrong, whose instruction was it, and is the instruction absent, unread, ignored, or simply wrong? |
+
+### 7.1 Trace capture — the raw material
+
+Everything in this section derives from one collector, so there is one thing to
+get right. For **every turn of every agent** the harness records:
+
+| Field | Notes |
+|-------|-------|
+| `agent`, `role`, `tier`, `story`, `attempt`, `parent_dispatch` | Who this is and why it was spawned |
+| `model_requested` / `model_served` | The tier-binding check (`EFF-07`) falls out of this for free |
+| `tokens` (in / out / cache-read / cache-write), `usd`, `duration` | Per turn, not just per run |
+| `reasoning` | The model's own reasoning text **where the provider and host expose it** |
+| `message` | The assistant text |
+| `tool_calls[]` | name, argument digest, result size, duration, and for file reads the **resolved path** |
+| `files_read[]` classified | `anymake-system` (AGENTS/, PHASE_GUIDES/, TEMPLATES/, skills/, PROJECT_TYPES/) · `project-artifact` (the PROJECTS/ workspace) · `source` · `other` |
+| `skills_invoked[]` | Which companion skill fired, and on whose turn |
+| `artifact_written`, `verdict_emitted` | The deliverable and the call |
+
+**Degradation is explicit, not silent.** Tool calls, messages, timings and token
+counts are available from the host's own accounting in every configuration.
+Reasoning text may not be — it depends on the provider and on whether OpenCode
+persists it. The trace viewer renders what exists and labels what doesn't, and
+the report's header states which fields this run captured. A diagnostic you
+can't get is reported as absent; it is never inferred from the message text and
+presented as reasoning.
+
+**Where it lives.** Traces are large — a full sweep is plausibly hundreds of
+megabytes, which cannot be inlined into a single-file report. So: `report.html`
+stays self-contained for every summary view, and traces are written to
+`traces/<cell-id>.jsonl`, lazy-loaded when a trace is opened. `evals/report/serve.sh`
+serves the run directory over localhost the way `dashboard/kanban.sh` already
+does for the kanban — same pattern, same zero-build constraint. Opened directly
+over `file://`, the report shows every summary view and says plainly that trace
+detail needs the server.
+
+### 7.2 The dispatch tree
+
+The trace is reassembled into the tree the system actually ran:
+
+```
+session (hub)
+└── orchestrator run-001
+    ├── dispatch → planner · story 3.4 · attempt 1        6.2k in / 1.8k out · 41s · brief written
+    ├── dispatch → worker · story 3.4 · attempt 1        28.4k in / 9.1k out · 6m12s · PR #7
+    ├── dispatch → validator · story 3.4 · attempt 1     19.7k in / 2.2k out · 1m48s · VERDICT: FAIL
+    ├── dispatch → worker · story 3.4 · attempt 2 (retry) 31.0k in / 7.4k out · 5m02s · PR #7 updated
+    └── dispatch → validator · story 3.4 · attempt 2     20.1k in / 2.0k out · 1m31s · VERDICT: PASS
+```
+
+Every node carries its own cost and outcome, and one derived number that turns
+out to matter more than expected:
+
+**Input composition.** For each agent run, what fraction of its input tokens was
+(a) the role prompt injected from its `AGENTS/*.md` file, (b) the task brief,
+(c) files it chose to read, (d) retry context, (e) carried conversation. This is
+mechanically derivable by matching read content against the pinned checkout's
+file hashes, and it is what converts "is `AGENTS.md` too big?" from an opinion
+into a line item. The hub bootstrap is measured the same way: the plugin injects
+the entire `skills/anymake/SKILL.md` into the first user message of every
+session, so that injection has a fixed per-session price which the report states
+in dollars.
+
+### 7.3 The component ledger
+
+Anymake is not one thing; it is roughly fifteen separable bets. The ledger lists
+them with a cost side that comes free with every run, a benefit side that
+requires an ablation arm, and a verdict.
+
+| Component | Ablation id | Cost side (always measured) | Benefit side (ablation) |
+|-----------|-------------|------------------------------|--------------------------|
+| Phase 0–1 (Foundation, Discovery) | `no-phase01` | tokens, wall-clock, artifacts produced | Δ composite, Δ planning fidelity |
+| Phase 2 design system + prototype gate | `no-design-system` | tokens, gate rounds | Δ `FID-08`, Δ oracle on UI stories |
+| Planner stage | `orchestrator-authors-briefs` | tokens per story, brief size | Δ worker success rate, Δ retries |
+| Validator stage | `no-validator` | tokens per PR | unique catches (§7.5) |
+| Experience Runner stage | `no-experience-runner` | tokens per story + app launch time | **unique catches** — its whole justification |
+| Product Owner Proxy gates | `auto-advance-gates` | tokens per gate, rejection rounds | Δ artifact quality, Δ trust gap |
+| Experience Scripts (Phase 3.2b) | `no-experience-scripts` | tokens in planning | Δ `OUT-03` |
+| Intent layer (Cartographer + DECISIONS/INVARIANTS) | `no-intent-layer` | tokens per agile cycle | Δ `FID-04/05`, Δ regressions |
+| Plan Reviewer loop | `no-plan-review` | tokens per round | Δ `OUT-06` root-cause correctness |
+| Dispatch hardening (INV-018) | `raw-dispatch` | prompt overhead per dispatch | Δ empty-deliverable rate |
+| Worktrees + concurrency | `sequential-shared-checkout` | setup time | Δ wall-clock, Δ merge conflicts |
+| Model tiering | covered by the matrix | — | Δ composite per dollar |
+| `CONVENTIONS.md` accumulation | `no-conventions` | tokens read per story | Δ consistency, Δ planner input size |
+| Board-state + BOARD.md rendering | `no-board` | tokens per state change | Δ stall recovery, Δ orchestrator accuracy |
+| Brownfield mapping depth | `brownfield-lite` | tokens | Δ `FID-05` on S5 |
+
+Each row also carries a **harm** column, because a component can score worse
+than neutral: gates that rejected work the oracle says was fine, retry loops
+that burned budget and escalated anyway, a stage whose failure blocked a story
+that was actually correct. Cost minus harm minus benefit produces one of four
+verdicts — **earns its keep · neutral · negative · unmeasured** — and
+`unmeasured` is a first-class state, shown as such, never rounded to neutral.
+
+### 7.4 Ablation — the staircase and the leave-one-out
+
+Two complementary experiments, because they answer different questions and each
+alone misleads.
+
+**The staircase** runs an ordered set of arms, each adding one layer:
+
+```
+bare model  →  +phases 0–3  →  +planner  →  +validator  →  +experience runner  →  +proxy gates  →  full
+```
+
+Each step's marginal Δ composite (and Δ cost) is the value of *adding that layer
+on top of everything before it*. This is the single most informative experiment
+for "have I over-engineered this," and the first arm is exactly the S0 control:
+a frontier model, going solo, on the same brief.
+
+**Leave-one-out** removes one component from the complete system and measures
+the loss. A component can look worthless in the staircase (because whatever came
+before it already covered the gap) and still be load-bearing when removed from
+the full system — or the reverse. Low on both is the real delete signal.
+
+**Ablating a markdown system means patching prose**, which is the method's weak
+point and is handled explicitly. Each ablation lives in
+`evals/ablations/<id>/` as a patch against the pinned checkout plus a
+**trace assertion** that proves the removal took: `no-experience-runner` asserts
+zero experience-runner dispatches in the trace and zero experience reports on
+disk. An ablation whose assertion fails is discarded, not scored — otherwise
+you are measuring a patch that didn't apply.
+
+**Cost control.** A full sweep per arm is unaffordable. Ablations run at n=2 on
+the two scenarios that stress the component (the hardest fixture, never the
+cheapest — see §7.10), and the report labels every ablation-derived number with
+its n.
+
+### 7.5 Checking-stage yield
+
+Anymake has four checking stages, and each was added on a specific argument
+about what the previous one couldn't catch. Those arguments are testable:
+
+| Per stage | Meaning |
+|-----------|---------|
+| Invocations · cost | What it costs to run at all |
+| Catches | Verdicts of FAIL/NEEDS CHANGES the oracle confirms were real defects |
+| **Unique catches** | Defects **no other stage caught** and the oracle confirms — the only number that justifies a stage's existence |
+| False rejections | Rejections the oracle says were fine — work redone for nothing |
+| Misses | Defects that passed this stage and the oracle later caught |
+| Cost per unique catch | The price of the insurance |
+
+**This is the number that keeps or kills the Experience Runner.** Its stated
+purpose is catching what a Validator and a green test suite cannot. If its
+unique-catch count across a sweep is zero while it costs a launch-and-drive
+cycle per story, that is the strongest possible argument to cut it. If it is
+nonzero, every one of those catches is an instance of the exact failure the
+system was built to prevent, and the argument is closed in the other direction.
+The same test applies, unchanged, to the Validator, the Product Owner Proxy and
+the Plan Reviewer.
+
+### 7.6 Instruction attention and yield
+
+Per instruction file, across the sweep:
+
+| Column | What it tells you |
+|--------|-------------------|
+| Reads · read by which stages | Whether it is reaching the agents it was written for |
+| Tokens per read · total · **% of all input tokens** | What it costs, in money |
+| Rules exercised | How many of its rules a run actually had occasion to apply |
+| Rules violated | Of those, how many were broken |
+| Verdict | **load-bearing · expensive · dead · unread-but-violated** |
+
+Three findings this surfaces that nothing else in the harness would:
+
+- **Dead files.** Never read, in any cell, in any scenario. Either the content is
+  unreachable or the discovery path is broken. Both are bugs; today neither is
+  visible.
+- **Expensive files.** High token share, few rules exercised. `AGENTS.md` is
+  41 KB of summary whose own header says the detailed files win any
+  disagreement — if it is read every session and its rules all duplicate
+  `AGENTS/*.md`, this column prices that duplication.
+- **Unread-but-violated.** The rule exists, the run broke it, and the file never
+  entered that agent's context. That is a *discovery* failure, not a wording
+  failure, and it has a completely different fix (§7.7).
+
+### 7.7 Defect attribution — four causes, four different fixes
+
+Every oracle failure, probe failure, escalation and retry is attributed to a
+stage and a cause class. The classes are chosen so that each implies a different
+edit — a taxonomy that doesn't change what you'd do is decoration.
+
+| Cause class | How it's identified | The fix |
+|-------------|--------------------|---------|
+| **Instruction absent** | No rule in any file covers the situation | Write the rule |
+| **Instruction unread** | The rule exists; the file never entered that agent's context (mechanical, from `files_read`) | Discovery/salience: move it into the role prompt, inline it in the brief, or shorten the file it's buried in |
+| **Instruction read but violated** | The file was read; the rule was not followed | Wording/salience: shorten, make it imperative, or add a mechanical check |
+| **Instruction followed, outcome wrong** | The rule was followed exactly and the result is still bad | **The rule is wrong.** Change the rule |
+| **Model capability** | The same instructions, same scenario, a stronger model in another cell: it succeeds there | Not an instruction problem — it's a model floor for that role's tier |
+| **Environment** | Shim, network, fixture | Not a finding |
+
+The first four are mostly mechanical: the `files_read` classification separates
+*unread* from *read-and-violated* without judgment, which is the split that
+matters most and the one a human reviewer would get wrong by guessing. The
+capability class falls out of the matrix for free — **the same defect appearing
+only in the weaker cells is evidence about the model, not about your prose**,
+and without the matrix you would spend a week rewriting an instruction that was
+fine. Only "followed but wrong" needs a judge, and it carries the usual citation
+verification and a confidence label.
+
+### 7.8 The fix list
+
+The report's last view is a ranked, actionable list — the thing you open the
+morning after a sweep:
+
+```
+#1  Worker skips the Test layer on stories with no UI          ×7 occurrences · 3 configs
+    Cause: instruction read but violated — AGENTS/worker.md §Build order
+    Evidence: 7 trace spans · 4 oracle failures · PRB-TEST-01 adjacent
+    Proposed: the layer list is 7 bullets deep in a 267-line file; lift "no layer
+              is optional" into the dispatch prompt's pre-established facts
+    Ships with: a verify-plugin.mjs assertion that every task brief's §4 Test row
+              is non-empty for stories with runtime-verifiable criteria
+```
+
+Ranked by frequency × severity × confidence, grouped by target file, and every
+entry carries the assertion that would catch a regression — because this repo's
+own rule is that *every instruction fix ships with the check that would have
+caught it*, and a fix list that ignores that rule generates exactly the drift the
+audit already found once.
+
+### 7.9 Over-engineering diagnostics
+
+Six derived numbers aimed squarely at the question. None enter the composite;
+all are reported per cell and per config.
+
+| Diagnostic | Definition | Why it bites |
+|------------|-----------|--------------|
+| **Ceremony ratio** | tokens producing process artifacts (briefs, reports, board updates, verdicts) ÷ tokens producing shipped code and tests | Read next to the control arm's quality, this is the headline over-engineering number |
+| **Artifact read-back rate** | artifacts written that no later agent ever reads | An artifact nothing consumes is pure cost. Mechanical, from the trace, and merciless |
+| **Gate yield** | gate rejections after which the revised artifact measurably improved on the oracle | A gate that rejects a lot and changes nothing is a tax |
+| **Retry yield** | retries that ended in success rather than escalation | Distinguishes a working retry budget from a delay before the inevitable |
+| **Redundancy index** | findings raised by more than one stage | Where two checkers overlap, one of them is optional |
+| **Time-to-first-code** | wall-clock and tokens before the first shipped line | The direct cost of "planning before building," priced |
+
+### 7.10 What ablation cannot tell you
+
+Three limits, stated up front so the ledger isn't over-read:
+
+1. **Small n and interacting components.** At n=2, a 4-point composite difference
+   is noise. The ledger's job is to find components with *large* or *zero*
+   effects; anything in between needs more repeats before you act on it, and the
+   report marks it that way rather than ranking it.
+2. **Easy fixtures hide the value of safety machinery.** A component that only
+   pays off on hard, ambiguous, security-adjacent work looks worthless when
+   measured on a clean CLI build. Ablations therefore run on the hardest
+   available fixture, and a "no measured benefit" verdict on an easy scenario is
+   labeled as such, not generalized.
+3. **Insurance is not measured by its average payout.** The security override,
+   the Never Building gate, and the intent-conflict gate exist for rare,
+   expensive events. They will usually show zero benefit and nonzero cost, and
+   that is exactly what insurance looks like. **These components are exempt from
+   the ledger's `negative` verdict**; they get a "cost of insurance" line instead,
+   so you can see what they cost without the report implying you should cut them.
+
+Everything else is fair game. If the Planner stage costs 17% of every run and
+removing it changes nothing the oracle can see, that is a real finding and the
+harness should say so plainly.
+
+## 8. The report
 
 One self-contained HTML file per run, zero build step, no external fetches beyond
 the font — the same constraints `dashboard/kanban.html` already works under, for
@@ -687,30 +988,46 @@ the same reason (you will open this over a `file://` URL or a
 `python3 -m http.server` on a laptop, and it must just work). Data is inlined as
 a single JSON blob so the file can be emailed, archived, and diffed.
 
-### 7.1 Views
+### 8.1 Views
 
-1. **Run header** — run id, date, Anymake SHA, suite, matrix, fixture versions,
-   weight-set version, total spend, total wall-clock, n per cell.
-2. **Leaderboard** — one row per model config: composite (median + IQR),
-   per-pillar bars, cost, Δ vs. the S0 control, veto markers.
-3. **Scenario × config matrix** — heatmap of composites; click any cell to drill
-   in. This is the view that answers "does this model fall apart on CLI projects."
-4. **Efficiency frontier** — composite vs. USD scatter, control arm marked, the
-   frontier drawn. Answers Q2 in one glance.
-5. **Invariant probe board** — probes × configs grid: pass / fail / not-triggered.
-   Answers Q4. Any red cell here outranks every other number on the page.
-6. **Trust-gap panel** — claimed-done vs. oracle-verified, per config, with the
-   specific stories named.
-7. **Autonomy panel** — gate-rounds distribution, plan-review rounds, escalations
-   by type, human turns (scripted vs. unscripted).
-8. **Spend panel** — tokens and USD by phase, by agent role, by tier; rework tax.
-9. **Cell drill-down** — run timeline reconstructed from the board snapshot series
-   (reusing the kanban's visual language), artifact tree, transcript excerpts at
-   each gate, and the **score derivation table**.
-10. **Comparison mode** — `--baseline <run-id>` renders deltas per metric, for
-    answering Q3 after an instruction change.
+The report has two audiences and they read it in opposite directions. Someone
+asking *"which config should I use"* reads the summary views top-down. You,
+asking *"what is broken and what should I delete,"* start from a red cell and
+drill until you are looking at the instruction line that caused it. So every
+score in every summary view is a link into the trace, and the diagnostic views
+come before the scoreboard views in the navigation — the leaderboard is the
+smallest part of what this report is for.
 
-### 7.2 Every score is auditable
+**Diagnostic views** — the working surface:
+
+1. **Overview** — headline tiles (best cost-adjusted config, Anymake vs. control,
+   trust gap, invariants broken), the leaderboard, the efficiency frontier, and
+   the derived alarms.
+2. **Components** — the component ledger (§7.3) with cost / benefit / harm /
+   verdict per feature, the ablation staircase, and the checking-stage yield
+   table (§7.5). *The view that answers "have I over-engineered this."*
+3. **Traces** — the dispatch tree per cell, expandable to per-turn reasoning,
+   tool calls, files read, skills invoked, tokens and artifacts. Filterable to
+   failures only, to one agent, or to one story.
+4. **Instructions** — per-file attention and yield (§7.6): reads, token share,
+   rules exercised, rules violated, and the dead / expensive / load-bearing
+   verdict.
+5. **Fix list** — the ranked, file-targeted action list (§7.8), each entry with
+   its evidence links, cause class, proposed change, and the assertion to add.
+
+**Scoreboard views** — the comparable summary:
+
+6. **Scenario × config matrix** — composites as a heatmap; click through to a cell.
+7. **Invariant probes** — probes × configs, pass / fail / not-triggered.
+8. **Trust gap** — claimed done vs. independently verified, with every gap story named.
+9. **Autonomy** — gate rounds, plan-review rounds, escalations, human turns.
+10. **Spend** — by phase, by agent role, by tier; rework tax; ceremony ratio.
+11. **Cell drill-down** — run timeline from the board snapshot series, artifact
+    tree, and the score derivation table.
+12. **Comparison mode** — `--baseline <run-id>` renders per-metric deltas, which
+    is how you check whether last week's instruction edit actually helped.
+
+### 8.2 Every score is auditable
 
 The derivation table is not a nice-to-have. For each metric the drill-down shows:
 raw value → normalizer applied → normalized score → weight (after redistribution)
@@ -723,7 +1040,7 @@ doing the grading. A composite you can't take apart is a composite you can't act
 on, and it's also how you catch a broken metric before you act on a wrong
 conclusion.
 
-### 7.3 Machine-readable twin
+### 8.3 Machine-readable twin
 
 Alongside `report.html`, every run writes `report.json` with the same data.
 That's what makes trend tracking, CI thresholds, and cross-run analysis possible
@@ -731,9 +1048,9 @@ without scraping HTML.
 
 ---
 
-## 8. Run lifecycle
+## 9. Run lifecycle
 
-### 8.1 Per cell
+### 9.1 Per cell
 
 ```
  1. materialize arena (checkout SHA, copy fixture, write opencode.json, install shims)
@@ -757,14 +1074,14 @@ half the machine's cores, capped by provider rate limits). Execution order is
 randomized so a provider slowdown mid-sweep doesn't systematically land on one
 config.
 
-### 8.2 Caps and failure handling
+### 9.2 Caps and failure handling
 
 Three caps per cell: wall-clock, USD, and turn count. A cap hit is a **result**
 (`AUT-09 = capped`), not an exclusion — dropping timeouts biases every comparison
 toward slow, thorough models. A harness-level crash (adapter failure, disk, arena
 corruption) *is* excluded, counted in `REL-01`, and retried once.
 
-### 8.3 On disk
+### 9.3 On disk
 
 ```
 runs/<run-id>/
@@ -785,7 +1102,7 @@ require re-running it.
 
 ---
 
-## 9. Fairness and determinism
+## 10. Fairness and determinism
 
 These are the controls without which the numbers are decorative:
 
@@ -815,9 +1132,9 @@ the IQR bars and the "not separated" markers are for.
 
 ---
 
-## 10. Fitting into this repo
+## 11. Fitting into this repo
 
-### 10.1 ADR-014 — the harness is a developer tool, not a runtime
+### 11.1 ADR-014 — the harness is a developer tool, not a runtime
 
 ADR-008 says this repo is markdown-as-source-of-truth: no build step, no runtime,
 no application code. A harness is executable code, so the tension is real and
@@ -840,7 +1157,7 @@ developer-only tool**. Binding constraints:
 
 That last constraint is what makes Q3 answerable, so it is not negotiable.
 
-### 10.2 A small change to the manifest schema
+### 11.2 A small change to the manifest schema
 
 Add `## Eval Profile` to the manifest schema in `PROJECT_TYPES/README.md` and to
 each type's `manifest.md` (Appendix A). It's ~15 lines per type, mostly
@@ -855,7 +1172,7 @@ don't contradict its Gate Criteria Deltas. Per this repo's own rule — *every
 instruction fix ships with the assertion that would have caught it* — that check
 should land with the schema change, not after it.
 
-### 10.3 CI
+### 11.3 CI
 
 Not on every push; it costs real money and takes hours. Instead:
 
@@ -869,7 +1186,7 @@ Not on every push; it costs real money and takes hours. Instead:
 
 ---
 
-## 11. Risks and open questions
+## 12. Risks and open questions
 
 | Risk | Mitigation | Residual |
 |------|-----------|----------|
@@ -880,40 +1197,58 @@ Not on every push; it costs real money and takes hours. Instead:
 | Metrics gamed by future instruction edits ("write to the test") | Oracles hidden and outside the arena; probes rotate stimuli across versions | Watch for it; a suspiciously fast jump in one metric is a signal to inspect |
 | Sweep cost | Cheap probes ride existing scenarios; `--suite smoke` for iteration; per-cell USD caps | Manageable, but budget a full sweep deliberately |
 | The `gh` shim diverges from real GitHub behavior | Shim covers only the observed command set; unknown invocations logged as `CNF-10` rather than silently succeeding | Some real-GitHub behaviors untested |
+| Reasoning text may not be persisted by the host/provider | Trace viewer degrades to messages + tool calls + files read, and the report states which fields the run captured | Attribution between "read but violated" and "followed but wrong" gets harder; the mechanical *unread* split still works |
+| Trace volume (hundreds of MB per sweep) | Summaries stay inline in `report.html`; traces lazy-load from `traces/*.jsonl` over `evals/report/serve.sh` | `file://` viewing loses trace detail (stated in the UI) |
+| An ablation patch removes more than intended | Every ablation ships a trace assertion proving the component didn't run; a failed assertion discards the arm rather than scoring it | Prose patching stays the method's weakest joint |
+| **Acting on a "delete it" verdict that was really small-n noise** | n and effect size shown on every ledger row; safety components exempt from the `negative` verdict (§7.10) | Real — the ledger is a prompt to investigate, not an instruction to cut |
 
-**Open questions for you:**
+**Open questions:**
 
 1. **Fixture investment.** Three hand-built fixtures (saas / cli / api-service)
    is roughly a week of careful work and is the single biggest cost in this plan.
    Worth it, or start with one (`cli` — cheapest to build, fastest to run, covers
    the whole agile pipeline) and expand once the harness itself is proven?
 2. **Sweep budget.** A per-run USD cap has to come from somewhere. What's the
-   ceiling for a full sweep you'd actually run weekly?
-3. **Does a real GitHub arm matter to you?** The shim covers the pipeline; it
-   doesn't prove the system works against real GitHub. A single real-repo
-   scenario, run rarely, would close that — at the cost of hermeticity.
+   ceiling for a full sweep you'd actually run weekly? Ablation arms multiply it:
+   the staircase alone is 6 arms.
+3. **Ablation order.** The staircase in §7.4 adds layers in the order the system
+   itself was built. A different order would attribute credit differently (a
+   layer added last gets whatever gap remains). Is build-order the right story,
+   or should the staircase follow *suspicion* order — cheapest-to-cut first?
+4. **Does a real GitHub arm matter?** The shim covers the pipeline; it doesn't
+   prove the system works against real GitHub. A single real-repo scenario, run
+   rarely, would close that — at the cost of hermeticity.
 
 ---
 
-## 12. Build plan
+## 13. Build plan
 
 Each phase is independently useful and ends with something you can look at. No
 phase depends on a later one being right.
 
 | Phase | Deliverable | Proves |
 |-------|-------------|--------|
-| **P0** | Adapter + `--probe`; one arena; one scenario (S1 `cli`); raw telemetry only, no scoring | We can launch, drive, and instrument OpenCode reliably. **The riskiest unknown, retired first** |
-| **P1** | `gh`/CI shims; board snapshotter; mechanical metrics (A, C, E); `report.json` | Every number that doesn't need an oracle or a judge |
-| **P2** | HTML report + composite scoring + derivation tables | The mockup, made real |
-| **P3** | Fixture #1 with hidden oracle; S3 bugfix scenario; `OUT-02/03/04/05` | The trust gap becomes measurable — the point of the whole exercise |
-| **P4** | Simulated product owner + invariant probes | Q4. Gated runs and the agile pipeline become testable |
-| **P5** | Judges with citation verification; fidelity pillar (B) | "How close is the work to the design," answered |
-| **P6** | Matrix sweeps, repeats, variance, `--baseline` diffing, control arm | Q1, Q2, Q3 |
-| **P7** | Fixtures #2–3; remaining project types; nightly smoke in CI | Coverage and regression protection |
+| **P0** | Adapter + `--probe`; one arena; one scenario (S1 `cli`); **full trace capture** — turns, tool calls, files read, skills, tokens | We can launch, drive, and *see inside* OpenCode reliably. **The riskiest unknown, retired first** |
+| **P1** | Trace viewer + dispatch tree + input composition + instruction attention table (§7.1, §7.2, §7.6) | You can already read what every agent did and what every file cost — useful before a single score exists |
+| **P2** | `gh`/CI shims; board snapshotter; mechanical metrics (A, C, E); `report.json` | Every number that doesn't need an oracle or a judge |
+| **P3** | HTML report: composite scoring, derivation tables, spend and ceremony views | The mockup, made real |
+| **P4** | Fixture #1 with hidden oracle; S3 bugfix scenario; `OUT-02/03/04/05`; checking-stage yield (§7.5) | The trust gap becomes measurable — and the Experience Runner's unique-catch count becomes knowable |
+| **P5** | Ablation runner + trace assertions; the staircase; component ledger (§7.3, §7.4) | **Q5.** Which parts earn their keep |
+| **P6** | Simulated product owner + invariant probes | Q4. Gated runs and the agile pipeline become testable |
+| **P7** | Judges with citation verification; fidelity pillar (B); defect attribution + fix list (§7.7, §7.8) | "Where do I change it," answered in ranked order |
+| **P8** | Matrix sweeps, repeats, variance, `--baseline` diffing, control arm | Q1, Q2, Q3 |
+| **P9** | Fixtures #2–3; remaining project types; nightly smoke in CI | Coverage and regression protection |
 
-A useful result arrives at **P3**, not P7. That's deliberate — the trust gap on
-one fixture, on your default model, is already worth more than a complete matrix
-of everything else.
+**The ordering changed to match what you want out of this.** P1 lands the trace
+viewer and the instruction-cost table before any scoring exists, because "what
+did each agent actually do, and what did each file cost me" is answerable from
+telemetry alone and is immediately useful. P5 lands the ablation ledger before
+the full model matrix, because Q5 — which parts to keep — matters more to you
+right now than ranking four model configs.
+
+A genuinely useful result therefore arrives at **P1**, and the first result that
+can change your mind about a feature arrives at **P5**. Neither needs the
+complete system to exist.
 
 ---
 

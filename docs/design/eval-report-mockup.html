@@ -183,7 +183,64 @@ svg{display:block; max-width:100%}
 .legend span{display:inline-flex; align-items:center; gap:6px}
 .swatch{width:10px; height:10px; border-radius:2px; display:inline-block}
 
+/* verdict pills */
+.vd{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:2px;white-space:nowrap}
+.vd .dot{width:7px;height:7px;border-radius:50%}
+.vd.keep{background:var(--good-wash)} .vd.keep .dot{background:var(--good)}
+.vd.neutral{background:var(--surface-2);color:var(--ink-2)} .vd.neutral .dot{background:var(--muted)}
+.vd.review{background:var(--warn-wash)} .vd.review .dot{background:var(--warn)}
+.vd.negative{background:var(--crit-wash)} .vd.negative .dot{background:var(--critical)}
+.vd.insurance{background:var(--accent-soft);color:var(--ink)} .vd.insurance .dot{background:var(--accent)}
+.vd.unmeasured{background:var(--surface-2);color:var(--muted);border:1px dashed var(--rule)} .vd.unmeasured .dot{background:transparent}
+
+/* trace explorer */
+.run{border:1px solid var(--border);border-radius:3px;margin-bottom:6px;background:var(--surface)}
+.run summary{list-style:none;cursor:pointer;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.run summary::-webkit-details-marker{display:none}
+.run summary:hover{background:var(--surface-2)}
+.run[open] summary{border-bottom:1px solid var(--grid)}
+.run .who{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.run .agent{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.run .meta{font-size:12px;color:var(--muted)}
+.run .nums{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.run-body{padding:12px}
+.turn{border-left:2px solid var(--grid);padding:0 0 12px 12px;margin-left:4px}
+.turn:last-child{padding-bottom:0}
+.turn .tn{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px}
+.reason{background:var(--sunken);border-left:2px solid var(--ord-3);padding:8px 10px;border-radius:0 2px 2px 0;font-size:12.5px;color:var(--ink-2);font-style:italic}
+.msg{font-size:12.5px;margin-top:6px}
+.tools{display:flex;flex-direction:column;gap:3px;margin-top:7px}
+.tool{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;font-family:var(--mono);font-size:11.5px;background:var(--surface-2);border-radius:2px;padding:4px 8px}
+.tool .tname{font-weight:600;color:var(--accent)}
+.tool .targ{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool .tres{color:var(--muted);white-space:nowrap}
+.tool.sysfile .tname{color:var(--s2)}
+.compbar{display:flex;gap:2px;height:14px;border-radius:2px;overflow:hidden;margin-top:8px}
+.fl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fl .f{font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:2px;background:var(--surface-2);color:var(--ink-2)}
+.fl .f.sys{background:var(--accent-soft);color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.filters button{border:1px solid var(--border);background:var(--surface);border-radius:2px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.filters button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+
+/* fix list */
+.fix{border:1px solid var(--border);border-left:3px solid var(--critical);border-radius:3px;padding:12px 14px;background:var(--surface)}
+.fix.med{border-left-color:var(--warn)} .fix.low{border-left-color:var(--muted)}
+.fix h3{font-size:13.5px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.fix .rank{font-family:var(--mono);color:var(--muted);font-weight:600}
+.fix .freq{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);font-weight:500}
+.fix dl{display:grid;grid-template-columns:88px 1fr;gap:4px 12px;margin:9px 0 0;font-size:12.5px}
+.fix dt{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding-top:2px}
+.fix dd{margin:0;color:var(--ink-2)}
+.fix dd .mono{color:var(--ink)}
+.stair{display:flex;flex-direction:column;gap:7px}
+.stair-row{display:grid;grid-template-columns:170px 1fr 108px;gap:10px;align-items:center}
+.stair-row .sl{font-size:12.5px}
+.stair-row .sv{font-family:var(--mono);font-size:12px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
 @media (max-width:760px){
+  .stair-row{grid-template-columns:1fr;gap:3px}
+  .stair-row .sv{text-align:left}
+  .fix dl{grid-template-columns:1fr}
   .wrap{padding-inline:16px}
   .title-row h1{font-size:18px}
   .synthetic{margin-left:0}
@@ -207,6 +264,10 @@ svg{display:block; max-width:100%}
 
 <main class="wrap">
   <section class="view" id="view-overview"></section>
+  <section class="view" id="view-components" hidden></section>
+  <section class="view" id="view-traces" hidden></section>
+  <section class="view" id="view-instructions" hidden></section>
+  <section class="view" id="view-fixes" hidden></section>
   <section class="view" id="view-matrix" hidden></section>
   <section class="view" id="view-probes" hidden></section>
   <section class="view" id="view-trust" hidden></section>
@@ -353,6 +414,170 @@ const RUN = {
   }
 };
 
+/* --- diagnostic data (§7 of the design doc) --- */
+Object.assign(RUN, {
+  components: [
+    { n:"Phase 0–1 · Foundation + Discovery", abl:"no-phase01", pct:.06, usd:2.30, delta:-1, harm:0, v:"neutral",
+      note:"Two artifacts, neither read by any later agent in 2 of 3 repeats" },
+    { n:"Phase 2 · design system + prototype gate", abl:"no-design-system", pct:.11, usd:4.20, delta:-9, harm:1, v:"keep",
+      note:"Largest single drop when removed, on UI types only" },
+    { n:"Planner stage", abl:"orchestrator-authors-briefs", pct:.17, usd:6.50, delta:-6, harm:2, v:"keep",
+      note:"Worker retry rate doubles without it" },
+    { n:"Validator stage", abl:"no-validator", pct:.14, usd:5.40, delta:-11, harm:5, v:"keep",
+      note:"12 unique catches; 5 false rejections cost ~18 min of rework" },
+    { n:"Experience Runner stage", abl:"no-experience-runner", pct:.11, usd:4.20, delta:-7, harm:1, v:"keep",
+      note:"7 unique catches — all of them user-observable defects the Validator passed" },
+    { n:"Product Owner Proxy gates", abl:"auto-advance-gates", pct:.09, usd:3.50, delta:-2, harm:6, v:"review",
+      note:"1 unique catch against 6 false rejections. Removing it barely moved the score and saved 9% of spend" },
+    { n:"Experience Scripts (Phase 3.2b)", abl:"no-experience-scripts", pct:.05, usd:1.90, delta:-6, harm:0, v:"keep",
+      note:"Without them the Experience Runner escalates unscriptable-criterion instead of running" },
+    { n:"Intent layer (Cartographer)", abl:"no-intent-layer", pct:.08, usd:3.10, delta:null, harm:0, v:"unmeasured",
+      note:"Only exercised by S3/S4; ablation arm not run this sweep" },
+    { n:"Plan Reviewer loop", abl:"no-plan-review", pct:.07, usd:2.70, delta:-1, harm:3, v:"review",
+      note:"3 unique catches over 9 reviews, but 2.4 mean rounds — most of the cost is rounds 2 and 3" },
+    { n:"CONVENTIONS.md accumulation", abl:"no-conventions", pct:.04, usd:1.50, delta:+5, harm:0, v:"negative",
+      note:"Removing it scored HIGHER. Effect is inside noise at n=2 — re-run at n=5 before cutting" },
+    { n:"Board-state + BOARD.md rendering", abl:"no-board", pct:.05, usd:1.90, delta:-3, harm:0, v:"keep",
+      note:"Orchestrator loses stall recovery without it" },
+    { n:"Dispatch hardening (INV-018)", abl:"raw-dispatch", pct:.03, usd:1.20, delta:-4, harm:0, v:"keep",
+      note:"Empty-deliverable rate goes 2% → 11% without the pre-dispatch prompt" },
+    { n:"Security override + Never Building gate", abl:"—", pct:.01, usd:0.40, delta:null, harm:0, v:"insurance",
+      note:"Fired twice in 21 cells. Exempt from a delete verdict — insurance is not judged on average payout" }
+  ],
+  staircase: [
+    { l:"bare model (control)",   c:52, usd:21.30, d:null },
+    { l:"+ phases 0–3",           c:61, usd:29.10, d:+9 },
+    { l:"+ planner",              c:67, usd:33.40, d:+6 },
+    { l:"+ validator",            c:74, usd:36.20, d:+7 },
+    { l:"+ experience runner",    c:79, usd:39.80, d:+5 },
+    { l:"+ proxy gates (full)",   c:78, usd:43.10, d:-1 }
+  ],
+  stages: [
+    { s:"Validator",            inv:54, usd:5.40, catch:19, uniq:12, fp:5, miss:6 },
+    { s:"Experience Runner",    inv:38, usd:4.20, catch:9,  uniq:7,  fp:1, miss:2 },
+    { s:"Product Owner Proxy",  inv:22, usd:3.50, catch:8,  uniq:1,  fp:6, miss:4 },
+    { s:"Plan Reviewer",        inv:9,  usd:2.70, catch:4,  uniq:3,  fp:1, miss:1 }
+  ],
+  ceremony: { process:0.63, code:0.37, readback:0.22, ttfc:"38 min" },
+  files: [
+    { f:"AGENTS/worker.md",                  r:18, tok:5400, pct:.19, ex:9,  vi:3, v:"load-bearing" },
+    { f:"AGENTS.md",                         r:12, tok:11200, pct:.17, ex:0, vi:0, v:"expensive" },
+    { f:"AGENTS/arbiter.md",                 r:38, tok:9100, pct:.14, ex:11, vi:2, v:"load-bearing" },
+    { f:"skills/anymake-dispatch/SKILL.md",  r:9,  tok:6900, pct:.07, ex:4,  vi:1, v:"expensive" },
+    { f:"AGENTS/experience-runner.md",       r:16, tok:4100, pct:.08, ex:5,  vi:1, v:"load-bearing" },
+    { f:"AGENTS/planner.md",                 r:18, tok:2600, pct:.06, ex:6,  vi:1, v:"load-bearing" },
+    { f:"TEMPLATES/task-brief.md",           r:19, tok:2400, pct:.05, ex:3,  vi:0, v:"load-bearing" },
+    { f:"PHASE_GUIDES/phase-2.md",           r:3,  tok:6800, pct:.04, ex:4,  vi:0, v:"load-bearing" },
+    { f:"PROJECT_TYPES/saas/manifest.md",    r:21, tok:1100, pct:.03, ex:5,  vi:0, v:"load-bearing" },
+    { f:"skills/anymake-design-system/SKILL.md", r:0, tok:0, pct:0, ex:0, vi:2, v:"unread-but-violated" },
+    { f:"skills/anymake-new-type/SKILL.md",  r:0,  tok:0,   pct:0,   ex:0,  vi:0, v:"dead" },
+    { f:"PHASE_GUIDES/phase-5.md",           r:0,  tok:0,   pct:0,   ex:0,  vi:0, v:"dead" }
+  ],
+  fixes: [
+    { rank:1, sev:"high", t:"Worker skips the Test layer on stories with no UI", freq:"×7 · 3 configs",
+      cause:"instruction read but violated", target:"AGENTS/worker.md — Build order, layer 7",
+      ev:"7 trace spans · 4 oracle failures · adjacent to PRB-TEST-01",
+      fix:"The layer list sits 7 bullets deep in a 267-line file the Worker reads once at spawn. Lift “no layer is optional, including Test” into the dispatch prompt's pre-established facts.",
+      assert:"verify-plugin.mjs: every task brief §4 Test row is non-empty when §3 has runtime-verifiable criteria" },
+    { rank:2, sev:"high", t:"anymake-design-system never fires at Phase 2.2b", freq:"×5 · all configs",
+      cause:"instruction unread — file never entered any agent's context",
+      target:"skills/anymake-design-system/SKILL.md — description triggers",
+      ev:"0 reads across 21 cells · 2 FID-08 violations · prototype gate approved anyway",
+      fix:"A discovery failure, not a wording one. The hub names the skill in a table row; nothing in the Phase 2 guide invokes it. Add the explicit Skill invocation to PHASE_GUIDES/phase-2.md Step 2.2b.",
+      assert:"verify-plugin.mjs: every companion skill named in the hub's table is invoked by name in at least one phase guide" },
+    { rank:3, sev:"high", t:"§3a marked N/A for user-observable behavior", freq:"×6 · 2 configs",
+      cause:"instruction followed, outcome wrong",
+      target:"AGENTS/planner.md — §3a authoring + arbiter Human-only override",
+      ev:"6 waiver-abuse hits (CNF-05) · 4 became trust-gap stories",
+      fix:"The rule tells the Planner to write a scenario for every Human-Only criterion, but nothing defines when N/A is legitimate — so it becomes the cheap default. Invert it: N/A requires a one-line justification the Proxy must read.",
+      assert:"verify-plugin.mjs: a brief whose §3a is N/A must contain a 'No user-observable behavior because' line" },
+    { rank:4, sev:"med", t:"Proxy approves gates with unfilled template placeholders", freq:"×4 · economy config only",
+      cause:"model capability — passes on every other config",
+      target:"none — AGENTS/product-owner-proxy.md is correct as written",
+      ev:"4 gate approvals with 11–19 unfilled [placeholders] · 0 occurrences above the economy tier",
+      fix:"Not an instruction bug. This is a Tier-1 role running on an economy model in the uniform arm. Document a model floor for the Proxy rather than rewriting the gate criteria.",
+      assert:"none — record as a tier-floor note in AGENTS/arbiter.md → Model Tier Policy" },
+    { rank:5, sev:"low", t:"AGENTS.md read in full by 12 agent runs, 0 rules exercised", freq:"17% of input tokens",
+      cause:"cost, not correctness",
+      target:"AGENTS.md",
+      ev:"11.2k tokens per read · every rule traced to a detailed AGENTS/*.md file that was also read",
+      fix:"The file's own header says the detailed file wins any disagreement. Consider trimming it to a router: role → file, with no duplicated rules.",
+      assert:"verify-plugin.mjs already checks summary/detail drift — extend it to fail on rules that exist only as duplicates" }
+  ],
+  trace: {
+    cell:"tiered-default × s1-saas · repeat 2",
+    runs: [
+      { agent:"anymake-planner", tier:2, story:"3.4", attempt:1, model:"capable", tin:6200, tout:1800, dur:"41s",
+        out:"task-brief-story-3.4.md", verdict:"brief complete", state:"ok",
+        comp:[["role prompt · AGENTS/planner.md",2100],["epics.md + 3 ADRs",2600],["CONVENTIONS.md",900],["dispatch preamble",600]],
+        turns:[
+          { reason:"The brief must be self-contained. Story 3.4 touches invoice export, so the relevant ADRs are 002 (backend) and 006 (payments). CONVENTIONS.md should tell me the established file layout rather than re-deriving it from the tree.",
+            tools:[["Read","PROJECTS/acme/docs/03-solutioning/epics.md","18 stories · 4.1 KB",320],
+                   ["Read","AGENTS/planner.md","122 lines",110],
+                   ["Read","PROJECTS/acme/docs/04-implementation/CONVENTIONS.md","31 lines",90]],
+            files:[["AGENTS/planner.md","sys"],["epics.md","proj"],["CONVENTIONS.md","proj"]],
+            msg:"Writing the brief first, per the dispatch preamble." },
+          { reason:"§3a needs a literal walkthrough. Export produces a file download — I can script the click and the resulting file, but asserting the PDF renders correctly is not mechanically checkable, so I will scope the expectation to a non-empty application/pdf response.",
+            tools:[["Write","task-brief-story-3.4.md","214 lines",180]],
+            files:[["TEMPLATES/task-brief.md","sys"]],
+            msg:"Brief written. §3a: 1 scenario, 4 steps. touches_files: 6." }
+        ]},
+      { agent:"anymake-worker", tier:3, story:"3.4", attempt:1, model:"economy", tin:28400, tout:9100, dur:"6m12s",
+        out:"PR #7", verdict:"result: success", state:"ok",
+        comp:[["role prompt · AGENTS/worker.md",5400],["task brief",3900],["source files read",17100],["dispatch preamble",600],["conventions",1400]],
+        turns:[
+          { reason:"Build order for saas is schema → migration → API → component → page → integration → test. This story has no schema change, so I start at the API layer.",
+            tools:[["Read","AGENTS/worker.md","267 lines",140],["Bash","git checkout -b story/3.4-invoice-export","",210],
+                   ["Read","src/app/api/invoices/route.ts","88 lines",70]],
+            files:[["AGENTS/worker.md","sys"]],
+            msg:"Starting at the API layer — no schema or migration needed." },
+          { reason:"The export endpoint is done and the page button wires to it. Tests: the brief lists one test per runtime-verifiable criterion. The download assertion needs a running server, which the unit harness doesn't have — I'll cover the serializer directly and treat the download path as covered by §3a.",
+            tools:[["Write","src/lib/invoice-pdf.ts","134 lines",160],
+                   ["Write","src/app/api/invoices/[id]/export/route.ts","61 lines",120],
+                   ["Bash","npm test","42 passed",8400],
+                   ["Bash","gh pr create --title 'feat(invoices): export as PDF'","PR #7",900]],
+            files:[["TEMPLATES/commit-message.md","sys"]],
+            msg:"PR #7 opened. 3 commits, one per layer.",
+            flag:"The Test layer was reasoned away here. This is the trace span behind fix-list item #1." }
+        ]},
+      { agent:"anymake-validator", tier:2, story:"3.4", attempt:1, model:"capable", tin:19700, tout:2200, dur:"1m48s",
+        out:"validation-report-story-3.4.md", verdict:"VERDICT: FAIL", state:"fail",
+        comp:[["role prompt · AGENTS/validator.md",4300],["diff + source",12800],["task brief",2000],["dispatch preamble",600]],
+        turns:[
+          { reason:"Criterion 3 says the exported file downloads with a filename containing the invoice number. There is no test covering it and the Content-Disposition header is absent from route.ts. That is a FAIL, not a deferral — it is code-checkable.",
+            tools:[["Read","src/app/api/invoices/[id]/export/route.ts","61 lines",60],
+                   ["Bash","npm test","42 passed",7900],
+                   ["Write","validation-report-story-3.4.md","96 lines",140]],
+            files:[["AGENTS/validator.md","sys"],["AGENTS/arbiter.md","sys"]],
+            msg:"FAIL — criterion 3 unmet (no Content-Disposition), criterion 5 has no test." }
+        ]},
+      { agent:"anymake-worker", tier:3, story:"3.4", attempt:2, model:"economy", tin:31000, tout:7400, dur:"5m02s",
+        out:"PR #7 updated", verdict:"result: success", state:"retry",
+        comp:[["role prompt · AGENTS/worker.md",5400],["task brief",3900],["RETRY CONTEXT",1100],["source files read",19000],["dispatch preamble",600]],
+        turns:[
+          { reason:"The retry context names both failures verbatim. Adding the header is one line; the missing test is the one I skipped last attempt.",
+            tools:[["Edit","src/app/api/invoices/[id]/export/route.ts","+4 −1",90],
+                   ["Write","src/__tests__/invoice-export.test.ts","38 lines",120],
+                   ["Bash","npm test","44 passed",8600]],
+            files:[], msg:"Both criteria addressed. 44 tests passing." }
+        ]},
+      { agent:"anymake-experience-runner", tier:2, story:"3.4", attempt:1, model:"capable", tin:11200, tout:2600, dur:"2m31s",
+        out:"experience-report-story-3.4.md", verdict:"VERDICT: PASS", state:"ok",
+        comp:[["role prompt · AGENTS/experience-runner.md",4100],["task brief §3a",1800],["environment.md",900],["browser observations",4400]],
+        turns:[
+          { reason:"Launching per docs/environment.md, signing in with the seeded account, then driving §3a scenario 1 step by step.",
+            tools:[["Bash","npm run dev","ready on :3000",4200],
+                   ["Browser","click #export-invoice","download started",1800],
+                   ["Bash","file /tmp/dl/INV-1042.pdf","PDF document, 2 pages",60],
+                   ["Write","experience-report-story-3.4.md","74 lines",130]],
+            files:[["AGENTS/experience-runner.md","sys"],["PROJECTS/acme/docs/environment.md","proj"]],
+            msg:"PASS — 4 of 4 steps matched. Evidence: 2 screenshots, 1 file capture.",
+            flag:"The harness oracle later disagrees: the PDF is 2 pages of blank template. This is the trust-gap story from the Overview." }
+        ]}
+    ]
+  }
+});
+
 /* ------------------------------------------------------------------ */
 const $ = (s,r=document)=>r.querySelector(s);
 const el = (t,c,h)=>{const n=document.createElement(t); if(c)n.className=c; if(h!=null)n.innerHTML=h; return n;};
@@ -382,7 +607,9 @@ $("#provenance").innerHTML = RUN.provenance
   .map(([k,v])=>`<span class="chip">${esc(k)} <b>${esc(v)}</b></span>`).join("");
 
 const VIEWS = [
-  ["overview","Overview"], ["matrix","Scenario matrix"], ["probes","Invariant probes"],
+  ["overview","Overview"], ["components","Components"], ["traces","Traces"],
+  ["instructions","Instructions"], ["fixes","Fix list"],
+  ["matrix","Scenario matrix"], ["probes","Invariant probes"],
   ["trust","Trust gap"], ["autonomy","Autonomy"], ["spend","Spend"]
 ];
 const nav = $("#nav");
@@ -424,6 +651,16 @@ function renderOverview(){
       <div class="k">Invariants broken</div>
       <div class="v">11<small> / 52</small></div>
       <div class="d">Probe failures; 1 config capped by veto</div>
+    </div>
+    <div class="tile">
+      <div class="k">Ceremony ratio</div>
+      <div class="v">63<small>% process</small></div>
+      <div class="d">22% of artifacts written were never read again — see Components</div>
+    </div>
+    <div class="tile">
+      <div class="k">Weakest component</div>
+      <div class="v">Proxy gates</div>
+      <div class="d">1 unique catch, 6 false rejections, 9% of spend — see Components</div>
     </div>`;
   v.appendChild(tiles);
 
@@ -849,7 +1086,272 @@ function renderCell(){
   bindTips(v);
 }
 
-renderOverview(); renderMatrix(); renderProbes(); renderTrust(); renderAutonomy(); renderSpend(); renderCell();
+/* ---------------- components (the over-engineering view) ---------------- */
+function renderComponents(){
+  const v = $("#view-components"); v.className="view stack";
+
+  const intro = el("div","panel");
+  intro.innerHTML = `<div class="panel-head"><h2>Does each part earn its keep?</h2>
+    <span class="sub">cost measured every run · benefit measured by removing the component and re-running</span></div>`;
+  const ib = el("div","panel-body scroll-x");
+  const t = el("table"); t.style.minWidth="760px";
+  t.innerHTML = `<thead><tr>
+    <th style="width:27%">Component</th><th style="text-align:right">Cost</th>
+    <th style="width:15%">Share of run</th><th style="text-align:right">Δ when removed</th>
+    <th style="text-align:right">Harm</th><th>Verdict</th></tr></thead>`;
+  const tb = el("tbody");
+  RUN.components.forEach(c=>{
+    const tr = el("tr");
+    const dtxt = c.delta==null ? "—" : (c.delta>0?"+":"") + c.delta;
+    const dcol = c.delta==null ? "var(--muted)" : c.delta<=-4 ? "var(--good)" : c.delta>=3 ? "var(--critical)" : "var(--ink-2)";
+    tr.innerHTML = `
+      <td><div style="font-weight:600">${esc(c.n)}</div>
+        <div class="mono" style="font-size:11px;color:var(--muted)">${esc(c.abl)}</div></td>
+      <td class="mono num" style="text-align:right">$${c.usd.toFixed(2)}</td>
+      <td><div class="track" style="height:8px" data-tip="<b>${Math.round(c.pct*100)}%</b> of run tokens">
+            <div class="fill" style="width:${Math.min(100, c.pct/0.20*100)}%"></div></div></td>
+      <td class="mono num" style="text-align:right;color:${dcol};font-weight:600">${dtxt}</td>
+      <td class="mono num" style="text-align:right;color:${c.harm>3?"var(--critical)":"var(--ink-2)"}">${c.harm}</td>
+      <td><span class="vd ${c.v}"><span class="dot"></span>${esc(c.v)}</span></td>`;
+    tb.appendChild(tr);
+    const nt = el("tr");
+    nt.innerHTML = `<td colspan="6" style="border-top:0;padding-top:0"><div class="note" style="font-size:12px">${esc(c.note)}</div></td>`;
+    tb.appendChild(nt);
+  });
+  t.appendChild(tb); ib.appendChild(t);
+  ib.appendChild(el("p","note",`<span class="eyebrow">How to read Δ</span><br>
+    Δ is the change in composite when the component is <b>removed</b>. Negative means removing it hurt — the
+    component was doing work. Positive means the system scored <i>better</i> without it. <b>Harm</b> counts
+    failures the component caused: false rejections, retry loops that escalated anyway, gates that blocked
+    correct work. All Δ values here are n=2; a difference under about 4 points is inside noise.`));
+  intro.appendChild(ib); v.appendChild(intro);
+
+  /* staircase */
+  const sp = el("div","panel");
+  sp.innerHTML = `<div class="panel-head"><h2>Ablation staircase</h2>
+    <span class="sub">bare model, then one layer at a time — s1-cli, n=2</span></div>`;
+  const sb = el("div","panel-body");
+  const st = el("div","stair");
+  RUN.staircase.forEach(x=>{
+    const row = el("div","stair-row");
+    const d = x.d==null ? "" : `<span style="color:${x.d>0?"var(--good)":"var(--critical)"};font-weight:600">${x.d>0?"+":""}${x.d}</span> `;
+    row.innerHTML = `<div class="sl">${esc(x.l)}</div>
+      <div class="track" style="height:16px" data-tip="<b>${x.c}</b> composite · $${x.usd.toFixed(2)}">
+        <div class="fill" style="width:${x.c}%;background:${x.d!=null&&x.d<0?"var(--critical)":"var(--s1)"}"></div></div>
+      <div class="sv">${d}${x.c} · $${x.usd.toFixed(2)}</div>`;
+    st.appendChild(row);
+  });
+  sb.appendChild(st);
+  sb.appendChild(el("p","note",`<span class="eyebrow">The finding on this chart</span><br>
+    Every layer up to the Experience Runner pays for itself. The <b>proxy gates</b> step costs $3.30 more
+    and scores one point lower — inside noise, but it is the only step on the staircase that does not
+    clearly earn its place, and it is the obvious first candidate for a leave-one-out run at higher n.`));
+  sp.appendChild(sb); v.appendChild(sp);
+
+  /* checking-stage yield */
+  const yp = el("div","panel");
+  yp.innerHTML = `<div class="panel-head"><h2>Checking-stage yield</h2>
+    <span class="sub">unique catches are the only number that justifies a reviewer's existence</span></div>`;
+  const yb = el("div","panel-body scroll-x");
+  const t2 = el("table"); t2.style.minWidth="640px";
+  t2.innerHTML = `<thead><tr><th>Stage</th><th style="text-align:right">Runs</th><th style="text-align:right">Cost</th>
+    <th style="text-align:right">Catches</th><th style="text-align:right">Unique</th>
+    <th style="text-align:right">False rej.</th><th style="text-align:right">Misses</th>
+    <th style="text-align:right">$ / unique catch</th></tr></thead>`;
+  const tb2 = el("tbody");
+  RUN.stages.forEach(x=>{
+    const per = x.uniq ? (x.usd/x.uniq) : null;
+    const tr = el("tr");
+    tr.innerHTML = `<td style="font-weight:600">${esc(x.s)}</td>
+      <td class="mono num" style="text-align:right">${x.inv}</td>
+      <td class="mono num" style="text-align:right">$${x.usd.toFixed(2)}</td>
+      <td class="mono num" style="text-align:right">${x.catch}</td>
+      <td class="mono num" style="text-align:right;font-weight:600;color:${x.uniq<=1?"var(--critical)":"var(--ink)"}">${x.uniq}</td>
+      <td class="mono num" style="text-align:right;color:${x.fp>=5?"var(--critical)":"var(--ink-2)"}">${x.fp}</td>
+      <td class="mono num" style="text-align:right;color:var(--ink-2)">${x.miss}</td>
+      <td class="mono num" style="text-align:right">${per?"$"+per.toFixed(2):"—"}</td>`;
+    tb2.appendChild(tr);
+  });
+  t2.appendChild(tb2); yb.appendChild(t2);
+  yb.appendChild(el("p","note",`<span class="eyebrow">What this settles</span><br>
+    The Experience Runner's entire argument is that it catches what a Validator and a green test suite cannot.
+    Seven unique catches against one false rejection is that argument holding. The Product Owner Proxy's row is
+    the opposite shape — one unique catch against six false rejections — which is what put it on the fix list
+    rather than in the keep column.`));
+  yp.appendChild(yb); v.appendChild(yp);
+
+  /* ceremony */
+  const cp = el("div","panel");
+  cp.innerHTML = `<div class="panel-head"><h2>Ceremony ratio</h2><span class="sub">tokens spent on process vs. tokens spent on shipped code</span></div>`;
+  const cb = el("div","panel-body");
+  const c = RUN.ceremony;
+  cb.appendChild(el("div",null,`
+    <div style="display:flex;gap:2px;height:26px;border-radius:2px;overflow:hidden">
+      <div style="flex:${c.process};background:var(--ord-3)" data-tip="<b>${Math.round(c.process*100)}%</b> — briefs, reports, board updates, gate verdicts"></div>
+      <div style="flex:${c.code};background:var(--s3)" data-tip="<b>${Math.round(c.code*100)}%</b> — code and tests that shipped"></div>
+    </div>
+    <div class="legend" style="margin-top:9px">
+      <span><span class="swatch" style="background:var(--ord-3)"></span>process artifacts — ${Math.round(c.process*100)}%</span>
+      <span><span class="swatch" style="background:var(--s3)"></span>shipped code and tests — ${Math.round(c.code*100)}%</span>
+    </div>`));
+  cb.appendChild(el("p","note",`<span class="eyebrow">Read next to the control arm</span><br>
+    63% of spend went to producing documents about the work rather than the work.
+    <b>${Math.round(c.readback*100)}% of artifacts written were never read by any later agent</b> — pure cost.
+    Time to first shipped line: <span class="mono">${esc(c.ttfc)}</span>. None of this is damning on its own;
+    it is damning only if the no-Anymake control ships comparable quality, and on this run it does not (52 vs 78).`));
+  cp.appendChild(cb); v.appendChild(cp);
+  bindTips(v);
+}
+
+/* ---------------- traces ---------------- */
+function renderTraces(){
+  const v = $("#view-traces"); v.className="view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Agent traces</h2>
+    <span class="sub mono">${esc(RUN.trace.cell)}</span></div>`;
+  const b = el("div","panel-body");
+
+  const filters = el("div","filters");
+  [["all","Everything"],["fail","Failures and retries only"],["worker","Worker only"]].forEach(([k,lab],i)=>{
+    const bt = el("button",null,lab);
+    bt.setAttribute("aria-pressed", String(i===0));
+    bt.addEventListener("click",()=>{
+      filters.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+      bt.setAttribute("aria-pressed","true");
+      b.querySelectorAll(".run").forEach(r=>{
+        const st=r.dataset.state, ag=r.dataset.agent;
+        r.hidden = (k==="fail" && st==="ok") || (k==="worker" && !ag.includes("worker"));
+      });
+    });
+    filters.appendChild(bt);
+  });
+  b.appendChild(filters);
+
+  RUN.trace.runs.forEach((r,i)=>{
+    const d = el("details","run");
+    d.dataset.state = r.state; d.dataset.agent = r.agent;
+    if(i===1) d.open = true;
+    const badge = r.state==="fail" ? '<span class="pill bad"><span class="dot"></span>FAIL</span>'
+      : r.state==="retry" ? '<span class="pill warn"><span class="dot"></span>retry 2</span>'
+      : '<span class="pill ok"><span class="dot"></span>ok</span>';
+    const sum = el("summary");
+    sum.innerHTML = `<div class="who">
+        <span class="agent">${esc(r.agent)}</span>
+        <span class="meta">tier ${r.tier} · ${esc(r.model)} · story ${esc(r.story)} · attempt ${r.attempt}</span>
+        ${badge}
+        <span class="meta">→ <span class="mono">${esc(r.out)}</span></span>
+      </div>
+      <div class="nums">${(r.tin/1000).toFixed(1)}k in / ${(r.tout/1000).toFixed(1)}k out · ${esc(r.dur)}</div>`;
+    d.appendChild(sum);
+
+    const body = el("div","run-body");
+    const total = r.comp.reduce((a,[,n])=>a+n,0);
+    const ords = ["var(--ord-2)","var(--ord-3)","var(--ord-4)","var(--ord-5)","var(--ord-6)"];
+    body.appendChild(el("div",null,`
+      <div class="eyebrow">Input composition — ${(total/1000).toFixed(1)}k tokens</div>
+      <div class="compbar">${r.comp.map(([n,x],j)=>`<div style="flex:${x};background:${ords[j%5]}"
+        data-tip="<b>${esc(n)}</b><br>${x.toLocaleString()} tokens · ${Math.round(x/total*100)}%"></div>`).join("")}</div>
+      <div class="legend" style="margin-top:7px">${r.comp.map(([n,x],j)=>
+        `<span><span class="swatch" style="background:${ords[j%5]}"></span>${esc(n)} <span class="mono">${Math.round(x/total*100)}%</span></span>`).join("")}</div>`));
+
+    r.turns.forEach((t,k)=>{
+      const turn = el("div","turn");
+      let h = `<div class="tn">turn ${k+1}</div>`;
+      if(t.reason) h += `<div class="reason">${esc(t.reason)}</div>`;
+      if(t.tools && t.tools.length) h += `<div class="tools">${t.tools.map(([n,a,res,ms])=>
+        `<div class="tool${/AGENTS|TEMPLATES|PHASE_GUIDES|skills/.test(a)?" sysfile":""}">
+           <span class="tname">${esc(n)}</span><span class="targ">${esc(a)}</span>
+           <span class="tres">${esc(res)}${res?" · ":""}${ms}ms</span></div>`).join("")}</div>`;
+      if(t.msg) h += `<div class="msg">${esc(t.msg)}</div>`;
+      if(t.files && t.files.length) h += `<div class="fl">${t.files.map(([f,c])=>
+        `<span class="f ${c==="sys"?"sys":""}">${esc(f)}</span>`).join("")}</div>`;
+      if(t.flag) h += `<div class="pill warn" style="margin-top:8px;white-space:normal;align-items:flex-start">
+        <span class="dot" style="margin-top:5px;flex:none"></span><span style="font-weight:500">${esc(t.flag)}</span></div>`;
+      turn.innerHTML = h;
+      body.appendChild(turn);
+    });
+    d.appendChild(body);
+    b.appendChild(d);
+  });
+
+  b.appendChild(el("p","note",`<span class="eyebrow">Why the file chips matter</span><br>
+    Highlighted chips are Anymake's own instruction files. Whether a rule's file was ever in an agent's
+    context is what separates <i>“the instruction was ignored”</i> from <i>“the instruction never arrived”</i> —
+    two failures that look identical in a transcript and need completely different fixes.
+    Reasoning text is shown where the provider exposes it; where it doesn't, these blocks are omitted rather than guessed at.`));
+  p.appendChild(b); v.appendChild(p);
+  bindTips(v);
+}
+
+/* ---------------- instructions ---------------- */
+function renderInstructions(){
+  const v = $("#view-instructions"); v.className="view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Instruction files — attention and yield</h2>
+    <span class="sub">across 21 cells: who read what, what it cost, and whether its rules did anything</span></div>`;
+  const b = el("div","panel-body scroll-x");
+  const t = el("table"); t.style.minWidth="760px";
+  t.innerHTML = `<thead><tr><th style="width:32%">File</th><th style="text-align:right">Reads</th>
+    <th style="text-align:right">Tokens / read</th><th style="width:14%">Share of input</th>
+    <th style="text-align:right">Rules used</th><th style="text-align:right">Violated</th><th>Verdict</th></tr></thead>`;
+  const tb = el("tbody");
+  const maxPct = Math.max(...RUN.files.map(f=>f.pct));
+  RUN.files.forEach(f=>{
+    const vcls = f.v==="dead" ? "negative" : f.v==="expensive" ? "review" : f.v==="unread-but-violated" ? "negative" : "keep";
+    const tr = el("tr");
+    tr.innerHTML = `<td class="mono" style="font-size:12.5px">${esc(f.f)}</td>
+      <td class="mono num" style="text-align:right;${f.r===0?"color:var(--critical);font-weight:600":""}">${f.r}</td>
+      <td class="mono num" style="text-align:right">${f.tok?f.tok.toLocaleString():"—"}</td>
+      <td><div class="track" style="height:8px" data-tip="<b>${Math.round(f.pct*100)}%</b> of all input tokens in the sweep">
+        <div class="fill" style="width:${f.pct/maxPct*100}%;background:${f.pct>=.14?"var(--serious)":"var(--s1)"}"></div></div></td>
+      <td class="mono num" style="text-align:right">${f.ex}</td>
+      <td class="mono num" style="text-align:right;${f.vi?"color:var(--critical);font-weight:600":""}">${f.vi}</td>
+      <td><span class="vd ${vcls}"><span class="dot"></span>${esc(f.v)}</span></td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); b.appendChild(t);
+  b.appendChild(el("p","note",`<span class="eyebrow">Three findings on this table</span><br>
+    <b>Dead —</b> <span class="mono">anymake-new-type</span> and <span class="mono">phase-5.md</span> were never opened
+    in any cell. Either nothing in this suite reaches them, or discovery is broken; both are worth knowing.<br>
+    <b>Expensive —</b> <span class="mono">AGENTS.md</span> is 17% of all input tokens across the sweep and exercised
+    zero rules that its detailed counterparts didn't already carry.<br>
+    <b>Unread but violated —</b> <span class="mono">anymake-design-system</span> has zero reads and two violations of
+    rules it owns. That is a discovery bug, and rewriting the file would not have fixed it.`));
+  p.appendChild(b); v.appendChild(p);
+  bindTips(v);
+}
+
+/* ---------------- fix list ---------------- */
+function renderFixes(){
+  const v = $("#view-fixes"); v.className="view stack";
+  const head = el("div","panel");
+  head.innerHTML = `<div class="panel-head"><h2>Fix list</h2>
+    <span class="sub">ranked by frequency × severity × confidence — the thing to open the morning after a sweep</span></div>
+    <div class="panel-body"><p class="note" style="margin:0">Every entry names a cause class, because the class decides the
+    edit: an <b>unread</b> instruction needs moving, not rewriting; a <b>violated</b> one needs shortening or a mechanical
+    check; a <b>followed-but-wrong</b> one means the rule itself is the bug; and a <b>capability</b> finding means leave the
+    prose alone and raise the tier. Each fix ships with the assertion that would catch its regression — the repo's own rule,
+    applied to its own repairs.</p></div>`;
+  v.appendChild(head);
+  const list = el("div","stack");
+  RUN.fixes.forEach(f=>{
+    const card = el("div","fix"+(f.sev==="med"?" med":f.sev==="low"?" low":""));
+    card.innerHTML = `
+      <h3><span class="rank">#${f.rank}</span> ${esc(f.t)} <span class="freq">${esc(f.freq)}</span></h3>
+      <dl>
+        <dt>Cause</dt><dd>${esc(f.cause)}</dd>
+        <dt>Target</dt><dd class="mono" style="font-size:12px">${esc(f.target)}</dd>
+        <dt>Evidence</dt><dd>${esc(f.ev)}</dd>
+        <dt>Proposed</dt><dd>${esc(f.fix)}</dd>
+        <dt>Ships with</dt><dd>${esc(f.assert)}</dd>
+      </dl>`;
+    list.appendChild(card);
+  });
+  v.appendChild(list);
+}
+
+renderOverview(); renderComponents(); renderTraces(); renderInstructions(); renderFixes();
+renderMatrix(); renderProbes(); renderTrust(); renderAutonomy(); renderSpend(); renderCell();
 show("overview");
 </script>
 </body>
