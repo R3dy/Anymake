@@ -51,3 +51,15 @@ Deploy to staging then production. Publish API docs (OpenAPI/reference). Metrics
 - **Replace:** prototype gate → **API contract review** (every endpoint has request/response schema, status codes, and an example; error format is consistent).
 - **Add:** rate-limiting present on public endpoints; auth required on all non-public routes; versioning strategy defined.
 - **Keep:** all security checks (heightened — this is an attack surface), acceptance-criteria quality, test coverage, no-secrets-in-code. Monetization-milestone-order check applies **only if** monetization is enabled.
+
+## Eval Profile
+**Success axis:** contract correctness + uptime (from Success Model)
+**Oracle modes:** Request (primary) — the literal method/path/headers/body, compared against status, body and headers
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: FID-08 (design-system consistency), monetization-linked Outcome checks unless a paid model is chosen
+- Replace: OUT-03 experience probes → HTTP request/response assertions
+- Add: API-contract check (every endpoint has a request/response schema, status codes and an example; error format is consistent)
+- Add: auth-required check on all non-public routes; rate limiting present on public ones
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** an unauthenticated non-public route is a `PRB-SEC-01` stimulus for this type, not a finding to weigh — this is an attack surface

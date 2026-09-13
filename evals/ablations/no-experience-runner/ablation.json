@@ -1,0 +1,15 @@
+{
+  "component": "experience-runner",
+  "question": "The Experience Runner's stated purpose is catching what a Validator and a green test suite cannot. Does it?",
+  "removes": ["experience-runner"],
+  "ops": [
+    { "action": "delete", "file": "AGENTS/experience-runner.md" },
+    { "action": "replace", "file": "skills/anymake-build-loop/SKILL.md",
+      "find": "Experience Runner", "replace": "(stage removed for this ablation arm)" }
+  ],
+  "assert": {
+    "noDispatchesFor": ["experience-runner"],
+    "noArtifactsMatching": "experience-report-.*\\.md$"
+  },
+  "note": "An ablation whose assertion fails is discarded, not scored — otherwise you are measuring a patch that did not apply (§7.4)."
+}

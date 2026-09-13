@@ -1,0 +1,14 @@
+{
+  "version": "v1.0",
+  "note": "Pillar weights per scenario class — §6.4. Stamped into every report; a score is meaningless without the weights that produced it. Changing these is a version bump, not an edit.",
+  "classes": {
+    "S1": { "A": 30, "B": 25, "C": 20, "D": 10, "E": 15 },
+    "S2": { "A": 25, "B": 25, "C": 20, "D": 15, "E": 15 },
+    "S3": { "A": 35, "B": 15, "C": 20, "D": 15, "E": 15 },
+    "S4": { "A": 30, "B": 25, "C": 20, "D": 10, "E": 15 },
+    "S5": { "A": 15, "B": 35, "C": 25, "D": 10, "E": 15 },
+    "S0": { "A": 40, "B": 33, "C": 0, "D": 7, "E": 20 }
+  },
+  "judgedPillarCap": 0.25,
+  "vetoCap": 40
+}

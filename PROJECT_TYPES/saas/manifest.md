@@ -47,3 +47,14 @@ Deploy to staging then production (Vercel). Metrics: AARRR funnel — Acquisitio
 
 ## Gate Criteria Deltas
 None — `saas` is the reference type. The default gate criteria in `AGENTS/product-owner-proxy.md` are written for `saas`. All other types express their gates as deltas against this baseline.
+
+## Eval Profile
+**Success axis:** revenue + retention (from Success Model)
+**Oracle modes:** Browser (primary) — sign in with the seeded account, then drive each story's §3a scenario
+**Metric deltas** (this type IS the baseline — every other type expresses its deltas against this one):
+- Skip: none
+- Replace: none
+- Add: none
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** none beyond baseline

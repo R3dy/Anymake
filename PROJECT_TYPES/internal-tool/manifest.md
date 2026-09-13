@@ -49,3 +49,14 @@ Deploy to the internal environment. Roll out to the team with onboarding. Metric
 - **Relax:** prototype is recommended, not a hard gate — do not fail Phase 2 solely for prototype polish.
 - **Replace:** success metrics → adoption / time-saved targets instead of revenue.
 - **Keep:** auth + authorization checks (internal data still needs protection), acceptance-criteria quality, test coverage, no-secrets-in-code.
+
+## Eval Profile
+**Success axis:** adoption + time saved (from Success Model)
+**Oracle modes:** Browser (primary) — drive the dev server authenticated as the seeded internal test account
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: monetization-linked Outcome checks, market/AARRR-linked checks
+- Relax: FID-08 is reported but never blocking — prototype polish must not fail a gate for this type
+- Keep: authorization checks (internal data still needs protection)
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** none beyond baseline

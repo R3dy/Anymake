@@ -1,0 +1,18 @@
+{
+  "id": "s0-cli-control",
+  "class": "S0",
+  "label": "S0 · Control — no Anymake",
+  "type": "cli",
+  "mode": "control",
+  "projectName": "tempo",
+  "suites": ["standard"],
+  "note": "The same seed brief, the same model, the plugin NOT installed. One extra cell per scenario, and the only thing that makes any Anymake number interpretable. Scored on Outcome, Fidelity, Efficiency and the human-load subset of Autonomy; Conformance reports N/A — no system under test, never zero.",
+  "prompt": "I want a command-line time tracker called tempo. I start and stop timers against project names, and I can ask it what I worked on today or this week. It should store everything locally and never need a network connection. I do not want a GUI and I do not want any team or sync features. Build it.",
+  "controlOf": "s1-cli-greenfield",
+  "oracleFrom": "s1-cli-greenfield",
+  "script": [
+    { "match": "approve|proceed|does this look right", "reply": "approved", "tag": "gate-approval" },
+    { "match": "what (database|storage)", "reply": "A local SQLite file under the user's config directory. No network, ever.", "tag": "fact" }
+  ],
+  "caps": { "usd": 12, "minutes": 90, "turns": 500 }
+}

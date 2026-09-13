@@ -1,0 +1,26 @@
+{
+  "component": "staircase step: + experience runner",
+  "question": "What is the marginal value of adding experience runner on top of everything before it?",
+  "staircaseStep": "experience",
+  "systemOff": false,
+  "removes": [
+    "proxy"
+  ],
+  "ops": [
+    {
+      "action": "delete",
+      "file": "AGENTS/product-owner-proxy.md"
+    },
+    {
+      "action": "append",
+      "file": "AGENTS/orchestrator.md",
+      "text": "\n\n## Ablation arm: auto-advance gates\n\nFor this run only, advance every phase gate without a Product Owner Proxy verdict. Record the advance on BOARD.md as usual.\n"
+    }
+  ],
+  "assert": {
+    "noDispatchesFor": [
+      "proxy"
+    ]
+  },
+  "note": "Composed from the leave-one-out ops. The staircase adds layers in BUILD order; §12 open question 3 asks whether suspicion order would attribute credit better."
+}

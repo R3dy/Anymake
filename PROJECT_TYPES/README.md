@@ -89,9 +89,29 @@ Distribution target and the metrics framework that matters for this type.
 ## Gate Criteria Deltas
 Per-gate overrides for the Product Owner Proxy: which checks to add, skip, or replace,
 relative to the default SaaS gate criteria in AGENTS/product-owner-proxy.md.
+
+## Eval Profile
+How the eval harness (`evals/`) scores this type: the success axis, the oracle
+interaction mode(s), the metric deltas (skip / replace / add — the same three
+words as Gate Criteria Deltas, and mapped mechanically from them), budget anchors,
+and any veto additions.
 ```
 
 When a manifest says a check is **skipped**, the Product Owner Proxy must not fail a gate for it. When it says **replaced**, the proxy applies the replacement check instead.
+
+The **Eval Profile** carries the same idea into measurement, so evaluation extends the
+way everything else about a type does — two markdown files, no code changes:
+
+| Gate Criteria Deltas | Eval Profile | What the harness does |
+|---|---|---|
+| **Skip** | `Skip: <METRIC-ID>` | `applies_when: false` — the metric is dropped and its weight is **redistributed**, never zero-filled |
+| **Replace** | `Replace: <METRIC-ID> → <evidence>` | same metric id, different evidence binding (the type's own interaction mode) |
+| **Add** | `Add: <check>` | an extra metric scoped to this type |
+
+A composite is comparable across project types; a raw metric is only comparable within
+one. That is what the skip/replace/add mapping and the per-type budget anchors buy.
+A type with no Eval Profile falls back to the `saas` baseline and is flagged in the
+report as unprofiled — visible, not silent.
 
 ---
 
@@ -101,3 +121,6 @@ When a manifest says a check is **skipped**, the Product Owner Proxy must not fa
 2. Create `PROJECT_TYPES/<id>/guide.md` — a self-contained phase walkthrough (use `hobby/guide.md` as a structural model).
 3. Add a row to the **Available Types** table above.
 4. No changes to the orchestrator, worker, or proxy are needed — they read the manifest generically.
+5. No changes to the eval harness are needed either — it reads the manifest's `## Eval
+   Profile` generically, for the same reason. `npm run verify` fails a manifest that
+   has no Eval Profile, or whose skip list contradicts its Gate Criteria Deltas.

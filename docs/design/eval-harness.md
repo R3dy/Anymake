@@ -1,6 +1,10 @@
 # Anymake Eval Harness — Design
 
-**Status:** Design — not yet built
+**Status:** Built — see `evals/` and `evals/README.md`. P0–P6 and P8 are in;
+judged metrics (P7) report *unscored* until a judge pass exists, and cost/time bands are
+uncalibrated by design until the first real sweep. `evals/README.md` → "Status against
+the build plan" tracks this section by section, and ADR-014 records the decision
+(`docs/adr/ADR-014-eval-harness-is-a-developer-tool.md`).
 **Date:** 2026-09-13
 **Scope:** A runnable tool that launches one or more OpenCode instances against
 the Anymake system, across project types, scenario classes, and model
@@ -1315,6 +1319,6 @@ repo already expresses it.
 
 ---
 
-*Design doc for the Anymake Eval Harness. Nothing in `evals/` exists yet — this
-is the spec that says what to build and, more importantly, what each number would
-and would not mean.*
+*Design doc for the Anymake Eval Harness. `evals/` now implements it — this stays
+the spec that says what each number does and does not mean. Where the build and this
+document disagree, this document is right and the build has a bug.*

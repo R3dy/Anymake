@@ -1,0 +1,8 @@
+{
+  "name": "notes",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": { "notes": "bin/notes.js" },
+  "scripts": { "test": "node --test test/*.test.js" }
+}

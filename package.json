@@ -7,7 +7,10 @@
   "scripts": {
     "verify": "node .opencode/verify-plugin.mjs",
     "validate-board": "node .opencode/validate-board-state.mjs",
-    "test": "node .opencode/verify-plugin.mjs"
+    "test": "node .opencode/verify-plugin.mjs",
+    "eval": "node evals/run.mjs",
+    "eval:probe": "node evals/run.mjs --probe",
+    "eval:selftest": "node evals/selftest.mjs"
   },
   "keywords": [
     "opencode",
@@ -24,5 +27,18 @@
     "type": "git",
     "url": "https://github.com/R3dy/Anymake.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    ".opencode/",
+    "AGENTS/",
+    "AGENTS.md",
+    "PHASE_GUIDES/",
+    "PROJECT_TYPES/",
+    "TEMPLATES/",
+    "skills/",
+    "dashboard/",
+    "llms.txt",
+    "README.md",
+    "CHANGELOG.md"
+  ]
 }

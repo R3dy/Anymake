@@ -7,3 +7,7 @@ PHASE_STATE.md
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Eval harness output — runs are large, reproducible, and machine-specific.
+# report.json / report.html are the deliverables; archive them deliberately.
+evals/runs/

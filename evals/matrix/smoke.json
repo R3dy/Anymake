@@ -1,0 +1,7 @@
+{
+  "id": "smoke",
+  "note": "One config, one cell per scenario — the iteration loop and the nightly CI smoke (§11.3).",
+  "configs": [
+    { "id": "system-default", "label": "System default", "note": "zero-config path", "strength": "unknown", "env": {}, "opencode": {}, "mockQuality": 0.86 }
+  ]
+}

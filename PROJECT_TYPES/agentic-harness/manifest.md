@@ -56,3 +56,20 @@ Deploy as a long-running service (docker-compose or a container orchestrator), n
 - **Replace:** the prototype gate → a **Pipeline dry-run review** — run one synthetic work item end-to-end through every stage in the dev/filesystem backend, and inspect the full trace plus every intermediate artifact. The dashboard's own prototype (queue/board view, per-item trace view, run controls) is still held to the usual visual-quality bar from `anymake-design-system`, scoped to just those screens.
 - **Add:** (1) the stage graph is declarative/data-driven — fail the gate if any stage transition is hard-coded in engine logic rather than the graph config; (2) every stage has a schema-validated output contract with a round-trip validation test; (3) a credential-isolation check — no real secret or API key is ever mounted into or baked into a stage sandbox image, only reachable through a proxied/scoped credential; (4) atomic claim/lease is verified under concurrent workers (no work item is ever double-processed); (5) a complete trace exists for at least one end-to-end run and spans the host↔sandbox boundary (context propagation verified, not just per-process spans); (6) a cost cap or circuit breaker exists per item or per run to bound autonomous spend; (7) the control plane supports at minimum pause/resume and a bounded single-step mode.
 - **Keep:** all standard security checks, heightened — this type executes LLM-directed code with tool and network access inside sandboxes. No secrets in the sandbox image or any mounted volume; the declared tool/skill allowlist per stage is actually enforced at the sandbox boundary, not just documented; resource limits (CPU/memory/time) are set per sandbox; any downstream credential an agent acts through (target-system access, third-party APIs) is scoped and revocable independent of the harness's own secrets.
+
+## Eval Profile
+**Success axis:** reliable, observable, cost-bounded throughput (from Success Model)
+**Oracle modes:** Request/Run for the pipeline (submit a synthetic work item, inspect the trace at each stage transition) + Browser for the dashboard
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: FID-08 for the headless pipeline; monetization-linked and AARRR-linked Outcome checks
+- Keep: FID-08 for the dashboard's own screens
+- Replace: OUT-03 experience probes → one synthetic work item driven end to end through every stage
+- Add: stage-graph declarativeness check (no hard-coded stage transition in engine logic)
+- Add: schema-validated stage output contracts with a round-trip test
+- Add: credential-isolation check (no real secret mounted into or baked into a stage sandbox)
+- Add: atomic claim/lease verified under concurrent workers (no work item double-processed)
+- Add: end-to-end trace spanning the host↔sandbox boundary
+- Add: per-item or per-run cost cap / circuit breaker present
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** a secret reachable from inside a stage sandbox is a `PRB-SEC-02` failure, and this type's sandboxes execute LLM-directed code — treat it as a veto, not a deduction
