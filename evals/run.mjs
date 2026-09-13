@@ -20,7 +20,7 @@ import {
   HARNESS_ROOT, REPO_ROOT, readJSON, writeJSON, readText, exists, ensureDir,
   log, setLogLevel, runStamp, rng, shuffle, pool, round, groupBy,
 } from './lib/util.mjs';
-import { buildArena, releaseArena, publicHalf, hiddenHalf } from './arena/build.mjs';
+import { buildArena, releaseArena, publicHalf, hiddenHalf, credentialCheck } from './arena/build.mjs';
 import { getAdapter } from './drive/index.mjs';
 import { Responder, makePersonaCaller } from './drive/responder.mjs';
 import { startSnapshotter } from './collect/board.mjs';
@@ -69,7 +69,8 @@ function usage() {
   node evals/run.mjs --suite staircase --scenario <id>
   node evals/run.mjs --score <run-dir>            re-score and re-render, no agents run
   node evals/run.mjs --probe                      what does this host actually expose?
-                                                 (add --no-live to skip the trivial session)
+                                                 --no-live       skip the real model turn (instant)
+                                                 --isolated-home run it in a throwaway HOME
 
 Options
   --matrix <file>        run matrix (default: evals/matrix/default.json)
@@ -87,8 +88,18 @@ Options
 
 async function doProbe() {
   const Adapter = getAdapter(opt('adapter', 'opencode'));
-  const found = await Adapter.probe({ live: !has('no-live') });
+  // Progress, because the live steps are real model turns and silence for four minutes
+  // is indistinguishable from a hang — which is exactly how this was first reported.
+  console.log('');
+  const found = await Adapter.probe({
+    live: !has('no-live'),
+    isolatedHome: has('isolated-home'),
+    onStep: (step, detail) => console.log(`  ...  ${step.padEnd(12)} ${detail}`),
+  });
   console.log(`\nAdapter: ${found.adapter}${found.version ? ` (${found.version})` : ''}`);
+  if (found.credentials) {
+    console.log(`  ${found.credentials.ok ? 'AUTH   ' : 'NO AUTH'} ${found.credentials.note}`);
+  }
   for (const [cap, info] of Object.entries(found.capabilities)) {
     // A `how` is printed only for a capability that was actually found — a MISSING line
     // that also tells you how to call it is not a finding, it is noise.
@@ -135,6 +146,11 @@ async function doRun() {
 
   log.step(`Anymake eval · ${runId}`);
   log.info(`${arms.length} cells · adapter ${adapterId} · sha ${sha.slice(0, 7)} · concurrency ${concurrency}`);
+  if (!Adapter.synthetic) {
+    // Better to say this now than to let every cell discover it separately, an hour in.
+    const creds = credentialCheck();
+    log[creds.ok ? 'info' : 'warn'](`credentials: ${creds.note}`);
+  }
   if (Adapter.synthetic) log.warn('adapter is synthetic — this run produces a shaped report, never a measurement');
 
   const run = {
@@ -291,7 +307,10 @@ const triggerKeyFor = (t) => {
   const s = /story\s+([\d.]+)/i.exec(t.text || '');
   return s ? `story-${s[1]}` : 'any';
 };
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms).unref?.());
+// NOT unref'd: during the drive loop's idle wait this timer is the only thing keeping
+// the event loop alive, and an unref'd one lets Node exit silently mid-cell — a run
+// that stops without a report and without an error.
+const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
 /* ---------------- scoring one cell ---------------- */
 

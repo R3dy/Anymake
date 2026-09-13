@@ -23,6 +23,7 @@ import { deriveAlarms } from './score/alarms.mjs';
 import { publicHalf, hiddenHalf } from './arena/build.mjs';
 import { parseEvalProfile } from './run.mjs';
 import { installDOM } from './report/domstub.mjs';
+import { OpenCodeAdapter, parseLeadingJSON, normalizeSession } from './drive/opencode.mjs';
 
 let failures = 0;
 const ok = (m) => console.log(`  PASS  ${m}`);
@@ -217,7 +218,7 @@ for (const id of fs.readdirSync(path.join(HARNESS_ROOT, 'ablations'))) {
 }
 
 /* ---------------------------------------------------------------- */
-console.log('\n[12] End to end: a full run renders every view');
+console.log('\n[14] End to end: a full run renders every view');
 const runDir = execRun();
 if (runDir) {
   const model = readJSON(path.join(runDir, 'report.json'));
@@ -235,6 +236,52 @@ if (runDir) {
   rmrf(runDir);
 } else {
   bad('the end-to-end run did not complete');
+}
+
+/* ---------------------------------------------------------------- */
+console.log('\n[13] The OpenCode adapter, against an offline stub');
+{
+  // evals/fixtures/host-stub/opencode reproduces the two host behaviors that caused
+  // real bugs: help on stderr with exit 0, and export's chatter on stderr alongside
+  // JSON on stdout. Driving it here means those bugs cannot come back silently on a
+  // machine that has no opencode installed.
+  const stub = path.join(HARNESS_ROOT, 'drive', 'host-stub', 'opencode');
+  check(exists(stub), 'the offline host stub exists');
+
+  const found = await OpenCodeAdapter.probe({ bin: stub, env: { ...process.env, ANTHROPIC_API_KEY: 'stub' }, live: true });
+  check(found.version === '1.18.29', `the probe reads a version through the stub (${found.version})`);
+  for (const cap of ['start', 'send', 'usage', 'kill']) {
+    check(found.capabilities[cap]?.available === true,
+      `probe finds '${cap}' even though the stub writes its help to stderr — the bug that reported MISSING for capabilities the host has`);
+  }
+  check(Object.values(found.capabilities).every((c) => c.available || c.how === null),
+    'a MISSING capability never prints a "how" — an unavailable capability with call instructions is incoherent output');
+  check(/export parsed/.test(found.capabilities.usage.evidence || ''),
+    'export is parsed despite the trailing stderr chatter appended after its JSON');
+
+  // Parsing: the exact shapes that broke once.
+  check(parseLeadingJSON('{"a":1}\nExporting session: x')?.a === 1, 'JSON survives trailing chatter');
+  check(parseLeadingJSON('chatter\n{"a":1}')?.a === 1, 'JSON survives leading chatter');
+  check(parseLeadingJSON('{"t":"a{b}"}trailing')?.t === 'a{b}', 'brace-balancing is not fooled by braces inside strings');
+  check(parseLeadingJSON('no json here') === null, 'a stream with no JSON returns null rather than throwing');
+
+  // Normalization: §7.1's trace fields, mapped off opencode's published message schema.
+  const exported = parseLeadingJSON(
+    execFileSync(stub, ['export', 'x'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  const recs = normalizeSession({ id: 'ses_1', data: exported, parent: null }, 'ses_1');
+  check(recs.length === 1, 'only assistant messages become trace records');
+  const r = recs[0];
+  check(r.tokens.in === 100 && r.tokens.out === 20 && r.tokens.cache_read === 40, 'tokens map from tokens{input,output,cache{read}}');
+  check(r.usd === 0.0123, 'cost maps to usd');
+  check(r.model_served === 'test-model', 'the SERVED model is read back off the message — EFF-07 depends on it');
+  check(r.role === 'worker', 'the agent name maps to an Anymake role');
+  check(r.duration_ms === 9000, 'duration comes from time{created,completed}');
+  check(r.reasoning === 'thinking about story-3.4', 'ReasoningPart is captured when the host persists it');
+  check(r.story === '3.4', 'the story id is recovered from the turn');
+  check(r.verdict_emitted === 'PASS', 'a verdict in the message text is captured as evidence about the run, never as a score');
+  check(r.files_read.some((f) => f.path === 'AGENTS/worker.md'), 'a read tool call becomes a files_read entry — the unread/violated split in §7.7 rests on this');
+  check(r.artifact_written === 'task-brief-story-3.4.md', 'a write tool call becomes the artifact');
+  check(r.subtasks[0]?.agent === 'anymake-validator', 'a SubtaskPart is a dispatch — the next node in the tree');
 }
 
 /* ---------------------------------------------------------------- */

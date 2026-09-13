@@ -10,6 +10,7 @@
 //   3. No network dependence in the critical path. Fixtures vendor their deps; LLM
 //      API traffic is the one permitted egress.
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { ensureDir, writeJSON, writeText, exists, log, REPO_ROOT, HARNESS_ROOT } from '../lib/util.mjs';
@@ -51,6 +52,12 @@ export function buildArena({ cellDir, sha, scenario, fixture, modelConfig, ablat
 
   // 4. HOME override: opencode config + a git identity, so nothing reaches the
   //    developer's real config.
+  //
+  //    But isolation must not take the CREDENTIALS with it. opencode keeps them in
+  //    <data>/opencode/auth.json, so an arena that redirects XDG_DATA_HOME and copies
+  //    nothing has zero credentials — every cell then fails to authenticate, or worse,
+  //    blocks on an interactive login with no stdin. Provider env vars survive the
+  //    override on their own; auth.json has to be carried in deliberately.
   const ocDir = ensureDir(path.join(dirs.home, '.config', 'opencode'));
   // The S0 control arm and the staircase's first step install no plugin at all: the
   // system under test is simply absent, which is the only honest way to measure what
@@ -61,6 +68,8 @@ export function buildArena({ cellDir, sha, scenario, fixture, modelConfig, ablat
     ...(modelConfig?.opencode || {}),
     ...(systemOff ? {} : { plugin: [path.join(dirs.anymake, '.opencode', 'plugins', 'anymake.js')] }),
   });
+  seedCredentials(dirs.home);
+
   writeText(path.join(dirs.home, '.gitconfig'),
     '[user]\n  name = Anymake Eval\n  email = eval@anymake.invalid\n[init]\n  defaultBranch = main\n[commit]\n  gpgsign = false\n');
 
@@ -93,6 +102,60 @@ export function publicHalf(brief) {
 export function hiddenHalf(brief) {
   const i = brief.indexOf('## HIDDEN');
   return i >= 0 ? brief.slice(i) : '';
+}
+
+/**
+ * Carry the host's provider credentials into the cell's HOME.
+ *
+ * Copied, not symlinked: a cell must never be able to write back over the developer's
+ * real credentials. If there is nothing to copy, that is not fatal — a provider env
+ * var works too — and `credentialCheck()` is what tells the operator which case they
+ * are in before a sweep burns an hour proving it.
+ */
+export function seedCredentials(cellHome) {
+  const src = authFile();
+  if (!src) return { seeded: false, from: null };
+  const dest = path.join(cellHome, '.local', 'share', 'opencode', 'auth.json');
+  try {
+    ensureDir(path.dirname(dest));
+    fs.copyFileSync(src, dest);
+    fs.chmodSync(dest, 0o600);
+    return { seeded: true, from: src };
+  } catch (e) {
+    log.warn(`could not seed credentials into the arena: ${e.message}`);
+    return { seeded: false, from: src };
+  }
+}
+
+export function authFile() {
+  const explicit = process.env.ANYMAKE_EVAL_AUTH_FILE;
+  if (explicit) return exists(explicit) ? explicit : null;
+  const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+  const candidate = path.join(dataHome, 'opencode', 'auth.json');
+  return exists(candidate) ? candidate : null;
+}
+
+/** Provider env vars that authenticate on their own, so isolation does not break them. */
+const PROVIDER_ENV = [
+  'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY',
+  'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'GITHUB_TOKEN', 'AWS_ACCESS_KEY_ID', 'AZURE_API_KEY',
+];
+
+/**
+ * Answer, before a sweep starts, the question a hung run makes you ask an hour late:
+ * can a cell authenticate at all?
+ */
+export function credentialCheck(env = process.env) {
+  const file = authFile();
+  const vars = PROVIDER_ENV.filter((v) => env[v]);
+  return {
+    ok: !!file || vars.length > 0,
+    authFile: file,
+    envVars: vars,
+    note: file ? `auth.json will be copied into each cell's HOME`
+      : vars.length ? `no auth.json; relying on ${vars.join(', ')}, which survive the HOME override`
+      : 'no auth.json and no provider env var — cells will not be able to authenticate',
+  };
 }
 
 function arenaEnv({ arena, dirs, modelConfig, projectName }) {

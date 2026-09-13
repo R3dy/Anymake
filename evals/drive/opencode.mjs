@@ -36,6 +36,7 @@ import os from 'os';
 import path from 'path';
 import { spawn, spawnSync } from 'child_process';
 import { appendJSONL, readJSONL, writeJSON, writeText, ensureDir, exists, log } from '../lib/util.mjs';
+import { credentialCheck, seedCredentials } from '../arena/build.mjs';
 
 const CAPABILITIES = ['start', 'send', 'usage', 'kill'];
 
@@ -48,17 +49,45 @@ const CAPABILITIES = ['start', 'send', 'usage', 'kill'];
  * capabilities the host has.
  */
 function capture(bin, args, env, timeout = 30000) {
-  const r = spawnSync(bin, args, { encoding: 'utf8', env, timeout, stdio: ['ignore', 'pipe', 'pipe'] });
-  const out = `${r.stdout || ''}${r.stderr || ''}`;
-  if (r.error) return { ok: false, out, error: String(r.error.message).split('\n')[0], status: null };
-  return { ok: r.status === 0, out, error: r.status === 0 ? null : `exit ${r.status}`, status: r.status };
+  // killSignal matters: spawnSync's default SIGTERM lets a process that is blocked
+  // on an interactive prompt outlive its own timeout.
+  const r = spawnSync(bin, args, { encoding: 'utf8', env, timeout, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'pipe'] });
+  const stdout = r.stdout || '', stderr = r.stderr || '';
+  // Both streams are kept, but SEPARATELY. Merging them is right for detection and
+  // diagnostics and wrong for parsing: `opencode export` writes JSON to stdout and
+  // "Exporting session: …" to stderr, so a merged string has chatter appended after
+  // the JSON and JSON.parse fails on the trailing garbage.
+  const base = { stdout, stderr, out: `${stdout}${stderr}` };
+  if (r.error) return { ...base, ok: false, error: String(r.error.message).split('\n')[0], status: null };
+  return { ...base, ok: r.status === 0, error: r.status === 0 ? null : `exit ${r.status}`, status: r.status };
 }
 
-/** `opencode export` prints a human line before the JSON; start at the first brace. */
+/**
+ * Pull the first complete JSON object out of a stream that may carry human chatter
+ * on either side of it. Brace-balanced rather than "slice from the first brace",
+ * because trailing text is as common as leading text once stderr is in play.
+ */
 export function parseLeadingJSON(text) {
-  const i = text.indexOf('{');
-  if (i < 0) return null;
-  try { return JSON.parse(text.slice(i)); } catch { return null; }
+  if (!text) return null;
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  try { return JSON.parse(text.slice(start)); } catch { /* fall through to the scan */ }
+  let depth = 0, inString = false, escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) {
+      try { return JSON.parse(text.slice(start, i + 1)); } catch { return null; }
+    }
+  }
+  return null;
 }
 
 export class OpenCodeAdapter {
@@ -77,7 +106,8 @@ export class OpenCodeAdapter {
    * "  opencode run [message..]", not "  run", so a line-anchored regex missed it.
    * Help text is a moving target; running the thing is not.
    */
-  static async probe({ bin = process.env.ANYMAKE_EVAL_OPENCODE || 'opencode', env = process.env, live = true } = {}) {
+  static async probe({ bin = process.env.ANYMAKE_EVAL_OPENCODE || 'opencode', env = process.env,
+                       live = true, isolatedHome = false, onStep = () => {} } = {}) {
     const found = { adapter: 'opencode', bin, version: null, capabilities: {}, notes: [], raw: {} };
     const set = (cap, available, how, evidence) => {
       // `how` is only meaningful for a capability we actually found. Printing one for a
@@ -85,6 +115,7 @@ export class OpenCodeAdapter {
       found.capabilities[cap] = { available, how: available ? how : null, evidence };
     };
 
+    onStep('version', `${bin} --version`);
     const version = capture(bin, ['--version'], env, 15000);
     if (!version.ok && !version.out.trim()) {
       found.notes.push(`'${bin} --version' failed: ${version.error}. Is opencode on PATH, or set ANYMAKE_EVAL_OPENCODE.`);
@@ -93,24 +124,44 @@ export class OpenCodeAdapter {
     }
     found.version = version.out.trim().split('\n').pop();
 
+    onStep('help', 'reading the command and flag surface');
     const topHelp = capture(bin, ['--help'], env).out;
     const runHelp = capture(bin, ['run', '--help'], env).out;
     found.raw = { topHelp, runHelp };
     const hasRunCommand = /(^|\n)\s*(?:opencode\s+)?run\b/.test(topHelp);
     const flag = (f) => runHelp.includes(f);
 
+    // --- credentials, checked BEFORE spending 90 seconds finding out the hard way ---
+    onStep('credentials', 'checking that a provider is reachable');
+    const creds = credentialCheck(env);
+    found.credentials = creds;
+    if (!creds.ok) {
+      found.notes.push(`no provider credentials found — ${creds.note}. `
+        + `The live probe would block on an interactive login with no stdin, so it is skipped.`);
+    }
+
     // --- start: does a `run` invocation actually create a session? ---
-    // The throwaway HOME stays alive for the send and usage checks below: the session
-    // lives in that store, and exporting it from the ambient HOME would report "session
-    // not found" and blame the host for the probe's own tidiness.
-    let liveSession = null, liveDetail = 'not attempted (--no-live)';
+    //
+    // The live probe runs in YOUR HOME by default, and isolates only the working
+    // directory. An earlier version redirected HOME/XDG_* to a throwaway, which took
+    // the credentials with it (opencode keeps them in <data>/opencode/auth.json): the
+    // probe then had zero credentials and sat until its own timeout. Per-cell isolation
+    // is an arena concern, and the arena carries auth.json in deliberately.
+    // --isolated-home opts back into the old behavior for a hermeticity check.
+    let liveSession = null, liveDetail = live ? 'not attempted' : 'not attempted (--no-live)';
     let probeEnv = env, home = null, dir = null;
-    if (live) {
-      home = fs.mkdtempSync(path.join(os.tmpdir(), 'anymake-probe-home-'));
+    if (live && !creds.ok) {
+      liveDetail = 'skipped — no provider credentials (see the note below)';
+    } else if (live) {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 'anymake-probe-dir-'));
-      probeEnv = { ...env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config'), XDG_DATA_HOME: path.join(home, '.local', 'share') };
+      if (isolatedHome) {
+        home = fs.mkdtempSync(path.join(os.tmpdir(), 'anymake-probe-home-'));
+        probeEnv = { ...env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config'), XDG_DATA_HOME: path.join(home, '.local', 'share') };
+        seedCredentials(home);
+      }
       const args = ['run', ...(flag('--format') ? ['--format', 'json'] : []), ...(flag('--dir') ? ['--dir', dir] : []),
         'Reply with the single word READY.'];
+      onStep('live-run', 'starting a throwaway session — a real model turn, up to 90s');
       const res = capture(bin, args, probeEnv, 90000);
       liveSession = firstSessionId(res.out);
       liveDetail = liveSession
@@ -130,6 +181,7 @@ export class OpenCodeAdapter {
     const canContinue = flag('--continue');
     let sendEvidence = canSession ? 'run --help advertises --session' : (canContinue ? 'run --help advertises --continue' : 'neither --session nor --continue found');
     if (live && liveSession && canSession) {
+      onStep('live-send', 'continuing that session — up to 60s');
       const res = capture(bin, ['run', '--session', liveSession, '--format', 'json', 'ok'], probeEnv, 60000);
       // Only a SESSION error is a send failure. A provider or auth error means the
       // continuation was accepted and the model call failed after it — a different
@@ -149,10 +201,9 @@ export class OpenCodeAdapter {
     // --- usage: `export` is the authoritative per-message record ---
     let usageOk = false, usageEvidence = 'no session to export', how = `${bin} export <session-id>`;
     if (liveSession) {
-      // A cold, isolated HOME makes the first export slow — it brings its own server
-      // up. 30s was enough to look broken and not enough to be true.
+      onStep('export', `exporting ${liveSession} — the authoritative telemetry path`);
       const res = capture(bin, ['export', liveSession], probeEnv, 120000);
-      const parsed = parseLeadingJSON(res.out);
+      const parsed = parseLeadingJSON(res.stdout) || parseLeadingJSON(res.out);
       if (parsed?.info) {
         usageOk = true;
         usageEvidence = `export parsed · ${exportCoverage(parsed).join(' · ')}`;
@@ -312,7 +363,7 @@ export class OpenCodeAdapter {
 
   export(id) {
     const res = capture(this.bin, ['export', id], this.env, 120000);
-    return parseLeadingJSON(res.out);
+    return parseLeadingJSON(res.stdout) || parseLeadingJSON(res.out);
   }
 }
 

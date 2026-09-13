@@ -96,10 +96,33 @@ complete report before the first real sweep. Nothing it produces may be used to 
 Q1–Q5.
 
 OpenCode's non-interactive flags and on-disk session layout are a moving target, so
-`--probe` is the first thing to run on a new machine: it starts a trivial session and
-reports which of the four capabilities (`start`, `send`, `usage`, `kill`) it found and
-how. Everything downstream reads a normalized `telemetry/usage.jsonl`, so a layout change
-is a one-file fix in `drive/opencode.mjs`.
+`--probe` is the first thing to run on a new machine. It is empirical: it starts a real
+throwaway session, continues it, and exports it, then reports which of the four
+capabilities (`start`, `send`, `usage`, `kill`) it found and the evidence for each —
+including which of §7.1's trace fields your setup can actually fill.
+
+```bash
+npm run eval:probe                 # ~70s: real model turn + continuation + export
+npm run eval:probe -- --no-live    # instant: flag surface only, no model call
+npm run eval:probe -- --isolated-home   # the same, in a throwaway HOME (hermeticity check)
+```
+
+**It costs one real model turn** and prints progress as it goes, because silence for a
+minute is indistinguishable from a hang.
+
+**Credentials and the HOME override.** opencode keeps credentials in
+`<data>/opencode/auth.json`, and the arena redirects `HOME`/`XDG_DATA_HOME` per cell
+(§3.2 rule 1). Isolation must not take the credentials with it, so `auth.json` is
+*copied* into each cell's HOME — copied, not symlinked, so a cell can never write back
+over your real credentials. Provider env vars (`ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, …)
+survive the override on their own. Both `--probe` and the start of every sweep print
+which of the two you are relying on; if neither is present, they say so up front rather
+than letting every cell discover it an hour in.
+
+Everything downstream reads the normalized `telemetry/trace.jsonl`, so a host change is
+a one-file fix in `drive/opencode.mjs`. `evals/drive/host-stub/opencode` reproduces
+the host's quirks (help on stderr; export's chatter on stderr beside JSON on stdout) so
+`npm run eval:selftest` covers that file even on a machine with no opencode installed.
 
 ---
 
