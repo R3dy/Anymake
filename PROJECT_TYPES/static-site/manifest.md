@@ -50,3 +50,15 @@ Deploy to CDN with custom domain + SSL. Submit `sitemap.xml` to search consoles.
 - **Keep (hard):** the **prototype/visual-quality gate** — for a public content site, design quality is the deliverable, not optional.
 - **Add:** SEO baseline (every page has title + meta description; OG tags on key pages; sitemap + robots present); Core Web Vitals targets; responsive at mobile/tablet/desktop.
 - **Keep:** content-quality standard (no lorem ipsum / placeholders), accessibility, no-secrets-in-code.
+
+## Eval Profile
+**Success axis:** reach + conversion (from Success Model)
+**Oracle modes:** Browser (primary) — load each page and check rendered content, links and any form interaction
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: auth/database Outcome checks unless a feature needs them; monetization-linked checks
+- Keep (hard): FID-08 — for a public content site, design quality IS the deliverable
+- Add: SEO baseline (title + meta description per page; OG tags on key pages; sitemap and robots present)
+- Add: responsive check at mobile/tablet/desktop widths
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** none beyond baseline

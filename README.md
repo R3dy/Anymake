@@ -374,6 +374,15 @@ TEMPLATES/
 └── commit-message.md       # Conventional commit guidelines
 
 docs/audits/                # Point-in-time audits and their remediation plans
+docs/adr/                   # Decisions about this repo itself (ADR-014: the eval harness)
+docs/design/                # Design docs (eval-harness.md + its report mockup)
+
+evals/                      # The eval harness — developer-only, zero-dependency (ADR-014)
+├── run.mjs                 # CLI + scheduler: `npm run eval -- --scenario <id>`
+├── selftest.mjs            # The harness's own regression check (npm run eval:selftest)
+├── scenarios/ fixtures/    # Seed briefs with hidden acceptance lists; frozen repos + oracles
+├── ablations/              # One component removed + the trace assertion that proves it
+└── report/                 # The single-file HTML report and its localhost server
 
 AGENTS.md                   # The agent contract (summary; detailed AGENTS/*.md files win)
 CHANGELOG.md                # What changed in each version, and why
@@ -386,6 +395,8 @@ package.json                # npm metadata + `npm run verify` / `npm run validat
 **Build order is manifest-derived, and skipping a layer is not allowed.** Each project type's `manifest.md` sets its own Phase 4 build order; the SaaS default is Schema → Migration → API → Component → Page → Integration → Test. What is invariant is that the Worker follows the order in its brief and skips no layer that applies — skipping creates hidden dependencies that fail silently later. A `library` or `cli` project has a different order, not a violated one.
 
 **Markdown is the source of truth — so markdown gets a test suite.** There is no build step and no runtime (ADR-008): the instruction files *are* the system. That makes an instruction bug indistinguishable from a code bug in impact and much easier to miss, so `npm run verify` is the regression suite — 24 check groups, ~190 assertions, zero dependencies, run in CI on every push. It executes each dispatch verification command against the real template it targets, enforces the dispatch chokepoint, checks the summary contract against the specs it summarizes, and dry-runs the build loop against fixture deliverables. **Every instruction fix ships with the assertion that would have caught it.**
+
+**`npm run verify` checks the markdown is consistent; the eval harness checks it builds better software.** `evals/` launches real agent runs against a pinned checkout, across project types and model configs, and scores them against **hidden oracles the run never sees** — because a Validator `PASS` is evidence about the system's judgment, not a substitute for proof. Its headline number is the *trust gap*: stories marked done that an independent oracle fails. It also prices every component (what does the Experience Runner catch that nothing else does?) and every instruction file (which are load-bearing, which are expensive, which are never read at all). It is slow and costs money, so it is not a per-push gate — see `evals/README.md` and ADR-014.
 
 **Enforcement stays inside the no-runtime constraint.** Where a rule needed teeth, it got a schema constraint plus an on-demand check an agent is told to run (`validate-board-state.mjs`) — never a lock, a daemon, or a database. Real file locking on the taskboard was considered and rejected: it would make the board a runtime dependency.
 
@@ -412,6 +423,10 @@ and it runs in CI on every push and PR.
 npm run verify           # the regression harness — must print ALL CHECKS PASSED
 npm run validate-board   # validate a board-state.json against the schema
 node .opencode/validate-board-state.mjs PROJECTS/<name>/.anymake/board-state.json
+
+npm run eval:selftest    # the eval harness's own checks — free, offline, no provider
+npm run eval:probe       # what does this machine's OpenCode actually expose?
+npm run eval -- --scenario s1-cli-greenfield --adapter mock   # a full report, no spend
 ```
 
 `npm run verify` is zero-dependency Node (no install step). It checks skill and

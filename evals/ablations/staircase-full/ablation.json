@@ -1,0 +1,12 @@
+{
+  "component": "staircase step: + proxy gates (full)",
+  "question": "What is the marginal value of adding proxy gates (full) on top of everything before it?",
+  "staircaseStep": "full",
+  "systemOff": false,
+  "removes": [],
+  "ops": [],
+  "assert": {
+    "noDispatchesFor": []
+  },
+  "note": "Composed from the leave-one-out ops. The staircase adds layers in BUILD order; §12 open question 3 asks whether suspicion order would attribute credit better."
+}

@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anymake Eval Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --page:#f4f5f7; --surface:#fcfcfd; --surface-2:#eef0f3; --sunken:#e9ebef;
+  --ink:#0e1116; --ink-2:#4e535c; --muted:#868c96;
+  --grid:#e2e4e9; --rule:#d8dbe1; --border:rgba(14,17,22,.10);
+  --accent:#2a78d6; --accent-soft:#e7f0fc;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-wash:#e6f6e6; --crit-wash:#fbeaea; --warn-wash:#fdf3e0;
+  --ord-1:#86b6ef; --ord-2:#6da7ec; --ord-3:#3987e5; --ord-4:#256abf; --ord-5:#184f95; --ord-6:#0d366b;
+  --heat-0:#eef2f7; --heat-1:#cde2fb; --heat-2:#9ec5f4; --heat-3:#5598e7; --heat-4:#2a78d6; --heat-5:#1c5cab; --heat-6:#0d366b;
+  --shadow:0 1px 2px rgba(14,17,22,.06), 0 8px 24px -16px rgba(14,17,22,.28);
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --page:#0d0f12; --surface:#181b1f; --surface-2:#1f2328; --sunken:#131619;
+    --ink:#f2f4f7; --ink-2:#b9bec7; --muted:#868c96;
+    --grid:#282c32; --rule:#2f343b; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#14263d;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --good-wash:#12240f; --crit-wash:#2b1414; --warn-wash:#2a2010;
+    --ord-1:#184f95; --ord-2:#1c5cab; --ord-3:#256abf; --ord-4:#3987e5; --ord-5:#6da7ec; --ord-6:#9ec5f4;
+    --heat-0:#1d2126; --heat-1:#173254; --heat-2:#184f95; --heat-3:#256abf; --heat-4:#3987e5; --heat-5:#6da7ec; --heat-6:#9ec5f4;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0f12; --surface:#181b1f; --surface-2:#1f2328; --sunken:#131619;
+  --ink:#f2f4f7; --ink-2:#b9bec7; --muted:#868c96;
+  --grid:#282c32; --rule:#2f343b; --border:rgba(255,255,255,.10);
+  --accent:#3987e5; --accent-soft:#14263d;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good-wash:#12240f; --crit-wash:#2b1414; --warn-wash:#2a2010;
+  --ord-1:#184f95; --ord-2:#1c5cab; --ord-3:#256abf; --ord-4:#3987e5; --ord-5:#6da7ec; --ord-6:#9ec5f4;
+  --heat-0:#1d2126; --heat-1:#173254; --heat-2:#184f95; --heat-3:#256abf; --heat-4:#3987e5; --heat-5:#6da7ec; --heat-6:#9ec5f4;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:var(--sans); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0; text-wrap:balance; font-weight:600; letter-spacing:-.012em}
+a{color:var(--accent)}
+button{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1180px; margin:0 auto; padding-inline:20px; padding-block:0 56px}
+header.masthead{border-bottom:1px solid var(--rule); background:var(--surface)}
+.masthead .wrap{padding-block:18px 0}
+.title-row{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px}
+.title-row h1{font-size:20px}
+.title-row .runid{font-family:var(--mono); font-size:13px; color:var(--muted)}
+.synthetic{
+  margin-left:auto; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-2); background:var(--warn-wash); border:1px solid var(--border);
+  padding:3px 8px; border-radius:2px; font-weight:600;
+}
+.provenance{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.chip{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-2);
+  background:var(--surface-2); border:1px solid var(--border);
+  padding:3px 7px; border-radius:2px; white-space:nowrap;
+}
+.chip b{color:var(--ink); font-weight:500}
+nav.views{display:flex; gap:2px; margin-top:14px; overflow-x:auto; scrollbar-width:thin}
+nav.views button{
+  border:0; background:none; padding:9px 12px 10px; cursor:pointer; white-space:nowrap;
+  color:var(--ink-2); border-bottom:2px solid transparent; font-weight:500; font-size:13.5px;
+}
+nav.views button:hover{color:var(--ink)}
+nav.views button[aria-current="true"]{color:var(--ink); border-bottom-color:var(--accent)}
+main{padding-top:24px}
+.view[hidden]{display:none!important}
+
+/* ---------- primitives ---------- */
+.panel{background:var(--surface); border:1px solid var(--border); border-radius:4px; box-shadow:var(--shadow)}
+.panel-head{display:flex; align-items:baseline; gap:10px; padding:14px 16px 0}
+.panel-head h2{font-size:14.5px}
+.panel-head .sub{font-size:12.5px; color:var(--muted)}
+.panel-body{padding:14px 16px 16px}
+.grid{display:grid; gap:14px}
+.eyebrow{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.note{font-size:12.5px; color:var(--ink-2); line-height:1.55}
+.stack{display:flex; flex-direction:column; gap:14px}
+
+/* headline tiles: only for the numbers that ARE the point */
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(196px,1fr)); gap:14px}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:14px 16px; box-shadow:var(--shadow)}
+.tile .k{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.tile .v{font-size:30px; font-weight:600; letter-spacing:-.02em; margin-top:6px; line-height:1.05}
+.tile .v small{font-size:14px; font-weight:500; color:var(--ink-2); letter-spacing:0}
+.tile .d{font-size:12.5px; color:var(--ink-2); margin-top:6px}
+.tile.alarm{border-left:3px solid var(--critical)}
+.tile.alarm .v{color:var(--critical)}
+
+/* tables */
+table{width:100%; border-collapse:collapse}
+th{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:600; text-align:left; padding:0 10px 8px 0; white-space:nowrap}
+td{padding:9px 10px 9px 0; border-top:1px solid var(--grid); vertical-align:middle}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:var(--surface-2)}
+.scroll-x{overflow-x:auto}
+
+/* status */
+.pill{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pill .dot{width:7px; height:7px; border-radius:50%}
+.pill.ok{background:var(--good-wash); color:var(--ink)} .pill.ok .dot{background:var(--good)}
+.pill.bad{background:var(--crit-wash); color:var(--ink)} .pill.bad .dot{background:var(--critical)}
+.pill.warn{background:var(--warn-wash); color:var(--ink)} .pill.warn .dot{background:var(--warn)}
+.pill.na{background:var(--surface-2); color:var(--ink-2)} .pill.na .dot{background:var(--muted)}
+
+/* bars */
+.barrow{display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px}
+.track{position:relative; height:9px; background:var(--sunken); border-radius:2px; overflow:hidden}
+.fill{position:absolute; inset:0 auto 0 0; background:var(--accent); border-radius:2px}
+.fill.capped{background:var(--critical)}
+
+/* pillar heat strip */
+.heatstrip{display:flex; gap:2px}
+.heatcell{
+  width:34px; height:26px; border-radius:2px; display:grid; place-items:center;
+  font-family:var(--mono); font-size:11px; font-weight:500; cursor:default;
+}
+
+svg{display:block; max-width:100%}
+.tooltip{
+  position:fixed; z-index:50; pointer-events:none; opacity:0; transform:translate(-50%,-120%);
+  background:var(--ink); color:var(--page); padding:6px 9px; border-radius:3px;
+  font-size:12px; line-height:1.4; max-width:260px; box-shadow:var(--shadow); transition:opacity .08s;
+}
+.tooltip b{font-family:var(--mono); font-weight:600}
+
+/* probe board */
+.probeboard{display:grid; gap:2px; min-width:640px}
+.pb-cell{padding:7px 8px; font-size:12px; background:var(--surface-2); border-radius:2px; display:flex; align-items:center; gap:6px}
+.pb-head{background:none; color:var(--muted); font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:600; justify-content:center}
+.pb-lab{background:none; padding-left:0}
+.pb-lab .id{font-family:var(--mono); font-size:11.5px; color:var(--ink)}
+.pb-lab .t{color:var(--ink-2); font-size:12px}
+.pb-cell.pass{background:var(--good-wash)} .pb-cell.fail{background:var(--crit-wash)} .pb-cell.nt{background:var(--surface-2); color:var(--muted)}
+.pb-cell .gl{font-family:var(--mono); font-weight:600; width:100%; text-align:center}
+.pb-cell.fail .gl{color:var(--critical)} .pb-cell.pass .gl{color:var(--good)}
+
+/* alarms */
+.alarmlist{display:flex; flex-direction:column; gap:0}
+.alarm-item{display:grid; grid-template-columns:auto 1fr; gap:12px; padding:11px 0; border-top:1px solid var(--grid)}
+.alarm-item:first-child{border-top:0}
+.alarm-item .sev{width:3px; border-radius:2px; background:var(--warn)}
+.alarm-item.crit .sev{background:var(--critical)}
+.alarm-item h3{font-size:13px}
+.alarm-item p{margin:3px 0 0; font-size:12.5px; color:var(--ink-2)}
+.alarm-item .who{font-family:var(--mono); font-size:11.5px; color:var(--muted)}
+
+/* drilldown */
+.back{background:none; border:1px solid var(--border); border-radius:3px; padding:5px 10px; cursor:pointer; font-size:12.5px; color:var(--ink-2)}
+.back:hover{color:var(--ink); background:var(--surface-2)}
+.timeline-lane{display:grid; grid-template-columns:118px 1fr; align-items:center; gap:10px; padding:3px 0}
+.timeline-lane .lab{font-family:var(--mono); font-size:11.5px; color:var(--ink-2); text-align:right}
+.derivation td{font-family:var(--mono); font-size:12px}
+.derivation td.name{font-family:var(--sans)}
+.contrib{color:var(--ink-2)}
+.legend{display:flex; flex-wrap:wrap; gap:12px; align-items:center; font-size:12px; color:var(--ink-2)}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.swatch{width:10px; height:10px; border-radius:2px; display:inline-block}
+
+/* verdict pills */
+.vd{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:2px;white-space:nowrap}
+.vd .dot{width:7px;height:7px;border-radius:50%}
+.vd.keep{background:var(--good-wash)} .vd.keep .dot{background:var(--good)}
+.vd.neutral{background:var(--surface-2);color:var(--ink-2)} .vd.neutral .dot{background:var(--muted)}
+.vd.review{background:var(--warn-wash)} .vd.review .dot{background:var(--warn)}
+.vd.negative{background:var(--crit-wash)} .vd.negative .dot{background:var(--critical)}
+.vd.insurance{background:var(--accent-soft);color:var(--ink)} .vd.insurance .dot{background:var(--accent)}
+.vd.unmeasured{background:var(--surface-2);color:var(--muted);border:1px dashed var(--rule)} .vd.unmeasured .dot{background:transparent}
+
+/* trace explorer */
+.run{border:1px solid var(--border);border-radius:3px;margin-bottom:6px;background:var(--surface)}
+.run summary{list-style:none;cursor:pointer;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.run summary::-webkit-details-marker{display:none}
+.run summary:hover{background:var(--surface-2)}
+.run[open] summary{border-bottom:1px solid var(--grid)}
+.run .who{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.run .agent{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.run .meta{font-size:12px;color:var(--muted)}
+.run .nums{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.run-body{padding:12px}
+.turn{border-left:2px solid var(--grid);padding:0 0 12px 12px;margin-left:4px}
+.turn:last-child{padding-bottom:0}
+.turn .tn{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px}
+.reason{background:var(--sunken);border-left:2px solid var(--ord-3);padding:8px 10px;border-radius:0 2px 2px 0;font-size:12.5px;color:var(--ink-2);font-style:italic}
+.msg{font-size:12.5px;margin-top:6px}
+.tools{display:flex;flex-direction:column;gap:3px;margin-top:7px}
+.tool{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;font-family:var(--mono);font-size:11.5px;background:var(--surface-2);border-radius:2px;padding:4px 8px}
+.tool .tname{font-weight:600;color:var(--accent)}
+.tool .targ{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool .tres{color:var(--muted);white-space:nowrap}
+.tool.sysfile .tname{color:var(--s2)}
+.compbar{display:flex;gap:2px;height:14px;border-radius:2px;overflow:hidden;margin-top:8px}
+.fl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fl .f{font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:2px;background:var(--surface-2);color:var(--ink-2)}
+.fl .f.sys{background:var(--accent-soft);color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.filters button{border:1px solid var(--border);background:var(--surface);border-radius:2px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.filters button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+
+/* fix list */
+.fix{border:1px solid var(--border);border-left:3px solid var(--critical);border-radius:3px;padding:12px 14px;background:var(--surface)}
+.fix.med{border-left-color:var(--warn)} .fix.low{border-left-color:var(--muted)}
+.fix h3{font-size:13.5px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.fix .rank{font-family:var(--mono);color:var(--muted);font-weight:600}
+.fix .freq{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);font-weight:500}
+.fix dl{display:grid;grid-template-columns:88px 1fr;gap:4px 12px;margin:9px 0 0;font-size:12.5px}
+.fix dt{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding-top:2px}
+.fix dd{margin:0;color:var(--ink-2)}
+.fix dd .mono{color:var(--ink)}
+.stair{display:flex;flex-direction:column;gap:7px}
+.stair-row{display:grid;grid-template-columns:170px 1fr 108px;gap:10px;align-items:center}
+.stair-row .sl{font-size:12.5px}
+.stair-row .sv{font-family:var(--mono);font-size:12px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:760px){
+  .stair-row{grid-template-columns:1fr;gap:3px}
+  .stair-row .sv{text-align:left}
+  .fix dl{grid-template-columns:1fr}
+  .wrap{padding-inline:16px}
+  .title-row h1{font-size:18px}
+  .synthetic{margin-left:0}
+  .heatcell{width:28px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <div class="title-row">
+      <h1>Anymake Eval</h1>
+      <span class="runid" id="runid"></span>
+      <span class="synthetic" id="synthetic" hidden></span>
+    </div>
+    <div class="provenance" id="provenance"></div>
+    <nav class="views" id="nav" aria-label="Report views"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="view" id="view-overview"></section>
+  <section class="view" id="view-components" hidden></section>
+  <section class="view" id="view-traces" hidden></section>
+  <section class="view" id="view-instructions" hidden></section>
+  <section class="view" id="view-fixes" hidden></section>
+  <section class="view" id="view-matrix" hidden></section>
+  <section class="view" id="view-probes" hidden></section>
+  <section class="view" id="view-trust" hidden></section>
+  <section class="view" id="view-autonomy" hidden></section>
+  <section class="view" id="view-spend" hidden></section>
+  <section class="view" id="view-cell" hidden></section>
+</main>
+
+<div class="tooltip" id="tip" role="status" aria-live="polite"></div>
+
+<script>
+/* ------------------------------------------------------------------
+   RUN DATA — injected by evals/report/render.mjs from report.json.
+   The shapes here are the same ones docs/design/eval-report-mockup.html
+   used for its synthetic stand-in, so the mockup IS the spec for this file.
+   Data is inlined as a single JSON blob so the report can be emailed,
+   archived and diffed (§8).
+------------------------------------------------------------------ */
+const RUN = /*__RUN_DATA__*/{};
+
+/* Views degrade rather than throw: a run that has no ablation arms, no judge
+   pass, or no fixture oracle still renders every view it does have evidence
+   for, and says so where it does not (§7.1 "degradation is explicit"). */
+Object.assign(RUN, Object.fromEntries(Object.entries({
+  provenance: [], pillars: ["Outcome","Fidelity","Conformance","Autonomy","Efficiency"],
+  configs: [], scenarios: [], matrix: {}, probes: [], trust: [], trustStories: [],
+  gateRounds: [], autonomy: [], phases: [], spend: [], rework: [], roles: [],
+  alarms: [], components: [], staircase: [], stages: [], files: [], fixes: [],
+  ceremony: { process: 0, code: 0, readback: 0, ttfc: "—" },
+  cell: null, trace: null, empty: {},
+}).filter(([k]) => RUN[k] == null)));
+
+/* ------------------------------------------------------------------ */
+const $ = (s,r=document)=>r.querySelector(s);
+const el = (t,c,h)=>{const n=document.createElement(t); if(c)n.className=c; if(h!=null)n.innerHTML=h; return n;};
+const esc = s => String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const cfgName = i => RUN.configs[i]?.label ?? `config ${i}`;
+$("#runid").textContent = `${RUN.runId ?? "run"} · ${RUN.startedAt ?? ""}`;
+if (RUN.synthetic) { const s = $("#synthetic"); s.hidden = false;
+  s.textContent = RUN.syntheticNote || "Synthetic data · no agent was run"; }
+
+/* tooltip (shared hover layer for every mark) */
+const tip = $("#tip");
+function bindTips(root){
+  root.querySelectorAll("[data-tip]").forEach(n=>{
+    n.addEventListener("pointerenter", e=>{
+      tip.innerHTML = n.dataset.tip; tip.style.opacity = 1;
+      const r = n.getBoundingClientRect();
+      tip.style.left = Math.min(window.innerWidth-16, Math.max(140, r.left + r.width/2)) + "px";
+      tip.style.top = r.top + "px";
+    });
+    n.addEventListener("pointerleave", ()=> tip.style.opacity = 0);
+  });
+}
+const heat = v => v==null ? "var(--heat-0)"
+  : v>=85 ? "var(--heat-6)" : v>=75 ? "var(--heat-5)" : v>=65 ? "var(--heat-4)"
+  : v>=55 ? "var(--heat-3)" : v>=45 ? "var(--heat-2)" : "var(--heat-1)";
+const heatInk = v => (v!=null && v>=65) ? "#fff" : "var(--ink)";
+
+/* ---------------- provenance + nav ---------------- */
+$("#provenance").innerHTML = RUN.provenance
+  .map(([k,v])=>`<span class="chip">${esc(k)} <b>${esc(v)}</b></span>`).join("");
+
+const VIEWS = [
+  ["overview","Overview"], ["components","Components"], ["traces","Traces"],
+  ["instructions","Instructions"], ["fixes","Fix list"],
+  ["matrix","Scenario matrix"], ["probes","Invariant probes"],
+  ["trust","Trust gap"], ["autonomy","Autonomy"], ["spend","Spend"]
+];
+const nav = $("#nav");
+VIEWS.forEach(([id,label])=>{
+  const b = el("button",null,label);
+  b.dataset.view = id;
+  b.addEventListener("click", ()=>show(id));
+  nav.appendChild(b);
+});
+function show(id){
+  document.querySelectorAll(".view").forEach(v=> v.hidden = (v.id !== "view-"+id));
+  nav.querySelectorAll("button").forEach(b=> b.setAttribute("aria-current", String(b.dataset.view===id)));
+  window.scrollTo({top:0, behavior:"instant"});
+}
+
+/* ---------------- overview ---------------- */
+function renderOverview(){
+  const v = $("#view-overview"); v.className = "view stack";
+
+  const tiles = el("div","tiles");
+  tiles.innerHTML = (RUN.tiles || []).map(t=>`
+    <div class="tile${t.alarm?" alarm":""}">
+      <div class="k">${esc(t.k)}</div>
+      <div class="v">${esc(t.v)}${t.small?`<small> ${esc(t.small)}</small>`:""}</div>
+      <div class="d">${esc(t.d)}</div>
+    </div>`).join("");
+  v.appendChild(tiles);
+
+  /* leaderboard */
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Leaderboard</h2>
+    <span class="sub">composite, median of n=${RUN.n ?? 1} · whisker = IQR · click a row for the cell view</span></div>`;
+  const body = el("div","panel-body scroll-x");
+  const t = el("table");
+  t.innerHTML = `<thead><tr>
+      <th style="width:30%">Model config</th><th style="width:26%">Composite</th>
+      <th>Pillars (O · F · C · A · E)</th><th style="text-align:right">USD</th><th style="text-align:right">Per $</th>
+    </tr></thead>`;
+  const tb = el("tbody");
+  const perDollarBase = Math.max(...RUN.configs.map(c=>c.composite/c.usd));
+  RUN.configs.forEach((c,i)=>{
+    const tr = el("tr", c.control ? "" : "clickable");
+    const pd = Math.round((c.composite/c.usd)/perDollarBase*100);
+    const strip = c.pillars.map((s,j)=>`<div class="heatcell" style="background:${heat(s)};color:${heatInk(s)}"
+        data-tip="<b>${esc(RUN.pillars[j])}</b><br>${s==null?"N/A — no system under test":s+" / 100"}">${s==null?"—":s}</div>`).join("");
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight:600">${esc(c.label)}${c.control?' <span class="pill na"><span class="dot"></span>control</span>':""}</div>
+        <div class="note" style="font-size:12px;color:var(--muted)">${esc(c.note)}</div>
+        ${c.veto?`<div class="pill bad" style="margin-top:5px"><span class="dot"></span>capped at 40 — ${esc(c.veto)}</div>`:""}
+        ${c.tierBind!=null?`<div class="note" style="font-size:11.5px;color:var(--muted);margin-top:4px">tier binding effective ${Math.round(c.tierBind*100)}%</div>`:""}
+      </td>
+      <td>
+        <div class="barrow">
+          <div class="track" data-tip="<b>${c.composite}</b> median · IQR ${c.iqr[0]}–${c.iqr[1]} (n=${c.n ?? RUN.n ?? 1})">
+            <div class="fill ${c.veto?"capped":""}" style="width:${c.composite}%"></div>
+            <div style="position:absolute;left:${c.iqr[0]}%;width:${c.iqr[1]-c.iqr[0]}%;top:0;bottom:0;border-left:1px solid var(--ink-2);border-right:1px solid var(--ink-2);opacity:.55"></div>
+          </div>
+          <div class="mono num" style="font-weight:600;min-width:24px;text-align:right">${c.composite}</div>
+        </div>
+      </td>
+      <td><div class="heatstrip">${strip}</div></td>
+      <td class="mono num" style="text-align:right">$${c.usd.toFixed(2)}</td>
+      <td class="mono num" style="text-align:right;color:var(--ink-2)">${pd}</td>`;
+    if(!c.control) tr.addEventListener("click", ()=> show("cell"));
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); body.appendChild(t);
+  body.appendChild(el("p","note",`<span class="eyebrow">Reading this</span><br>${RUN.notes?.leaderboard
+    ?? "Differences whose IQRs overlap are not separated at this n — order them at your own risk. A capped row was capped by veto, not by weighted average: a vetoed run can hold the best efficiency pillar on the page and still not place."}`));
+  p.appendChild(body); v.appendChild(p);
+
+  /* frontier scatter */
+  const fp = el("div","panel");
+  fp.innerHTML = `<div class="panel-head"><h2>Efficiency frontier</h2><span class="sub">composite against spend — one point per config</span></div>`;
+  const fb = el("div","panel-body");
+  fb.appendChild(frontierSVG());
+  fb.appendChild(el("p","note","The frontier is the line you would actually choose along. A point below it is dominated: something else on this page is both better and cheaper."));
+  fp.appendChild(fb); v.appendChild(fp);
+
+  /* alarms */
+  const ap = el("div","panel");
+  ap.innerHTML = `<div class="panel-head"><h2>Derived alarms</h2><span class="sub">relationships between metrics — diagnoses, never folded into the score</span></div>`;
+  const ab = el("div","panel-body");
+  const list = el("div","alarmlist");
+  RUN.alarms.forEach(a=>{
+    const it = el("div","alarm-item"+(a.sev==="crit"?" crit":""));
+    it.innerHTML = `<div class="sev"></div><div>
+      <h3>${esc(a.name)} <span class="who">— ${esc(a.who)}</span></h3><p>${esc(a.text)}</p></div>`;
+    list.appendChild(it);
+  });
+  ab.appendChild(list); ap.appendChild(ab); v.appendChild(ap);
+  bindTips(v);
+}
+
+function frontierSVG(){
+  const W=880,H=300,L=54,R=24,T=26,B=44;
+  const x = u => L + (u/110)*(W-L-R);
+  const y = s => T + (1 - s/100)*(H-T-B);
+  let g = "";
+  for(let s=0;s<=100;s+=25) g += `<line x1="${L}" y1="${y(s)}" x2="${W-R}" y2="${y(s)}" stroke="var(--grid)" stroke-width="1"/>
+    <text x="${L-8}" y="${y(s)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${s}</text>`;
+  for(let u=0;u<=100;u+=25) g += `<text x="${x(u)}" y="${H-B+18}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--mono)">$${u}</text>`;
+  let marks = "";
+  RUN.configs.forEach(c=>{
+    const cx=x(c.usd), cy=y(c.composite);
+    const tipTxt = `<b>${esc(c.label)}</b><br>composite ${c.composite} · $${c.usd.toFixed(2)}`;
+    marks += c.control
+      ? `<circle cx="${cx}" cy="${cy}" r="6" fill="var(--surface)" stroke="var(--muted)" stroke-width="2" data-tip="${tipTxt}"/>`
+      : `<circle cx="${cx}" cy="${cy}" r="6" fill="${c.veto?"var(--critical)":"var(--s1)"}" stroke="var(--surface)" stroke-width="2" data-tip="${tipTxt}"/>`;
+    const anchor = c.usd > 80 ? "end" : c.usd < 16 ? "start" : "middle";
+    const lx = c.usd > 80 ? cx + 7 : c.usd < 16 ? cx - 7 : cx;
+    marks += `<text x="${lx}" y="${cy-13}" text-anchor="${anchor}" font-size="11.5" fill="var(--ink-2)">${esc(c.label)}</text>`;
+  });
+  // The frontier is computed, not drawn by hand: sort by spend, keep only points
+  // nothing cheaper already beats.
+  let peak = -Infinity;
+  const fr = RUN.configs.filter(c=>c.composite!=null && c.usd>0)
+    .slice().sort((a,b)=>a.usd-b.usd)
+    .filter(c=>{ if(c.composite>peak){ peak=c.composite; return true; } return false; })
+    .map(c=>`${x(c.usd)},${y(c.composite)}`).join(" ");
+  return el("div",null,`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Composite score against spend for each model config">
+    ${g}
+    <polyline points="${fr}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>
+    ${marks}
+    <text x="${L-8}" y="${T-10}" text-anchor="end" font-size="10.5" fill="var(--muted)" font-family="var(--mono)">composite</text>
+    <text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10.5" fill="var(--muted)">spend per run (USD) →</text>
+  </svg>`);
+}
+
+/* ---------------- matrix ---------------- */
+function renderMatrix(){
+  const v = $("#view-matrix"); v.className = "view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Scenario × config</h2>
+    <span class="sub">composite per cell — click any cell to open its run</span></div>`;
+  const b = el("div","panel-body scroll-x");
+  const t = el("table"); t.style.minWidth="720px";
+  t.innerHTML = `<thead><tr><th style="width:34%">Scenario</th>${
+    RUN.configs.map(c=>`<th style="text-align:center">${esc(c.label.replace(" — no Anymake",""))}</th>`).join("")}</tr></thead>`;
+  const tb = el("tbody");
+  RUN.scenarios.forEach(s=>{
+    const tr = el("tr");
+    const cells = RUN.matrix[s.id].map((val,i)=>{
+      const tipTxt = val==null ? `<b>not run</b><br>${esc(s.label)} · ${esc(cfgName(i))}`
+        : `<b>${val}</b> composite<br>${esc(s.label)} · ${esc(cfgName(i))}`;
+      return `<td style="text-align:center;padding-right:0">
+        <div class="heatcell" style="width:100%;height:32px;background:${heat(val)};color:${heatInk(val)};${val==null?"opacity:.55":""}"
+          data-tip="${tipTxt}">${val==null?"—":val}</div></td>`;
+    }).join("");
+    tr.innerHTML = `<td><div style="font-weight:600">${esc(s.label)}</div>
+      <div class="note" style="font-size:12px;color:var(--muted)">project type <span class="mono">${esc(s.type)}</span></div></td>${cells}`;
+    tr.classList.add("clickable");
+    tr.addEventListener("click", ()=> show("cell"));
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); b.appendChild(t);
+  b.appendChild(el("p","note",`<span class="eyebrow">Type-fairness</span><br>
+    Composites are comparable down a column because each project type is scored against its own
+    <span class="mono">Eval Profile</span> — non-applicable metrics are dropped and their weight redistributed,
+    never scored zero. Raw metrics (cost, story count, LOC) are only comparable <i>within</i> a type,
+    and the drill-down labels them as such.`));
+  p.appendChild(b); v.appendChild(p);
+  bindTips(v);
+}
+
+/* ---------------- probes ---------------- */
+function renderProbes(){
+  const v = $("#view-probes"); v.className="view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Invariant probes</h2>
+    <span class="sub">scripted stimulus, one mechanically-checkable correct response, taken verbatim from the rules</span></div>`;
+  const b = el("div","panel-body scroll-x");
+  const board = el("div","probeboard");
+  board.style.gridTemplateColumns = `minmax(300px,1fr) repeat(4, 118px)`;
+  board.appendChild(el("div","pb-cell pb-head pb-lab",""));
+  RUN.configs.slice(0,4).forEach(c=> board.appendChild(el("div","pb-cell pb-head", esc(c.label))));
+  RUN.probes.forEach(pr=>{
+    board.appendChild(el("div","pb-cell pb-lab",
+      `<span class="id">${esc(pr.id)}</span> <span class="t">${esc(pr.t)}</span>`));
+    pr.r.forEach((r,i)=>{
+      const cls = r==="pass"?"pass":r==="fail"?"fail":"nt";
+      const glyph = r==="pass"?"✓ pass":r==="fail"?"✕ fail":"– not triggered";
+      const c = el("div","pb-cell "+cls, `<span class="gl">${glyph}</span>`);
+      c.dataset.tip = `<b>${esc(pr.id)}</b> · ${esc(cfgName(i))}<br>${esc(pr.t)}`;
+      board.appendChild(c);
+    });
+  });
+  b.appendChild(board);
+  b.appendChild(el("p","note",`<span class="eyebrow">Why this view outranks the leaderboard</span><br>
+    Four of these probes are composite <b>vetoes</b>: a failure caps the run at 40 no matter how it scored elsewhere.
+    ${RUN.notes?.probes ?? "A veto probe failing means a rule the system calls absolute was crossed — a scope boundary or a security escalation, not a quality shortfall."}`));
+  p.appendChild(b); v.appendChild(p);
+  bindTips(v);
+}
+
+/* ---------------- trust gap ---------------- */
+function renderTrust(){
+  const v = $("#view-trust"); v.className="view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Claimed done vs. independently verified</h2>
+    <span class="sub">the system's own verdicts are never used to score it — only compared against the hidden oracle</span></div>`;
+  const b = el("div","panel-body");
+  const max = Math.max(...RUN.trust.map(t=>t.claimed));
+  const rows = el("div","stack"); rows.style.gap="10px";
+  RUN.trust.forEach(t=>{
+    const gap = t.claimed - t.verified;
+    const row = el("div");
+    row.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="font-weight:600">${esc(cfgName(t.c))}</span>
+        <span class="mono num" style="font-size:12.5px;color:var(--ink-2)">${t.verified} verified · ${gap} gap</span>
+      </div>
+      <div style="display:flex;gap:2px;height:22px;width:${(t.claimed/max*100).toFixed(1)}%">
+        <div style="flex:${t.verified};background:var(--s1);border-radius:2px 0 0 2px"
+             data-tip="<b>${t.verified}</b> stories pass the hidden oracle"></div>
+        ${gap?`<div style="flex:${gap};background:var(--critical);border-radius:0 2px 2px 0"
+             data-tip="<b>${gap}</b> stories marked done that fail the oracle"></div>`:""}
+      </div>`;
+    rows.appendChild(row);
+  });
+  b.appendChild(rows);
+  b.appendChild(el("div","legend",`
+    <span><span class="swatch" style="background:var(--s1)"></span>verified by oracle</span>
+    <span><span class="swatch" style="background:var(--critical)"></span>trust gap — claimed done, not working</span>`));
+  p.appendChild(b); v.appendChild(p);
+
+  const d = el("div","panel");
+  d.innerHTML = `<div class="panel-head"><h2>What the gap was</h2><span class="sub">every gap story is named — a rate you can't open is a rate you can't fix</span></div>`;
+  const db = el("div","panel-body scroll-x");
+  const t2 = el("table");
+  t2.innerHTML = `<thead><tr><th style="width:22%">Config</th><th style="width:30%">Story</th><th>Why it failed the oracle</th></tr></thead>`;
+  const tb2 = el("tbody");
+  RUN.trustStories.forEach(s=>{
+    const tr = el("tr");
+    tr.innerHTML = `<td class="mono" style="font-size:12.5px">${esc(s.c)}</td>
+      <td style="font-weight:500">${esc(s.story)}</td><td class="note">${esc(s.why)}</td>`;
+    tb2.appendChild(tr);
+  });
+  t2.appendChild(tb2); db.appendChild(t2); d.appendChild(db); v.appendChild(d);
+  bindTips(v);
+}
+
+/* ---------------- autonomy ---------------- */
+function renderAutonomy(){
+  const v = $("#view-autonomy"); v.className="view stack";
+
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Rounds to approval</h2>
+    <span class="sub">how many times a gate sent the work back before it cleared</span></div>`;
+  const b = el("div","panel-body");
+  const wrap = el("div","stack"); wrap.style.gap="10px";
+  const maxTot = Math.max(...RUN.gateRounds.map(g=>g.r.reduce((a,c)=>a+c,0)));
+  const labels = ["approved on round 1","needed 2 rounds","needed 3+ rounds"];
+  const cols = ["var(--ord-2)","var(--ord-4)","var(--ord-6)"];
+  RUN.gateRounds.forEach(g=>{
+    const tot = g.r.reduce((a,c)=>a+c,0);
+    const row = el("div");
+    row.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="font-weight:600">${esc(cfgName(g.c))}</span>
+        <span class="mono num" style="font-size:12.5px;color:var(--ink-2)">${tot} gates · mean ${(
+          (g.r[0]+g.r[1]*2+g.r[2]*3)/tot).toFixed(2)} rounds</span>
+      </div>
+      <div style="display:flex;gap:2px;height:22px;width:${(tot/maxTot*100).toFixed(1)}%">
+        ${g.r.map((n,i)=> n? `<div style="flex:${n};background:${cols[i]};border-radius:${i===0?"2px 0 0 2px":i===2?"0 2px 2px 0":"0"}"
+            data-tip="<b>${n}</b> gates ${esc(labels[i])}"></div>`:"").join("")}
+      </div>`;
+    wrap.appendChild(row);
+  });
+  b.appendChild(wrap);
+  b.appendChild(el("div","legend", cols.map((c,i)=>
+    `<span><span class="swatch" style="background:${c}"></span>${labels[i]}</span>`).join("")));
+  b.appendChild(el("p","note",`<span class="eyebrow">Read with care</span><br>
+    Fewer rejections is not automatically better. Economy uniform has the <i>best</i> first-pass rate on this page
+    and the worst artifacts — the <b>rubber-stamp</b> alarm fires exactly on that combination.
+    A gate that never rejects anything is either excellent or asleep, and only the cross-reference tells you which.`));
+  p.appendChild(b); v.appendChild(p);
+
+  const q = el("div","panel");
+  q.innerHTML = `<div class="panel-head"><h2>Human load</h2><span class="sub">what it needed a person for</span></div>`;
+  const qb = el("div","panel-body scroll-x");
+  const t = el("table");
+  t.innerHTML = `<thead><tr><th>Config</th><th style="text-align:right">Escalations</th>
+    <th style="text-align:right">Human turns</th><th style="text-align:right">Unscripted</th>
+    <th style="text-align:right">Plan rounds</th><th style="text-align:right">Longest unattended</th></tr></thead>`;
+  const tb = el("tbody");
+  RUN.autonomy.forEach(a=>{
+    const tr = el("tr");
+    tr.innerHTML = `<td style="font-weight:500">${esc(cfgName(a.c))}</td>
+      <td class="mono num" style="text-align:right">${a.escal}</td>
+      <td class="mono num" style="text-align:right">${a.human}</td>
+      <td class="mono num" style="text-align:right">${a.unscripted}</td>
+      <td class="mono num" style="text-align:right">${a.planRounds.toFixed(1)}</td>
+      <td class="mono num" style="text-align:right">${esc(a.longest)}</td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); qb.appendChild(t);
+  qb.appendChild(el("p","note","Escalations here exclude the ones a probe was designed to provoke — a run that stops for a planted security defect did the right thing, and is credited in <span class=\"mono\">CNF-12</span> rather than charged here."));
+  q.appendChild(qb); v.appendChild(q);
+  bindTips(v);
+}
+
+/* ---------------- spend ---------------- */
+function renderSpend(){
+  const v = $("#view-spend"); v.className="view stack";
+
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Spend by phase</h2><span class="sub">USD per phase — phases are ordered, so the ramp is too</span></div>`;
+  const b = el("div","panel-body");
+  const ords = ["var(--ord-1)","var(--ord-2)","var(--ord-3)","var(--ord-4)","var(--ord-5)","var(--ord-6)"];
+  const maxSpend = Math.max(...RUN.spend.map(s=>s.v.reduce((a,c)=>a+c,0)));
+  const wrap = el("div","stack"); wrap.style.gap="10px";
+  RUN.spend.forEach(s=>{
+    const tot = s.v.reduce((a,c)=>a+c,0);
+    const row = el("div");
+    row.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="font-weight:600">${esc(cfgName(s.c))}</span>
+        <span class="mono num" style="font-size:12.5px;color:var(--ink-2)">$${tot.toFixed(2)}</span>
+      </div>
+      <div style="display:flex;gap:2px;height:22px;width:${(tot/maxSpend*100).toFixed(1)}%">
+        ${s.v.map((x,i)=>`<div style="flex:${x};background:${ords[i]};border-radius:${i===0?"2px 0 0 2px":i===5?"0 2px 2px 0":"0"}"
+           data-tip="<b>${esc(RUN.phases[i])}</b><br>$${x.toFixed(2)} · ${Math.round(x/tot*100)}% of the run"></div>`).join("")}
+      </div>`;
+    wrap.appendChild(row);
+  });
+  b.appendChild(wrap);
+  b.appendChild(el("div","legend", RUN.phases.map((ph,i)=>
+    `<span><span class="swatch" style="background:${ords[i]}"></span>${esc(ph)}</span>`).join("")));
+  p.appendChild(b); v.appendChild(p);
+
+  const g = el("div","grid");
+  g.style.gridTemplateColumns = "repeat(auto-fit,minmax(300px,1fr))";
+
+  const r = el("div","panel");
+  r.innerHTML = `<div class="panel-head"><h2>Rework tax</h2><span class="sub">share of spend on retries, re-plans and discarded work</span></div>`;
+  const rb = el("div","panel-body stack");
+  RUN.rework.forEach(x=>{
+    const row = el("div","barrow");
+    row.innerHTML = `<div>
+        <div style="font-size:12.5px;margin-bottom:4px">${esc(cfgName(x.c))}</div>
+        <div class="track" style="height:10px" data-tip="<b>${Math.round(x.v*100)}%</b> of spend produced no accepted work">
+          <div class="fill" style="width:${x.v*100}%;background:${x.v>0.3?"var(--critical)":x.v>0.2?"var(--serious)":"var(--s1)"}"></div>
+        </div></div>
+      <div class="mono num" style="font-weight:600">${Math.round(x.v*100)}%</div>`;
+    rb.appendChild(row);
+  });
+  rb.appendChild(el("p","note","Two configs can land on the same total with completely different stories behind it. This is the number that separates “worked steadily” from “thrashed and recovered.”"));
+  r.appendChild(rb); g.appendChild(r);
+
+  const ro = el("div","panel");
+  ro.innerHTML = `<div class="panel-head"><h2>Spend by agent role</h2><span class="sub">tiered default</span></div>`;
+  const rob = el("div","panel-body stack");
+  RUN.roles.forEach(x=>{
+    const row = el("div","barrow");
+    row.innerHTML = `<div>
+        <div style="font-size:12.5px;margin-bottom:4px">${esc(x.r)}</div>
+        <div class="track" style="height:10px" data-tip="<b>${Math.round(x.pct*100)}%</b> of run spend"><div class="fill" style="width:${x.pct*100}%"></div></div>
+      </div><div class="mono num" style="font-weight:600">${Math.round(x.pct*100)}%</div>`;
+    rob.appendChild(row);
+  });
+  rob.appendChild(el("p","note","The Worker is the highest-volume role by design, which is the whole argument for putting it on the cheapest tier. This view is where that argument gets checked against reality."));
+  ro.appendChild(rob); g.appendChild(ro);
+  v.appendChild(g);
+  bindTips(v);
+}
+
+/* ---------------- cell drill-down ---------------- */
+function renderCell(){
+  const v = $("#view-cell"); v.className="view stack";
+  const c = RUN.cell;
+
+  const head = el("div");
+  head.style.cssText = "display:flex;flex-wrap:wrap;gap:12px;align-items:center";
+  const back = el("button","back","← All configs");
+  back.addEventListener("click", ()=> show("overview"));
+  head.appendChild(back);
+  head.appendChild(el("div",null,`<span class="mono" style="font-size:13px">${esc(c.id)}</span>`));
+  v.appendChild(head);
+
+  const tiles = el("div","tiles");
+  tiles.innerHTML = `
+    <div class="tile"><div class="k">Composite</div><div class="v">${c.composite}</div>
+      <div class="d">mechanical ${c.mech} · full ${c.full} — a 3-point spread means the score barely rests on judgment</div></div>
+    <div class="tile"><div class="k">Stories</div><div class="v">${c.done}<small> / ${c.stories} done</small></div>
+      <div class="d">${c.verified} independently verified — 2 short</div></div>
+    <div class="tile"><div class="k">Spend</div><div class="v">$${c.usd.toFixed(2)}</div>
+      <div class="d">wall-clock ${esc(c.wall)} · agent-active ${esc(c.agent)} at 4-cell concurrency</div></div>`;
+  v.appendChild(tiles);
+
+  const tp = el("div","panel");
+  tp.innerHTML = `<div class="panel-head"><h2>Run timeline</h2>
+    <span class="sub">reconstructed from the board-state snapshot series — 112 minutes</span></div>`;
+  const tbdy = el("div","panel-body");
+  c.timeline.forEach(l=>{
+    const lane = el("div","timeline-lane");
+    const bar = el("div"); bar.style.cssText="position:relative;height:16px;background:var(--sunken);border-radius:2px";
+    l.segs.forEach(([a,b2,col,txt])=>{
+      const s = el("div");
+      s.style.cssText = `position:absolute;left:${a/112*100}%;width:${Math.max(1.2,(b2-a)/112*100)}%;top:0;bottom:0;background:${col};border-radius:2px`;
+      s.dataset.tip = txt;
+      bar.appendChild(s);
+    });
+    lane.innerHTML = `<div class="lab">${esc(l.lab)}</div>`;
+    lane.appendChild(bar);
+    tbdy.appendChild(lane);
+  });
+  tbdy.appendChild(el("p","note","Hover any block. Gate and escalation lanes sit on the same axis as the phases, so a slow phase and the rejection that caused it line up visually."));
+  tp.appendChild(tbdy); v.appendChild(tp);
+
+  const dp = el("div","panel");
+  dp.innerHTML = `<div class="panel-head"><h2>Score derivation</h2>
+    <span class="sub">raw → normalized → weighted → contribution, with weights after redistribution</span></div>`;
+  const db = el("div","panel-body scroll-x");
+  const t = el("table"); t.className="derivation"; t.style.minWidth="700px";
+  t.innerHTML = `<thead><tr><th>ID</th><th>Metric</th><th>Raw</th><th>Normalizer</th>
+    <th style="text-align:right">Score</th><th style="text-align:right">Weight</th><th style="text-align:right">Contribution</th></tr></thead>`;
+  const tb = el("tbody");
+  c.derivation.forEach(r=>{
+    const tr = el("tr");
+    tr.innerHTML = `<td>${esc(r[0])}</td><td class="name">${esc(r[1])}</td><td>${esc(r[2])}</td>
+      <td class="contrib">${esc(r[3])}</td><td class="num" style="text-align:right;font-weight:600">${esc(r[4])}</td>
+      <td class="num contrib" style="text-align:right">${esc(r[5])}</td>
+      <td class="num" style="text-align:right">${esc(r[6])}</td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); db.appendChild(t);
+  db.appendChild(el("p","note",`<span class="eyebrow">Dropped for this project type</span><br>
+    <span class="mono">FID-08</span> design-system consistency, <span class="mono">CLI-UX</span>, install verification —
+    not applicable to <span class="mono">saas</span>. Their weight was redistributed inside their pillars;
+    nothing was scored zero for being irrelevant.`));
+  dp.appendChild(db); v.appendChild(dp);
+
+  const ap = el("div","panel");
+  ap.innerHTML = `<div class="panel-head"><h2>Artifacts produced</h2><span class="sub">what the run left on disk</span></div>`;
+  const ab = el("div","panel-body scroll-x");
+  const t2 = el("table");
+  t2.innerHTML = `<thead><tr><th style="width:44%">Path</th><th>Size</th><th>State</th></tr></thead>`;
+  const tb2 = el("tbody");
+  c.artifacts.forEach(([p2,s,st])=>{
+    const tr = el("tr");
+    const bad = st !== "complete";
+    tr.innerHTML = `<td class="mono" style="font-size:12.5px">${esc(p2)}</td>
+      <td class="note">${esc(s)}</td>
+      <td><span class="pill ${bad?"warn":"ok"}"><span class="dot"></span>${esc(st)}</span></td>`;
+    tb2.appendChild(tr);
+  });
+  t2.appendChild(tb2); ab.appendChild(t2); ap.appendChild(ab); v.appendChild(ap);
+  bindTips(v);
+}
+
+/* ---------------- components (the over-engineering view) ---------------- */
+function renderComponents(){
+  const v = $("#view-components"); v.className="view stack";
+
+  const intro = el("div","panel");
+  intro.innerHTML = `<div class="panel-head"><h2>Does each part earn its keep?</h2>
+    <span class="sub">cost measured every run · benefit measured by removing the component and re-running</span></div>`;
+  const ib = el("div","panel-body scroll-x");
+  const t = el("table"); t.style.minWidth="760px";
+  t.innerHTML = `<thead><tr>
+    <th style="width:27%">Component</th><th style="text-align:right">Cost</th>
+    <th style="width:15%">Share of run</th><th style="text-align:right">Δ when removed</th>
+    <th style="text-align:right">Harm</th><th>Verdict</th></tr></thead>`;
+  const tb = el("tbody");
+  RUN.components.forEach(c=>{
+    const tr = el("tr");
+    const dtxt = c.delta==null ? "—" : (c.delta>0?"+":"") + c.delta;
+    const dcol = c.delta==null ? "var(--muted)" : c.delta<=-4 ? "var(--good)" : c.delta>=3 ? "var(--critical)" : "var(--ink-2)";
+    tr.innerHTML = `
+      <td><div style="font-weight:600">${esc(c.n)}</div>
+        <div class="mono" style="font-size:11px;color:var(--muted)">${esc(c.abl)}</div></td>
+      <td class="mono num" style="text-align:right">$${c.usd.toFixed(2)}</td>
+      <td><div class="track" style="height:8px" data-tip="<b>${Math.round(c.pct*100)}%</b> of run tokens">
+            <div class="fill" style="width:${Math.min(100, c.pct/0.20*100)}%"></div></div></td>
+      <td class="mono num" style="text-align:right;color:${dcol};font-weight:600">${dtxt}</td>
+      <td class="mono num" style="text-align:right;color:${c.harm>3?"var(--critical)":"var(--ink-2)"}">${c.harm}</td>
+      <td><span class="vd ${c.v}"><span class="dot"></span>${esc(c.v)}</span></td>`;
+    tb.appendChild(tr);
+    const nt = el("tr");
+    nt.innerHTML = `<td colspan="6" style="border-top:0;padding-top:0"><div class="note" style="font-size:12px">${esc(c.note)}</div></td>`;
+    tb.appendChild(nt);
+  });
+  t.appendChild(tb); ib.appendChild(t);
+  ib.appendChild(el("p","note",`<span class="eyebrow">How to read Δ</span><br>
+    Δ is the change in composite when the component is <b>removed</b>. Negative means removing it hurt — the
+    component was doing work. Positive means the system scored <i>better</i> without it. <b>Harm</b> counts
+    failures the component caused: false rejections, retry loops that escalated anyway, gates that blocked
+    correct work. Δ values here are n=${RUN.ablationN ?? "?"}; at that n a difference under about 5 points is inside noise
+    and is labeled <b>inconclusive</b> rather than ranked.`));
+  intro.appendChild(ib); v.appendChild(intro);
+
+  /* staircase */
+  const sp = el("div","panel");
+  sp.innerHTML = `<div class="panel-head"><h2>Ablation staircase</h2>
+    <span class="sub">bare model, then one layer at a time${RUN.staircaseScope?` — ${esc(RUN.staircaseScope)}`:""}</span></div>`;
+  const sb = el("div","panel-body");
+  const st = el("div","stair");
+  RUN.staircase.forEach(x=>{
+    const row = el("div","stair-row");
+    const d = x.d==null ? "" : `<span style="color:${x.d>0?"var(--good)":"var(--critical)"};font-weight:600">${x.d>0?"+":""}${x.d}</span> `;
+    row.innerHTML = `<div class="sl">${esc(x.l)}</div>
+      <div class="track" style="height:16px" data-tip="<b>${x.c}</b> composite · $${x.usd.toFixed(2)}">
+        <div class="fill" style="width:${x.c}%;background:${x.d!=null&&x.d<0?"var(--critical)":"var(--s1)"}"></div></div>
+      <div class="sv">${d}${x.c} · $${x.usd.toFixed(2)}</div>`;
+    st.appendChild(row);
+  });
+  sb.appendChild(st);
+  sb.appendChild(el("p","note",`<span class="eyebrow">Reading this chart</span><br>${RUN.notes?.staircase
+    ?? "Each step's Δ is the value of adding that layer on top of everything before it. A step whose Δ is flat or negative is the first candidate for a leave-one-out run at higher n — the staircase alone cannot tell a redundant layer from one whose gap an earlier layer already closed."}`));
+  sp.appendChild(sb); v.appendChild(sp);
+
+  /* checking-stage yield */
+  const yp = el("div","panel");
+  yp.innerHTML = `<div class="panel-head"><h2>Checking-stage yield</h2>
+    <span class="sub">unique catches are the only number that justifies a reviewer's existence</span></div>`;
+  const yb = el("div","panel-body scroll-x");
+  const t2 = el("table"); t2.style.minWidth="640px";
+  t2.innerHTML = `<thead><tr><th>Stage</th><th style="text-align:right">Runs</th><th style="text-align:right">Cost</th>
+    <th style="text-align:right">Catches</th><th style="text-align:right">Unique</th>
+    <th style="text-align:right">False rej.</th><th style="text-align:right">Misses</th>
+    <th style="text-align:right">$ / unique catch</th></tr></thead>`;
+  const tb2 = el("tbody");
+  RUN.stages.forEach(x=>{
+    const per = x.uniq ? (x.usd/x.uniq) : null;
+    const tr = el("tr");
+    tr.innerHTML = `<td style="font-weight:600">${esc(x.s)}</td>
+      <td class="mono num" style="text-align:right">${x.inv}</td>
+      <td class="mono num" style="text-align:right">$${x.usd.toFixed(2)}</td>
+      <td class="mono num" style="text-align:right">${x.catch}</td>
+      <td class="mono num" style="text-align:right;font-weight:600;color:${x.uniq<=1?"var(--critical)":"var(--ink)"}">${x.uniq}</td>
+      <td class="mono num" style="text-align:right;color:${x.fp>=5?"var(--critical)":"var(--ink-2)"}">${x.fp}</td>
+      <td class="mono num" style="text-align:right;color:var(--ink-2)">${x.miss}</td>
+      <td class="mono num" style="text-align:right">${per?"$"+per.toFixed(2):"—"}</td>`;
+    tb2.appendChild(tr);
+  });
+  t2.appendChild(tb2); yb.appendChild(t2);
+  yb.appendChild(el("p","note",`<span class="eyebrow">What this settles</span><br>
+    The Experience Runner's entire argument is that it catches what a Validator and a green test suite cannot.
+    Seven unique catches against one false rejection is that argument holding. The Product Owner Proxy's row is
+    the opposite shape — one unique catch against six false rejections — which is what put it on the fix list
+    rather than in the keep column.`));
+  yp.appendChild(yb); v.appendChild(yp);
+
+  /* ceremony */
+  const cp = el("div","panel");
+  cp.innerHTML = `<div class="panel-head"><h2>Ceremony ratio</h2><span class="sub">tokens spent on process vs. tokens spent on shipped code</span></div>`;
+  const cb = el("div","panel-body");
+  const c = RUN.ceremony;
+  cb.appendChild(el("div",null,`
+    <div style="display:flex;gap:2px;height:26px;border-radius:2px;overflow:hidden">
+      <div style="flex:${c.process};background:var(--ord-3)" data-tip="<b>${Math.round(c.process*100)}%</b> — briefs, reports, board updates, gate verdicts"></div>
+      <div style="flex:${c.code};background:var(--s3)" data-tip="<b>${Math.round(c.code*100)}%</b> — code and tests that shipped"></div>
+    </div>
+    <div class="legend" style="margin-top:9px">
+      <span><span class="swatch" style="background:var(--ord-3)"></span>process artifacts — ${Math.round(c.process*100)}%</span>
+      <span><span class="swatch" style="background:var(--s3)"></span>shipped code and tests — ${Math.round(c.code*100)}%</span>
+    </div>`));
+  cb.appendChild(el("p","note",`<span class="eyebrow">Read next to the control arm</span><br>
+    63% of spend went to producing documents about the work rather than the work.
+    <b>${Math.round(c.readback*100)}% of artifacts written were never read by any later agent</b> — pure cost.
+    Time to first shipped line: <span class="mono">${esc(c.ttfc)}</span>. None of this is damning on its own;
+    it is damning only if the no-Anymake control ships comparable quality, and on this run it does not (52 vs 78).`));
+  cp.appendChild(cb); v.appendChild(cp);
+  bindTips(v);
+}
+
+/* ---------------- traces ---------------- */
+function renderTraces(){
+  const v = $("#view-traces"); v.className="view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Agent traces</h2>
+    <span class="sub mono">${esc(RUN.trace.cell)}</span></div>`;
+  const b = el("div","panel-body");
+
+  // §7.1: traces are large, so report.html carries the dispatch tree and the focus
+  // cell's turns, and the full per-turn record lives in traces/<cell-id>.jsonl. Over
+  // file:// there is no server to fetch it from, and the report says so rather than
+  // showing a truncated trace as if it were the whole thing.
+  if (location.protocol === "file:" && RUN.trace.hasFullTraces) {
+    b.appendChild(el("p","note",`<span class="eyebrow">Trace detail</span><br>
+      Summary views are complete over <span class="mono">file://</span>. The full per-turn record is in
+      <span class="mono">traces/${esc(RUN.trace.cellId || "")}.jsonl</span> and loads only when the run directory is served —
+      <span class="mono">bash evals/report/serve.sh ${esc(RUN.runId || "<run-id>")}</span>.`));
+  }
+  if (RUN.trace.captured) {
+    const missing = Object.entries(RUN.trace.captured).filter(([,v])=>!v).map(([k])=>k);
+    if (missing.length) b.appendChild(el("p","note",`<span class="eyebrow">Fields this run did not capture</span><br>
+      <span class="mono">${esc(missing.join(" · "))}</span> — the host or provider did not expose them.
+      They are shown as absent, never inferred from the message text.`));
+  }
+
+  const filters = el("div","filters");
+  [["all","Everything"],["fail","Failures and retries only"],["worker","Worker only"]].forEach(([k,lab],i)=>{
+    const bt = el("button",null,lab);
+    bt.setAttribute("aria-pressed", String(i===0));
+    bt.addEventListener("click",()=>{
+      filters.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+      bt.setAttribute("aria-pressed","true");
+      b.querySelectorAll(".run").forEach(r=>{
+        const st=r.dataset.state, ag=r.dataset.agent;
+        r.hidden = (k==="fail" && st==="ok") || (k==="worker" && !ag.includes("worker"));
+      });
+    });
+    filters.appendChild(bt);
+  });
+  b.appendChild(filters);
+
+  RUN.trace.runs.forEach((r,i)=>{
+    const d = el("details","run");
+    d.dataset.state = r.state; d.dataset.agent = r.agent;
+    if(i===1) d.open = true;
+    const badge = r.state==="fail" ? '<span class="pill bad"><span class="dot"></span>FAIL</span>'
+      : r.state==="retry" ? '<span class="pill warn"><span class="dot"></span>retry 2</span>'
+      : '<span class="pill ok"><span class="dot"></span>ok</span>';
+    const sum = el("summary");
+    sum.innerHTML = `<div class="who">
+        <span class="agent">${esc(r.agent)}</span>
+        <span class="meta">tier ${r.tier} · ${esc(r.model)} · story ${esc(r.story)} · attempt ${r.attempt}</span>
+        ${badge}
+        <span class="meta">→ <span class="mono">${esc(r.out)}</span></span>
+      </div>
+      <div class="nums">${(r.tin/1000).toFixed(1)}k in / ${(r.tout/1000).toFixed(1)}k out · ${esc(r.dur)}</div>`;
+    d.appendChild(sum);
+
+    const body = el("div","run-body");
+    const total = r.comp.reduce((a,[,n])=>a+n,0);
+    const ords = ["var(--ord-2)","var(--ord-3)","var(--ord-4)","var(--ord-5)","var(--ord-6)"];
+    body.appendChild(el("div",null,`
+      <div class="eyebrow">Input composition — ${(total/1000).toFixed(1)}k tokens</div>
+      <div class="compbar">${r.comp.map(([n,x],j)=>`<div style="flex:${x};background:${ords[j%5]}"
+        data-tip="<b>${esc(n)}</b><br>${x.toLocaleString()} tokens · ${Math.round(x/total*100)}%"></div>`).join("")}</div>
+      <div class="legend" style="margin-top:7px">${r.comp.map(([n,x],j)=>
+        `<span><span class="swatch" style="background:${ords[j%5]}"></span>${esc(n)} <span class="mono">${Math.round(x/total*100)}%</span></span>`).join("")}</div>`));
+
+    r.turns.forEach((t,k)=>{
+      const turn = el("div","turn");
+      let h = `<div class="tn">turn ${k+1}</div>`;
+      if(t.reason) h += `<div class="reason">${esc(t.reason)}</div>`;
+      if(t.tools && t.tools.length) h += `<div class="tools">${t.tools.map(([n,a,res,ms])=>
+        `<div class="tool${/AGENTS|TEMPLATES|PHASE_GUIDES|skills/.test(a)?" sysfile":""}">
+           <span class="tname">${esc(n)}</span><span class="targ">${esc(a)}</span>
+           <span class="tres">${esc(res)}${res?" · ":""}${ms}ms</span></div>`).join("")}</div>`;
+      if(t.msg) h += `<div class="msg">${esc(t.msg)}</div>`;
+      if(t.files && t.files.length) h += `<div class="fl">${t.files.map(([f,c])=>
+        `<span class="f ${c==="sys"?"sys":""}">${esc(f)}</span>`).join("")}</div>`;
+      if(t.flag) h += `<div class="pill warn" style="margin-top:8px;white-space:normal;align-items:flex-start">
+        <span class="dot" style="margin-top:5px;flex:none"></span><span style="font-weight:500">${esc(t.flag)}</span></div>`;
+      turn.innerHTML = h;
+      body.appendChild(turn);
+    });
+    d.appendChild(body);
+    b.appendChild(d);
+  });
+
+  b.appendChild(el("p","note",`<span class="eyebrow">Why the file chips matter</span><br>
+    Highlighted chips are Anymake's own instruction files. Whether a rule's file was ever in an agent's
+    context is what separates <i>“the instruction was ignored”</i> from <i>“the instruction never arrived”</i> —
+    two failures that look identical in a transcript and need completely different fixes.
+    Reasoning text is shown where the provider exposes it; where it doesn't, these blocks are omitted rather than guessed at.`));
+  p.appendChild(b); v.appendChild(p);
+  bindTips(v);
+}
+
+/* ---------------- instructions ---------------- */
+function renderInstructions(){
+  const v = $("#view-instructions"); v.className="view stack";
+  const p = el("div","panel");
+  p.innerHTML = `<div class="panel-head"><h2>Instruction files — attention and yield</h2>
+    <span class="sub">across 21 cells: who read what, what it cost, and whether its rules did anything</span></div>`;
+  const b = el("div","panel-body scroll-x");
+  const t = el("table"); t.style.minWidth="760px";
+  t.innerHTML = `<thead><tr><th style="width:32%">File</th><th style="text-align:right">Reads</th>
+    <th style="text-align:right">Tokens / read</th><th style="width:14%">Share of input</th>
+    <th style="text-align:right">Rules used</th><th style="text-align:right">Violated</th><th>Verdict</th></tr></thead>`;
+  const tb = el("tbody");
+  const maxPct = Math.max(...RUN.files.map(f=>f.pct));
+  RUN.files.forEach(f=>{
+    const vcls = f.v==="dead" ? "negative" : f.v==="expensive" ? "review" : f.v==="unread-but-violated" ? "negative" : "keep";
+    const tr = el("tr");
+    tr.innerHTML = `<td class="mono" style="font-size:12.5px">${esc(f.f)}</td>
+      <td class="mono num" style="text-align:right;${f.r===0?"color:var(--critical);font-weight:600":""}">${f.r}</td>
+      <td class="mono num" style="text-align:right">${f.tok?f.tok.toLocaleString():"—"}</td>
+      <td><div class="track" style="height:8px" data-tip="<b>${Math.round(f.pct*100)}%</b> of all input tokens in the sweep">
+        <div class="fill" style="width:${f.pct/maxPct*100}%;background:${f.pct>=.14?"var(--serious)":"var(--s1)"}"></div></div></td>
+      <td class="mono num" style="text-align:right">${f.ex}</td>
+      <td class="mono num" style="text-align:right;${f.vi?"color:var(--critical);font-weight:600":""}">${f.vi}</td>
+      <td><span class="vd ${vcls}"><span class="dot"></span>${esc(f.v)}</span></td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); b.appendChild(t);
+  b.appendChild(el("p","note",`<span class="eyebrow">Three findings on this table</span><br>
+    <b>Dead —</b> <span class="mono">anymake-new-type</span> and <span class="mono">phase-5.md</span> were never opened
+    in any cell. Either nothing in this suite reaches them, or discovery is broken; both are worth knowing.<br>
+    <b>Expensive —</b> <span class="mono">AGENTS.md</span> is 17% of all input tokens across the sweep and exercised
+    zero rules that its detailed counterparts didn't already carry.<br>
+    <b>Unread but violated —</b> <span class="mono">anymake-design-system</span> has zero reads and two violations of
+    rules it owns. That is a discovery bug, and rewriting the file would not have fixed it.`));
+  p.appendChild(b); v.appendChild(p);
+  bindTips(v);
+}
+
+/* ---------------- fix list ---------------- */
+function renderFixes(){
+  const v = $("#view-fixes"); v.className="view stack";
+  const head = el("div","panel");
+  head.innerHTML = `<div class="panel-head"><h2>Fix list</h2>
+    <span class="sub">ranked by frequency × severity × confidence — the thing to open the morning after a sweep</span></div>
+    <div class="panel-body"><p class="note" style="margin:0">Every entry names a cause class, because the class decides the
+    edit: an <b>unread</b> instruction needs moving, not rewriting; a <b>violated</b> one needs shortening or a mechanical
+    check; a <b>followed-but-wrong</b> one means the rule itself is the bug; and a <b>capability</b> finding means leave the
+    prose alone and raise the tier. Each fix ships with the assertion that would catch its regression — the repo's own rule,
+    applied to its own repairs.</p></div>`;
+  v.appendChild(head);
+  const list = el("div","stack");
+  RUN.fixes.forEach(f=>{
+    const card = el("div","fix"+(f.sev==="med"?" med":f.sev==="low"?" low":""));
+    card.innerHTML = `
+      <h3><span class="rank">#${f.rank}</span> ${esc(f.t)} <span class="freq">${esc(f.freq)}</span></h3>
+      <dl>
+        <dt>Cause</dt><dd>${esc(f.cause)}</dd>
+        <dt>Target</dt><dd class="mono" style="font-size:12px">${esc(f.target)}</dd>
+        <dt>Evidence</dt><dd>${esc(f.ev)}</dd>
+        <dt>Proposed</dt><dd>${esc(f.fix)}</dd>
+        <dt>Ships with</dt><dd>${esc(f.assert)}</dd>
+      </dl>`;
+    list.appendChild(card);
+  });
+  v.appendChild(list);
+}
+
+/* A view with no evidence says so, rather than rendering a convincing blank.
+   Same rule the scorer follows: an absence is reported, never defaulted. */
+function renderSafe(id, label, fn, ok){
+  const v = $("#view-"+id);
+  let expected = false;
+  try{
+    if(ok && !ok()){ expected = true; throw new Error(RUN.empty?.[id] || "this run captured no data for this view"); }
+    fn();
+    if(!v.children.length){ expected = true; throw new Error(RUN.empty?.[id] || "no rows"); }
+  }catch(e){
+    // A view with no evidence is an expected empty state, not a bug. Only a renderer
+    // that actually threw is recorded as an error, so the selftest's assertion means
+    // what it says.
+    // Recorded as well as rendered: evals/selftest.mjs asserts this list stays empty,
+    // so a renderer that throws on real data fails the harness's own check instead of
+    // reaching you as a blank panel in a browser.
+    if(!expected){
+      (globalThis.__RENDER_ERRORS__ ||= []).push({ view: id, error: String(e && e.message || e), stack: e && e.stack });
+    }
+    v.className = "view stack"; v.innerHTML = "";
+    const p = el("div","panel");
+    p.innerHTML = `<div class="panel-head"><h2>${esc(label)}</h2><span class="sub">nothing captured in this run</span></div>`;
+    const b = el("div","panel-body");
+    b.appendChild(el("p","note",`<span class="eyebrow">Not measured</span><br>${esc(String(e.message||e))}`));
+    p.appendChild(b); v.appendChild(p);
+  }
+}
+
+const any = a => Array.isArray(a) && a.length > 0;
+renderSafe("overview","Overview",renderOverview, ()=>any(RUN.configs));
+renderSafe("components","Components",renderComponents, ()=>any(RUN.components));
+renderSafe("traces","Traces",renderTraces, ()=>RUN.trace && any(RUN.trace.runs));
+renderSafe("instructions","Instructions",renderInstructions, ()=>any(RUN.files));
+renderSafe("fixes","Fix list",renderFixes, ()=>any(RUN.fixes));
+renderSafe("matrix","Scenario matrix",renderMatrix, ()=>any(RUN.scenarios));
+renderSafe("probes","Invariant probes",renderProbes, ()=>any(RUN.probes));
+renderSafe("trust","Trust gap",renderTrust, ()=>any(RUN.trust));
+renderSafe("autonomy","Autonomy",renderAutonomy, ()=>any(RUN.autonomy));
+renderSafe("spend","Spend",renderSpend, ()=>any(RUN.spend));
+renderSafe("cell","Cell drill-down",renderCell, ()=>!!RUN.cell);
+show("overview");
+</script>
+</body>
+</html>

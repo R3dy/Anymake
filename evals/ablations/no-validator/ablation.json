@@ -1,0 +1,11 @@
+{
+  "component": "validator",
+  "question": "How many defects does the Validator catch that no other stage would have?",
+  "removes": ["validator"],
+  "ops": [
+    { "action": "delete", "file": "AGENTS/validator.md" },
+    { "action": "replace", "file": "skills/anymake-build-loop/SKILL.md",
+      "find": "Validator", "replace": "(stage removed for this ablation arm)" }
+  ],
+  "assert": { "noDispatchesFor": ["validator"], "noArtifactsMatching": "validation-report-.*\\.md$" }
+}

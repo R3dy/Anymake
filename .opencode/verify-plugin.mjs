@@ -1515,5 +1515,63 @@ console.log('\n[24] Build-loop dry-run (output_checks against real deliverables)
   else bad('dry-run: a broken board-state.json write was NOT rejected');
 }
 
+// 25. Eval Profile — every project type declares how the harness scores it, and its
+//     skip list must not contradict its own Gate Criteria Deltas. This check ships with
+//     the schema change rather than after it, per this repo's own rule.
+console.log('\n[25] Eval Profile per project type (PROJECT_TYPES/<id>/manifest.md)');
+{
+  const typesDir = path.join(ROOT, 'PROJECT_TYPES');
+  const types = fs.readdirSync(typesDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  const METRIC_ID = /\b([A-Z]{3}-\d{2})\b/g;
+
+  for (const type of types) {
+    const manifestPath = path.join(typesDir, type, 'manifest.md');
+    if (!fs.existsSync(manifestPath)) { bad(`${type}: no manifest.md`); continue; }
+    const body = fs.readFileSync(manifestPath, 'utf8');
+
+    const evalSection = /##\s*Eval Profile([\s\S]*?)(\n##\s|$)/.exec(body);
+    if (!evalSection) {
+      bad(`${type}: manifest has no '## Eval Profile' section — the harness would fall back to the saas baseline`);
+      continue;
+    }
+    const evalText = evalSection[1];
+    const gateSection = /##\s*Gate Criteria Deltas([\s\S]*?)(\n##\s|$)/.exec(body);
+    const gateText = gateSection ? gateSection[1] : '';
+
+    if (/\*\*Success axis:\*\*/.test(evalText)) ok(`${type}: Eval Profile names a success axis`);
+    else bad(`${type}: Eval Profile has no '**Success axis:**' line`);
+
+    if (/\*\*Oracle modes:\*\*/.test(evalText)) ok(`${type}: Eval Profile names its oracle interaction mode(s)`);
+    else bad(`${type}: Eval Profile has no '**Oracle modes:**' line`);
+
+    if (/\*\*Budget anchors\*\*/.test(evalText)) ok(`${type}: Eval Profile declares budget anchors (calibrated or explicitly TBD)`);
+    else bad(`${type}: Eval Profile has no budget anchors — cost would be scored against a guess`);
+
+    // The mapping is mechanical, so the contradiction is mechanically checkable:
+    // a metric cannot be skipped by the Eval Profile while the gate deltas keep it.
+    const skipLine = /-\s*Skip:\s*([^\n]*)/i.exec(evalText);
+    const skipped = skipLine ? [...skipLine[1].matchAll(METRIC_ID)].map((m) => m[1]) : [];
+    const keepsDesign = /\*\*Keep \(hard\):\*\*[^\n]*prototype|design quality is the deliverable/i.test(gateText)
+      || /Keep \(hard\): FID-08/.test(evalText);
+    if (skipped.includes('FID-08') && keepsDesign) {
+      bad(`${type}: Eval Profile skips FID-08 while Gate Criteria Deltas keep the prototype/visual gate as hard`);
+    } else {
+      ok(`${type}: Eval Profile skip list does not contradict its Gate Criteria Deltas`);
+    }
+
+    // A "Skip" in the gate deltas for the GUI-prototype gate should show up as a
+    // skipped design-consistency metric, or as an explicit Relax line.
+    const gateSkipsPrototype = /Skip:[^\n]*prototype/i.test(gateText);
+    const evalHandlesPrototype = skipped.includes('FID-08') || /Relax:[^\n]*FID-08/.test(evalText)
+      || /Keep:[^\n]*FID-08/.test(evalText) || /FID-08 for the dashboard/.test(evalText);
+    if (gateSkipsPrototype && !evalHandlesPrototype) {
+      bad(`${type}: Gate Criteria Deltas skip the prototype gate but the Eval Profile still scores FID-08 unchanged`);
+    } else {
+      ok(`${type}: prototype-gate delta and FID-08 applicability agree`);
+    }
+  }
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

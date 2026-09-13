@@ -1,0 +1,24 @@
+{
+  "component": "staircase step: bare model (control)",
+  "question": "What is the marginal value of bare model (control) on top of everything before it?",
+  "staircaseStep": "bare",
+  "systemOff": true,
+  "removes": [
+    "planner",
+    "validator",
+    "experience-runner",
+    "proxy"
+  ],
+  "ops": [],
+  "assert": {
+    "noDispatchesFor": [
+      "planner",
+      "worker",
+      "validator",
+      "experience-runner",
+      "proxy",
+      "orchestrator"
+    ]
+  },
+  "note": "The first arm IS the S0 control: a frontier model going solo on the same brief, with the plugin not installed. Nothing to patch — the system is simply absent."
+}

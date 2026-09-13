@@ -6,6 +6,74 @@ change. Entries are newest first.
 
 ---
 
+## Unreleased — The eval harness (2026-09-13)
+
+Builds `docs/design/eval-harness.md`. `npm run verify` checks that the markdown is
+internally consistent; nothing checked that the markdown *builds better software*.
+This is the outer loop to that inner one.
+
+### What it is
+
+`evals/` — a runnable harness that launches agent runs against a pinned Anymake
+checkout, across project types, scenario classes and model configs, and produces one
+self-contained HTML report. Zero npm dependencies, Node ESM only, developer-only, never
+loaded by the plugin (**ADR-014**, `docs/adr/`). It reads the system the way a user
+would, from a pinned checkout, so it can evaluate an *older* SHA — which is the only way
+"did this instruction edit help or hurt?" is answerable at all.
+
+### The rule it is built around
+
+**The harness never scores a run using that run's own verdicts.** A Validator `PASS`, an
+Experience Runner `PASS`, a Product Owner Proxy `APPROVED` are evidence *about the
+system's judgment*, scored against a hidden oracle the run never sees — never a
+substitute for it. The headline number is the **trust gap**: claimed-done stories that
+fail that oracle.
+
+### What it measures
+
+- **51 metrics across 6 pillars**, each declaring its source, normalizer and
+  `applies_when`. A metric that does not apply is dropped and its weight
+  **redistributed** — never zero-filled, never defaulted to a middle value.
+- **13 invariant probes** turning honor-system rules (`INV-002`, `INV-018`, the security
+  override, the Never Building gate, gate honesty, test integrity, traceability) into
+  binary, mechanically-checkable outcomes. Five conditions **cap** the composite at 40
+  rather than deducting from it.
+- **The component ledger and ablation arms** — per feature: cost, harm, unique catches,
+  and a verdict of *earns its keep · neutral · negative · unmeasured · insurance*. Every
+  ablation ships a trace assertion proving the removal took; an arm whose assertion fails
+  is discarded, not scored.
+- **Instruction attention** — per file: reads, token share, rules exercised, rules
+  violated, and a verdict of *load-bearing · expensive · dead · unread-but-violated*.
+- **A ranked fix list** where each entry carries the assertion that would catch the
+  regression — this repo's own rule, applied to the tool that grades it.
+
+### Repo changes outside `evals/`
+
+- **`PROJECT_TYPES/<id>/manifest.md` gains `## Eval Profile`** (all eight types), plus
+  the schema in `PROJECT_TYPES/README.md`. Skip / Replace / Add map mechanically from
+  Gate Criteria Deltas, so adding a project type is still two markdown files and no code
+  changes — for evaluation as well as for building.
+- **`verify-plugin.mjs` check group [25]** fails a manifest with no Eval Profile, or one
+  whose skip list contradicts its own Gate Criteria Deltas. The check ships with the
+  schema change, not after it.
+- **`npm run eval`, `eval:probe`, `eval:selftest`**; `evals/runs/` is gitignored and
+  `evals/` is excluded from the published package.
+
+### Honest limits
+
+- Judged metrics (`FID-01/04/06/08`, `OUT-06`) report **unscored** until a judge pass
+  exists; their weight redistributes rather than defaulting.
+- Cost and time bands are **uncalibrated**, so `EFF-01/02/03/05` are reported raw and
+  excluded from the composite. Anchors come from observed medians after the first real
+  sweep — not guessed up front.
+- One fixture (`cli-notes`) exists; `docs/design/eval-harness.md` §12 open question 1
+  asked whether to start with one, and this does.
+- `--adapter mock` produces a complete report with no provider and no spend. It is a
+  simulation, stamped `synthetic` in the report, and is for testing the harness — never
+  for answering a question about Anymake.
+
+---
+
 ## v3.1 — Instruction-deviation remediation (2026-09-01)
 
 Implements `docs/audits/2026-08-29-remediation-plan.md`, which addresses every

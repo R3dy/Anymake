@@ -1,0 +1,42 @@
+{
+  "id": "default",
+  "note": "Model configs use Anymake's own mechanism rather than inventing one — per-agent agent.<name>.model in the arena's opencode.json, plus ANYMAKE_MODEL_TIER1/2/3 in the cell env (AGENTS/arbiter.md → Model Tier Policy). Fill the <...> placeholders with the model ids you actually run; the harness reads the served model back from telemetry and records what was really used.",
+  "configs": [
+    {
+      "id": "system-default",
+      "label": "System default",
+      "note": "configures nothing — whatever this machine is already set up for",
+      "strength": "unknown",
+      "env": {},
+      "opencode": {}
+    },
+    {
+      "id": "frontier-uniform",
+      "label": "Frontier uniform",
+      "note": "all agents Tier 1",
+      "strength": "strong",
+      "env": { "ANYMAKE_MODEL_TIER1": "<frontier>", "ANYMAKE_MODEL_TIER2": "<frontier>", "ANYMAKE_MODEL_TIER3": "<frontier>" },
+      "opencode": {},
+      "mockQuality": 0.93
+    },
+    {
+      "id": "tiered-default",
+      "label": "Tiered default",
+      "note": "T1 frontier · T2 capable · T3 economy",
+      "strength": "strong",
+      "tiered": true,
+      "env": { "ANYMAKE_MODEL_TIER1": "<frontier>", "ANYMAKE_MODEL_TIER2": "<capable>", "ANYMAKE_MODEL_TIER3": "<economy>" },
+      "opencode": {},
+      "mockQuality": 0.87
+    },
+    {
+      "id": "economy-uniform",
+      "label": "Economy uniform",
+      "note": "all agents economy tier",
+      "strength": "weak",
+      "env": { "ANYMAKE_MODEL_TIER1": "<economy>", "ANYMAKE_MODEL_TIER2": "<economy>", "ANYMAKE_MODEL_TIER3": "<economy>" },
+      "opencode": {},
+      "mockQuality": 0.62
+    }
+  ]
+}

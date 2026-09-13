@@ -49,3 +49,14 @@ Run locally (`npm run dev`, `python main.py`, etc.). Optionally push to a person
 - **Skip:** all monetization checks (pricing, upgrade trigger, monetization milestone), the mandatory-prototype gate, market-size/competitor checks, GDPR/legal, AARRR metrics, mandatory ADR set.
 - **Relax:** the automated-test mandate — tests are recommended but a gate must not fail solely for missing tests. Same relaxation for Experience Script coverage — write one when it's genuinely useful, but a missing scenario does not by itself block a story the way it does for `saas`/`internal-tool`.
 - **Keep:** scope clarity (Phase 0), "it actually runs" as the Phase 4 bar, no-secrets-in-code if the project touches credentials.
+
+## Eval Profile
+**Success axis:** personal use — it runs and does the thing (from Success Model)
+**Oracle modes:** Browser if the project has screens, Terminal otherwise — whichever shape the project actually took
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: FID-08 (design-system consistency), monetization-linked Outcome checks, market/AARRR-linked checks
+- Relax: FID-02 (build fidelity) is reported but never blocking — a missing test must not fail a gate for this type
+- Keep: OUT-07 buildability — "it actually runs" is the Phase 4 bar
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** none beyond baseline

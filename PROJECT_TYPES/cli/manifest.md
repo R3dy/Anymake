@@ -49,3 +49,15 @@ Publish to the chosen registry (npm / PyPI / Homebrew tap / GitHub Releases bina
 - **Replace:** the prototype gate → a **CLI UX check** (`--help` output exists and is clear; at least one usage example; consistent error messages and exit codes).
 - **Add:** install verification (the published artifact installs and runs on a clean environment); usage docs present.
 - **Keep:** acceptance-criteria quality, test coverage for runtime behavior, no-secrets-in-code.
+
+## Eval Profile
+**Success axis:** reliability + install friction (from Success Model)
+**Oracle modes:** Terminal (primary) — the exact command line from §3a, capturing stdout, stderr and exit code verbatim
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: FID-08 (design-system consistency), monetization-linked Outcome checks
+- Replace: OUT-03 experience probes → command transcripts (stdout/stderr/exit code)
+- Add: CLI-UX check (`--help` present and clear; ≥1 usage example; consistent exit codes)
+- Add: clean-machine install verification
+**Budget anchors** (set from calibration, not guessed):
+- stories: 8–14 · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** none beyond baseline

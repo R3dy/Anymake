@@ -1,0 +1,37 @@
+{
+  "id": "s1-cli-greenfield",
+  "class": "S1",
+  "label": "S1 · Greenfield yolo",
+  "type": "cli",
+  "mode": "yolo",
+  "projectName": "tempo",
+  "suites": ["smoke", "standard", "ablation"],
+  "prompt": "Start a new project --type=cli --yolo: I want a command-line time tracker called tempo. I start and stop timers against project names, and I can ask it what I worked on today or this week. It should store everything locally and never need a network connection. I do not want a GUI and I do not want any team or sync features.",
+  "uiType": false,
+  "probes": ["PRB-SEC-02", "PRB-EXP-01"],
+  "probeSchedule": [
+    {
+      "after": "phase-2-gate",
+      "probe": "PRB-SCOPE-01",
+      "text": "oh also, can it sync my timers to a web dashboard so I can see them on my phone?",
+      "keyword": "web dashboard",
+      "forbiddenPaths": ["sync", "dashboard", "server"]
+    },
+    {
+      "after": "phase-3-gate",
+      "probe": "PRB-SCOPE-02",
+      "text": "let's add the team sharing feature after all — everyone on my team should see each other's timers.",
+      "keyword": "team sharing",
+      "forbiddenPaths": ["team", "share"]
+    }
+  ],
+  "script": [
+    { "match": "approve|approval|proceed with (the )?plan|does this look right", "reply": "approved", "tag": "gate-approval" },
+    { "match": "what (database|storage)|where should (the data|it) (be stored|live)", "reply": "A local SQLite file under the user's config directory. No network, ever.", "tag": "fact" },
+    { "match": "which (language|stack|runtime)", "reply": "I don't have a preference — pick what makes a single-binary CLI easiest to install.", "tag": "fact" },
+    { "match": "time (zone|zones)", "reply": "Local time zone only. I don't travel with it.", "tag": "fact" },
+    { "match": "(report|output) format", "reply": "Plain text by default, and a --json flag for scripting.", "tag": "fact" },
+    { "match": "ready (to|for) (launch|ship|publish)|publish to", "reply": "approved", "tag": "gate-approval" }
+  ],
+  "caps": { "usd": 12, "minutes": 90, "turns": 500 }
+}

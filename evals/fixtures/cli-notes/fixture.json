@@ -1,0 +1,20 @@
+{
+  "id": "cli-notes",
+  "version": "v1",
+  "type": "cli",
+  "interactionMode": "Terminal",
+  "runCommand": "node bin/notes.js",
+  "testCommand": "npm test",
+  "lintCommand": null,
+  "budgetAnchors": { "note": "TBD after calibration — until then cost and time are reported raw and excluded from the composite (§6.1)" },
+  "defects": [
+    {
+      "id": 1,
+      "rootCause": "search() compares the query against the note body only, so a note whose title matches but whose body does not is never returned. The title was dropped from the haystack when tagging was added.",
+      "userVoiceReport": "Searching doesn't find my notes. I have a note called \"groceries\" and when I search for groceries it says nothing found, but it's right there when I list them.",
+      "reproSteps": ["notes add groceries \"milk and eggs\"", "notes search groceries", "expected: the groceries note; actual: no results"],
+      "governingRule": { "file": "AGENTS/solution-architect.md", "rule": "root cause, not symptom" }
+    }
+  ],
+  "notes": "Frozen source, squashed history, tagged fixture-v1. The regression suite passes on the frozen fixture BEFORE the defect is applied — a fixture that starts red measures nothing."
+}

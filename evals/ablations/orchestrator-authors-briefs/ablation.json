@@ -1,0 +1,11 @@
+{
+  "component": "planner",
+  "question": "Is a separate Planner worth it, or can the orchestrator write the briefs itself?",
+  "removes": ["planner"],
+  "ops": [
+    { "action": "delete", "file": "AGENTS/planner.md" },
+    { "action": "append", "file": "AGENTS/orchestrator.md",
+      "text": "\n\n## Ablation arm: orchestrator authors briefs\n\nFor this run only, write each story's task brief yourself instead of dispatching a Planner. Use TEMPLATES/task-brief.md unchanged.\n" }
+  ],
+  "assert": { "noDispatchesFor": ["planner"] }
+}

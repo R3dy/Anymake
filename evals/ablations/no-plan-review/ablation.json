@@ -1,0 +1,11 @@
+{
+  "component": "plan-review",
+  "question": "Does the Plan Reviewer loop improve root-cause correctness enough to pay for its rounds?",
+  "removes": ["plan-reviewer"],
+  "ops": [
+    { "action": "delete", "file": "AGENTS/plan-reviewer.md" },
+    { "action": "replace", "file": "skills/anymake-agile/SKILL.md",
+      "find": "Plan Reviewer", "replace": "(stage removed for this ablation arm)" }
+  ],
+  "assert": { "noDispatchesFor": ["plan-reviewer"], "noArtifactsMatching": "review-round-\\d+\\.md$" }
+}

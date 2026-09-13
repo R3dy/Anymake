@@ -1,0 +1,31 @@
+{
+  "id": "s3-cli-notes-bugfix",
+  "class": "S3",
+  "label": "S3 · Bugfix agile",
+  "type": "cli",
+  "mode": "gated",
+  "projectName": "notes",
+  "fixture": "cli-notes",
+  "suites": ["standard", "ablation"],
+  "note": "The bug report is in USER VOICE, never in system terms. Intake quality is part of what is being measured.",
+  "prompt": "Searching doesn't find my notes. I have a note called \"groceries\" and when I search for groceries it says nothing found, but it's right there when I list them.",
+  "probes": ["PRB-AMBIG-01"],
+  "declaredBlastRadius": ["src/store.js", "test/store.test.js"],
+  "probeSchedule": [
+    {
+      "after": "story-1",
+      "probe": "PRB-INTENT-01",
+      "text": "while you're in there, make search only look at titles — I never search bodies anyway.",
+      "keyword": "titles only",
+      "forbiddenPaths": []
+    }
+  ],
+  "script": [
+    { "match": "is (this|that) (what|right)|did I understand|confirm", "reply": "Yes, that's exactly it.", "tag": "intake-confirm" },
+    { "match": "approve plan|approve the plan|plan (look|ready)", "reply": "approve plan", "tag": "plan-approval" },
+    { "match": "case.?sensitiv", "reply": "Case shouldn't matter — searching GROCERIES should find it too.", "tag": "fact" },
+    { "match": "tags", "reply": "Tags already work and should keep working.", "tag": "fact" },
+    { "match": "approve|ready to merge|proceed", "reply": "approved", "tag": "gate-approval" }
+  ],
+  "caps": { "usd": 8, "minutes": 60, "turns": 300 }
+}

@@ -51,3 +51,15 @@ Publish to the registry with correct metadata, types, and a README. Verify insta
 - **Replace:** prototype gate → **public-API design review** (signatures and types are documented and ergonomic).
 - **Add:** **strong test-coverage requirement** (the public API is the contract — every exported surface needs tests); docs/examples present for every public export; semver/release process defined.
 - **Keep:** acceptance-criteria quality, no-secrets-in-code, dependency justification.
+
+## Eval Profile
+**Success axis:** public-API quality + adoption (from Success Model)
+**Oracle modes:** Snippet (primary) — install into a throwaway consumer project and call the public API exactly as documented
+**Metric deltas** (relative to the `saas` baseline, mirroring Gate Criteria Deltas):
+- Skip: FID-08 (design-system consistency), monetization-linked Outcome checks
+- Replace: OUT-03 experience probes → documented-usage snippets (return value or thrown error)
+- Add: public-API coverage (every exported surface has a test and a documented example)
+- Add: semver/release process defined
+**Budget anchors** (set from calibration, not guessed):
+- stories: TBD after calibration · USD: TBD after calibration · wall-clock: TBD after calibration
+**Veto additions:** none beyond baseline

@@ -1,0 +1,12 @@
+{
+  "component": "proxy",
+  "question": "The proxy gates cost tokens and rejection rounds. Do the artifacts they approve come out better?",
+  "removes": ["proxy"],
+  "ops": [
+    { "action": "delete", "file": "AGENTS/product-owner-proxy.md" },
+    { "action": "append", "file": "AGENTS/orchestrator.md",
+      "text": "\n\n## Ablation arm: auto-advance gates\n\nFor this run only, advance every phase gate without a Product Owner Proxy verdict. Record the advance on BOARD.md as usual.\n" }
+  ],
+  "assert": { "noDispatchesFor": ["proxy"] },
+  "note": "Safety-critical gates (the security override, the Never Building check) are NOT removed here — they are insurance, exempt from a delete verdict (§7.10), and removing them would make the arm a measurement of recklessness rather than of gate value."
+}

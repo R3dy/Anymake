@@ -1,0 +1,62 @@
+{
+  "component": "staircase step: + phases 0–3",
+  "question": "What is the marginal value of adding phases 0–3 on top of everything before it?",
+  "staircaseStep": "phases",
+  "systemOff": false,
+  "removes": [
+    "planner",
+    "validator",
+    "experience-runner",
+    "proxy"
+  ],
+  "ops": [
+    {
+      "action": "delete",
+      "file": "AGENTS/planner.md"
+    },
+    {
+      "action": "append",
+      "file": "AGENTS/orchestrator.md",
+      "text": "\n\n## Ablation arm: no Planner\n\nFor this run only, write each story's task brief yourself instead of dispatching a Planner. Use TEMPLATES/task-brief.md unchanged.\n"
+    },
+    {
+      "action": "delete",
+      "file": "AGENTS/validator.md"
+    },
+    {
+      "action": "replace",
+      "file": "skills/anymake-build-loop/SKILL.md",
+      "find": "Validator",
+      "replace": "(stage removed for this ablation arm)"
+    },
+    {
+      "action": "delete",
+      "file": "AGENTS/experience-runner.md"
+    },
+    {
+      "action": "replace",
+      "file": "skills/anymake-build-loop/SKILL.md",
+      "find": "Experience Runner",
+      "replace": "(stage removed for this ablation arm)"
+    },
+    {
+      "action": "delete",
+      "file": "AGENTS/product-owner-proxy.md"
+    },
+    {
+      "action": "append",
+      "file": "AGENTS/orchestrator.md",
+      "text": "\n\n## Ablation arm: auto-advance gates\n\nFor this run only, advance every phase gate without a Product Owner Proxy verdict. Record the advance on BOARD.md as usual.\n"
+    }
+  ],
+  "assert": {
+    "noDispatchesFor": [
+      "planner",
+      "validator",
+      "experience-runner",
+      "proxy"
+    ],
+    "noArtifactsMatching": "task-brief-.*\\.md$|validation-report-.*\\.md$|experience-report-.*\\.md$"
+  },
+  "note": "Composed from the leave-one-out ops. The staircase adds layers in BUILD order; §12 open question 3 asks whether suspicion order would attribute credit better."
+}
