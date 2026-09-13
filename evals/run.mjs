@@ -69,6 +69,7 @@ function usage() {
   node evals/run.mjs --suite staircase --scenario <id>
   node evals/run.mjs --score <run-dir>            re-score and re-render, no agents run
   node evals/run.mjs --probe                      what does this host actually expose?
+                                                 (add --no-live to skip the trivial session)
 
 Options
   --matrix <file>        run matrix (default: evals/matrix/default.json)
@@ -86,15 +87,25 @@ Options
 
 async function doProbe() {
   const Adapter = getAdapter(opt('adapter', 'opencode'));
-  const found = await Adapter.probe({});
+  const found = await Adapter.probe({ live: !has('no-live') });
   console.log(`\nAdapter: ${found.adapter}${found.version ? ` (${found.version})` : ''}`);
   for (const [cap, info] of Object.entries(found.capabilities)) {
-    console.log(`  ${info.available ? 'FOUND ' : 'MISSING'}  ${cap.padEnd(6)} ${info.how || ''}`);
+    // A `how` is printed only for a capability that was actually found — a MISSING line
+    // that also tells you how to call it is not a finding, it is noise.
+    console.log(`  ${info.available ? 'FOUND  ' : 'MISSING'} ${cap.padEnd(6)} ${info.available ? info.how : ''}`);
+    if (info.evidence) console.log(`           ${info.evidence}`);
   }
-  for (const n of found.notes || []) console.log(`  note   ${n}`);
+  for (const n of found.notes || []) console.log(`  note    ${n}`);
+
+  // The raw help and the live run are archived, so a gap is diagnosable instead of
+  // mysterious — this probe's whole job is to retire the riskiest unknown.
+  const out = path.join(RUNS_DIR, 'probe', `${runStamp()}-${found.adapter}.json`);
+  writeJSON(out, found);
+  console.log(`\n  raw     ${path.relative(process.cwd(), out)}`);
+
   const missing = Object.values(found.capabilities).filter((c) => !c.available).length;
   console.log(missing
-    ? `\n${missing} capability gap(s). Everything downstream reads telemetry/usage.jsonl, so a layout change is a one-file fix in drive/${found.adapter}.mjs.`
+    ? `\n${missing} capability gap(s). Everything downstream reads the normalized telemetry/trace.jsonl, so closing one is a one-file fix in evals/drive/${found.adapter}.mjs.`
     : '\nAll four capabilities located.');
 }
 
@@ -189,6 +200,7 @@ async function runCell({ arm, runDir, sha, Adapter, caps, run }) {
       arena: arena.dir, scenario: arm.scenario, modelConfig: arm.config, ablation: arm.ablation,
       seed: `${run.id}|${cellId}`,
     });
+    if (Adapter.synthetic) log.debug('synthetic adapter — this cell is a simulation');
 
     const capMs = caps.minutes * 60000;
     await adapter.start(arm.scenario.prompt, { timeoutMs: capMs });
@@ -218,10 +230,19 @@ async function runCell({ arm, runDir, sha, Adapter, caps, run }) {
   return scored;
 }
 
-/** §9.1 step 4 — the drive loop. */
+/**
+ * §9.1 step 4 — the drive loop, turn-based.
+ *
+ * `opencode run` is one-shot: it returns when the turn is done, and a session is
+ * continued by invoking the CLI again against its id. So this is not a poll-a-live-
+ * process loop — it reads what the completed turn said, answers if an answer is owed,
+ * and that answer is itself the next turn. A host that streams instead would still fit:
+ * `send` resolving when the reply lands is the only contract this depends on.
+ */
 async function driveLoop({ adapter, responder, caps, startedAt, cellDir }) {
   const transcriptPath = path.join(cellDir, 'telemetry', 'transcript.jsonl');
-  let turns = 0, seen = 0;
+  let turns = 0, seen = 0, idleRounds = 0;
+
   for (;;) {
     if (Date.now() - startedAt > caps.minutes * 60000) { adapter.kill('cap: wall-clock'); return { terminal: 'capped', cap: 'minutes' }; }
     if (turns > caps.turns) { adapter.kill('cap: turns'); return { terminal: 'capped', cap: 'turns' }; }
@@ -230,21 +251,37 @@ async function driveLoop({ adapter, responder, caps, startedAt, cellDir }) {
     const fresh = lines.slice(seen).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
     seen = lines.length;
 
+    let answered = false;
     for (const t of fresh) {
       if (t.role !== 'assistant') continue;
       turns++;
+      if (/\bALL STORIES DONE\b|\bPROJECT COMPLETE\b/i.test(t.text || '')) return { terminal: 'complete' };
+      if (/\bESCALATION REQUIRED\b/i.test(t.text || '')) return { terminal: 'escalated' };
+
+      // A probe arrives as an ordinary user turn at a scripted trigger — which is
+      // exactly how it would arrive from a real person (§4.2).
       const injection = responder.injectionFor(triggerKeyFor(t));
-      if (injection) await adapter.send(adapter.sessionId, injection.text);
+      if (injection) { await adapter.send(adapter.sessionId, injection.text); answered = true; continue; }
+
       if (responder.needsAnswer(t.text)) {
         const a = await responder.answer(t.text);
         await adapter.send(adapter.sessionId, a.reply);
+        answered = true;
       }
-      if (/\bALL STORIES DONE\b|\bPROJECT COMPLETE\b/i.test(t.text)) return { terminal: 'complete' };
-      if (/\bESCALATION REQUIRED\b/i.test(t.text)) return { terminal: 'escalated' };
     }
 
-    const exited = await Promise.race([adapter.waitForExit(), sleep(1500).then(() => null)]);
-    if (exited) return { terminal: exited.code === 0 ? 'complete' : 'escalated', exitCode: exited.code };
+    if (answered) { idleRounds = 0; continue; }
+
+    // Nothing was said that needs an answer. Deliver any probe still owed at this
+    // point; otherwise the run has stopped on its own and that IS the outcome.
+    const pending = responder.injectionFor('any');
+    if (pending) { await adapter.send(adapter.sessionId, pending.text); idleRounds = 0; continue; }
+
+    if (++idleRounds > 2) {
+      const exited = await adapter.waitForExit();
+      return { terminal: exited?.code === 0 ? 'complete' : 'escalated', exitCode: exited?.code ?? null };
+    }
+    await sleep(1000);
   }
 }
 
