@@ -45,7 +45,7 @@ Do these in order. Stop and tell the user what failed if a step errors.
    listed there, and that is fine.)
 
 4. **Tell the user:** "Anymake is installed. Restart OpenCode, then say
-   *Start a new project* to begin." If OpenCode runs as a background service,
+   *@anymake Start a new project* to begin." If OpenCode runs as a background service,
    `opencode service restart` restarts it.
 
 Do **not** edit `opencode.json` for a normal install — steps 2–3 are the whole
@@ -56,29 +56,40 @@ manages them (see [What the plugin sets up](#what-the-plugin-sets-up)).
 
 After restarting OpenCode:
 
-- Ask `"Start a new project"` — the assistant should answer in Anymake mode.
-- Ask `"What skills do you have?"` — `anymake` and its `anymake-*` companions
-  should be listed.
+- Ask `"@anymake Start a new project"` — the assistant should answer in Anymake mode.
+- Don't expect Anymake in an answer to `"What skills do you have?"` — its skills
+  are deliberately hidden from the model until invoked (see Usage).
 - `ls ~/.config/opencode/agents/anymake-*.md` should list 8 agent files.
 
 ## Usage
 
-Anymake loads automatically at the start of every session. Trigger it with:
+Anymake's skills load **only when you invoke them** — nothing is added to the
+model's context until you do. Start every Anymake conversation by mentioning
+the skill as `@anymake`; it loads its companion skills (`anymake-dispatch`,
+`anymake-build-loop`, …) itself as it needs them.
 
 | Say this | What happens |
 |----------|-------------|
-| `"Start a new project"` | Creates a new project workspace, begins Phase 0 Foundation |
-| `"Continue [project name]"` | Reads PHASE_STATE.md, resumes the last step |
-| `"I have a product idea: [description]"` | Triggers Anymake, starts Phase 0 |
-| `"Build an app"` | Triggers Anymake |
+| `"@anymake Start a new project"` | Creates a new project workspace, begins Phase 0 Foundation |
+| `"@anymake Continue [project name]"` | Reads PHASE_STATE.md, resumes the last step |
+| `"@anymake I have a product idea: [description]"` | Starts Phase 0 from your idea |
+
+Every Anymake skill sets `metadata.opencode/autoinvoke: false`, which keeps it
+out of the model's skill list (no name or description in every request) while
+leaving it loadable by id. Set the plugin option `"bootstrap": true` if you'd
+rather have Anymake always on without `@anymake`.
 
 ## What the plugin sets up
 
 On every OpenCode start the plugin:
 
-- **Registers the skills** — every `skills/<id>/SKILL.md` becomes an OpenCode skill.
-- **Loads the hub skill into the primary agent's system prompt**, so no manual
-  `/skill` load is needed. Anymake's own subagents keep their own prompts.
+- **Registers the skills** — every `skills/<id>/SKILL.md` becomes an on-demand
+  OpenCode skill (`autoinvoke: false`): loaded by `@anymake`, or by id from an
+  already-loaded Anymake skill. Each one is told where the plugin is installed,
+  so it can find `AGENTS/`, `TEMPLATES/` and the other supporting files.
+- **Adds nothing to your prompts by default.** With `"bootstrap": true` it puts
+  the hub skill into every primary-agent system prompt instead; Anymake's own
+  subagents always keep their own prompts.
 - **Registers the spawned agents** (Planner, Worker, Validator, Experience
   Runner, Product Owner Proxy, Cartographer, Solution Architect, Plan
   Reviewer) as named subagents. OpenCode V2 plugins cannot create agents
@@ -130,9 +141,18 @@ in `~/.config/opencode/plugins/`):
   ]
 }
 ```
-Plugin options win over the environment variables. Other options:
-`"syncAgents": false` (don't write agent files) and `"agentsDir": "/abs/path"`
-(write them somewhere else).
+Plugin options win over the environment variables.
+
+### Plugin options
+
+All optional, set in the `options` object shown above:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `modelTiers` | unset | `{ "tier1", "tier2", "tier3" }` model per tier (see above) |
+| `bootstrap` | `false` | `true` = always on: the hub skill is put into every primary-agent request, so `@anymake` isn't needed. The environment variable `ANYMAKE_BOOTSTRAP=1` does the same without editing config (and is the only switch on OpenCode 1.x) |
+| `syncAgents` | `true` | `false` = don't write agent files |
+| `agentsDir` | `~/.config/opencode/agents` | write the agent files somewhere else |
 
 Each agent's tier is fixed in its own file (`AGENTS/*.md` frontmatter,
 `tier: 1|2|3`) — see `AGENTS/arbiter.md` → **Model Tier Policy** for which
@@ -173,7 +193,8 @@ missing, append if the array exists):
 ```
 
 On 1.x the plugin uses its V1 fallback (requires 1.18.29+): skills and agents
-are registered through the V1 `config` hook, and per-agent overrides use the V1
+are registered through the V1 `config` hook (the hub skill is not injected
+into prompts unless `ANYMAKE_BOOTSTRAP=1`), and per-agent overrides use the V1
 `agent` key instead of `agents`. Upgrading to 2.4.1+ is recommended — after
 upgrading, remove that `plugin` entry and install with step 2 above.
 
@@ -185,9 +206,10 @@ opencode plugin check
 opencode run --print-logs "hello" 2>&1 | grep -i anymake
 ```
 
-**Anymake not responding to triggers:** ask `"What skills do you have?"` —
-Anymake should appear in the list. If it does not, confirm you restarted
-OpenCode after installing.
+**Anymake not responding:** start the message with `@anymake` — plain trigger
+phrases like "Start a new project" no longer load it on their own. If
+`@anymake` does nothing, confirm you restarted OpenCode after installing and
+that `opencode plugin check` is clean.
 
 **`[anymake] left anymake-<name>.md alone` in the logs:** a file with that
 name already exists in your agents directory and was not written by Anymake.

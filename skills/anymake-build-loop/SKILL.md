@@ -1,6 +1,8 @@
 ---
 name: anymake-build-loop
 description: Use to run the five-stage agentic build loop — an Orchestrator that dispatches Planners (one story brief each), Workers (one story each), Validators (one PR each), and Experience Runners (one live app drive-through each) over an ordered backlog until it is done. Triggers on "run the build loop", "implement my backlog", "build these stories", "agentic build", "start the worker/validator loop", or Anymake Phase 4 Step 4.3. Works standalone on any repo that has an ordered backlog of stories with acceptance criteria — not only inside a full Anymake project.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Build Loop — Five-Stage Agentic Implementation Engine

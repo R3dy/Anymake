@@ -1,6 +1,8 @@
 ---
 name: anymake-new-type
 description: Use to author a new Anymake project type — scaffold a conforming manifest.md + guide.md pair under PROJECT_TYPES/ so the system supports a kind of project it doesn't yet (e.g. mobile-app, browser-extension, data-pipeline, game). Triggers on "add a project type", "create a new Anymake type", "scaffold a manifest", "Anymake doesn't support X, add it", or "make a profile for <kind of project>". A meta-skill that extends Anymake itself.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake New Type — Project-Type Authoring

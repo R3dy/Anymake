@@ -1,6 +1,8 @@
 ---
 name: anymake-experience-check
 description: Use to actually run the testing harness on demand — launch the built application (locally, on a branch, or at a staging/production URL) and drive it through a story's Experience Script, or an ad hoc one you describe, the way a person would. Triggers on "test this for real", "actually verify this works", "prove this before I ship it", "drive the app through X", "run the experience check", "does the login flow really work", Anymake Phase 4 Step 4.6 (staging review), or the anymake-agile Verify step. The execution half of the Experience Harness — see anymake-experience-setup for authoring the scripts it runs.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Experience Check — Using the Testing Harness
