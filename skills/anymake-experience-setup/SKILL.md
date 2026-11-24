@@ -1,6 +1,8 @@
 ---
 name: anymake-experience-setup
 description: Use to build the testing harness for a project — author Experience Scripts (the literal click/type/run/request walkthroughs) for every story in a backlog, audit existing coverage for gaps, and set up docs/environment.md so the Experience Runner can actually launch the app. Triggers on "set up the testing harness", "write experience scripts for this backlog", "retrofit experience scripts", "audit experience script coverage", "does every story have a testing harness scenario", or Anymake Phase 3 Step 3.2b. The authoring half of the Experience Harness — see anymake-experience-check for running it.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Experience Setup — Building the Testing Harness

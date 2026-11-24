@@ -14,7 +14,7 @@ opencode plugin add github:R3dy/Anymake
 ```
 Then restart OpenCode. Agent-followable instructions (fallbacks, model tiers, OpenCode 1.x): https://raw.githubusercontent.com/R3dy/Anymake/main/.opencode/INSTALL.md
 
-**Trigger:** Say "Start a new project" or "Continue [project name]".
+**Trigger:** Skills load only when invoked. Say "@anymake Start a new project" or "@anymake Continue [project name]"; the hub skill loads its companions itself.
 
 ## Core concepts
 

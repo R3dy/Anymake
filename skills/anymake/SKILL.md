@@ -1,6 +1,8 @@
 ---
 name: anymake
 description: Use when the user wants to build software — a SaaS product, CLI tool, library, API service, internal tool, static site, or hobby project — from raw idea to a finished, shipped result. Triggers on "start a new project", "continue my build", "plan a product", "build an app", "Anymake", "agentic build", "structured build process", "I have a product idea", "launch a SaaS", "yolo mode", "autonomous mode", "--yolo", "build autonomously", or when working on any new product development. Guides through Foundation → Discovery → Planning → Solutioning → Implementation → Launch with user approval at each phase gate (or via autonomous Product Owner Proxy in yolo mode). Each session produces a concrete artifact and ends with a clear next action.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake — Agentic Build System
@@ -223,4 +225,4 @@ owns; companions never re-run the phase machine.
 
 ---
 
-*Anymake skill suite — v3.2*
+*Anymake skill suite — v3.3*

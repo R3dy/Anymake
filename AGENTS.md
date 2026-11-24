@@ -96,9 +96,9 @@ Each profile is two files:
 
 ## Skill Activation (OpenCode)
 
-When loaded via the OpenCode plugin, the contents of `skills/anymake/SKILL.md` are injected as the active skill. Claude operates as the Anymake assistant for the entire session.
+Every Anymake skill is on-demand (`metadata.opencode/autoinvoke: false`): nothing is in the model's context until the user invokes `@anymake`, after which `skills/anymake/SKILL.md` is the active skill for the rest of the session and loads its companions by id as needed. The plugin option `bootstrap: true` restores always-on injection of the hub skill.
 
-**Trigger phrases:** "Start a new project", "Continue [project name]", "I have a product idea", "Build an app", "Anymake", or any mention of building a SaaS product.
+**Typical openers:** "@anymake Start a new project", "@anymake Continue [project name]", "@anymake I have a product idea".
 
 **Session startup ritual** (run at the start of every session):
 1. Check `PROJECTS/[name]/PHASE_STATE.md` — if it doesn't exist, start Phase 0

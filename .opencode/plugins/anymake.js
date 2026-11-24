@@ -4,7 +4,12 @@
  *
  * What it does, in V2 terms:
  *   1. Skills — registers every skills/<id>/SKILL.md with `ctx.skill.transform`
- *      (V2 has no mutable `config.skills.paths`).
+ *      (V2 has no mutable `config.skills.paths`). Every skill is on-demand: its
+ *      `metadata.opencode/autoinvoke: false` frontmatter is carried into the
+ *      registration, so nothing sits in the model's skill list or context until
+ *      the user invokes it (`@anymake`) or a loaded skill loads a companion by
+ *      id. Each registered body is prefixed with where the supporting files are
+ *      installed, so an invoked skill can resolve AGENTS/, TEMPLATES/ etc.
  *   2. Agents — every AGENTS/*.md with `mode: subagent` becomes a named
  *      OpenCode subagent. V2's AgentEditor can update/remove agents but cannot
  *      ADD one, and agents only come from markdown files or the user's
@@ -17,10 +22,10 @@
  *      (`modelTiers`) or ANYMAKE_MODEL_TIER1/2/3. A model the user set for that
  *      agent in their own `agents` config always wins. See AGENTS/arbiter.md →
  *      "Model Tier Policy".
- *   4. Bootstrap — the hub skill is pushed into the system prompt with
- *      `ctx.session.hook("context")` (the V2 replacement for the V1
- *      `experimental.chat.*.transform` hooks), once per request, never into an
- *      Anymake subagent's own context.
+ *   4. Bootstrap (opt-in, plugin option `"bootstrap": true`) — pushes the hub
+ *      skill into every primary-agent system prompt with
+ *      `ctx.session.hook("context")`, so Anymake is always on without `@anymake`.
+ *      Off by default: it costs the whole hub skill in every request.
  *
  * Zero dependencies on purpose (ADR-008): `Plugin.define` from
  * `@opencode/plugin` is an identity function (`define(plugin) { return plugin }`),
@@ -72,6 +77,15 @@ const extractAndStripFrontmatter = (content) => {
 
 // ── Skills ────────────────────────────────────────────────────────────────
 
+// Prefixed to every registered skill body. Skills load on demand, so this —
+// not an always-on bootstrap — is what tells an invoked skill where its
+// supporting files live, and how to reach a companion skill if the host
+// refuses to load a hidden (autoinvoke: false) skill by id.
+const skillLocatorNote = () => `> **Anymake is installed at \`${PLUGIN_ROOT}\`.** Resolve every \`AGENTS/\`,
+> \`TEMPLATES/\`, \`PHASE_GUIDES/\`, \`PROJECT_TYPES/\`, \`dashboard/\` and \`skills/\` path
+> against that directory. To use a companion skill (\`anymake-*\`), load it by id with
+> the \`skill\` tool; if that is refused, read \`${SKILLS_DIR}/<id>/SKILL.md\` directly.`;
+
 const buildSkillEntries = () => {
   if (!fs.existsSync(SKILLS_DIR)) return [];
   const skills = [];
@@ -80,13 +94,20 @@ const buildSkillEntries = () => {
     const skillPath = path.join(SKILLS_DIR, dirent.name, 'SKILL.md');
     if (!fs.existsSync(skillPath)) continue;
     const { frontmatter, content } = extractAndStripFrontmatter(fs.readFileSync(skillPath, 'utf8'));
+    // Mirror V2's own frontmatter rules: `opencode/autoinvoke` wins over
+    // `disable-model-invocation` when both are set.
+    const autoinvokeRaw = frontmatter['opencode/autoinvoke'];
+    const autoinvoke = autoinvokeRaw !== undefined
+      ? autoinvokeRaw !== 'false'
+      : frontmatter['disable-model-invocation'] !== 'true';
     // V2 derives a skill's ID from its directory name — mirror that exactly.
     skills.push({
       id: dirent.name,
       name: frontmatter.name || dirent.name,
       description: frontmatter.description || undefined,
+      autoinvoke,
       path: skillPath,
-      content: content.trim(),
+      content: `${skillLocatorNote()}\n\n${content.trim()}`,
     });
   }
   return skills;
@@ -267,7 +288,7 @@ const setup = async (ctx) => {
     }));
   });
 
-  await step('bootstrap hook failed', async () => {
+  if (options.bootstrap === true) await step('bootstrap hook failed', async () => {
     registrations.push(await ctx.session.hook('context', (event) => {
       if (isAnymakeSubagent(event.agent)) return; // subagents get their own prompt
       const bootstrap = getBootstrapContent();

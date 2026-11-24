@@ -1,6 +1,8 @@
 ---
 name: anymake-brownfield
 description: Use to bring Anymake's phased discipline to an EXISTING codebase instead of a greenfield idea. Reverse-engineers PROJECT.md, a discovery snapshot, an architecture map, and a forward backlog from code that already exists. Triggers on "adopt Anymake in this repo", "onboard an existing project", "reverse-engineer a PRD", "Anymake an existing codebase", "I already have code", or "continue building on top of what's here". Bridges a real repo into the standard Anymake project workspace so the hub and other companion skills can take over.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Brownfield Onboarding

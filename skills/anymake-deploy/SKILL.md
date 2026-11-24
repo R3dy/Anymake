@@ -1,6 +1,8 @@
 ---
 name: anymake-deploy
 description: Use to deploy an Anymake project and manage its infrastructure — staging environments, production releases, environment/secret configuration, smoke tests, monitoring/error-tracking wiring, and rollback. Triggers on "deploy", "set up staging", "ship to production", "release", "provision infrastructure", "configure env vars", "roll back", or Anymake Phase 4 staging (Steps 4.1/4.6) and Phase 5 Step 5.2 (production). Respects the active project type's distribution target.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Deploy — Deployment & Infrastructure

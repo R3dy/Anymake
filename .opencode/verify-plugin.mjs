@@ -55,6 +55,12 @@ for (const dir of dirs) {
   if (!fm.description) bad(`${dir}: missing 'description'`);
   else if (fm.description.length < 40) bad(`${dir}: description suspiciously short`);
   if (fm.name === dir && fm.description) ok(`${dir} → name+description valid (${fm.description.length} chars)`);
+  // On-demand loading: OpenCode V2 lists a skill (name + description) in every
+  // request unless it opts out. Every Anymake skill is invoked (`@anymake`) or
+  // loaded by id from an invoked skill — never auto-listed.
+  const rawFrontmatter = fs.readFileSync(p, 'utf8').split('\n---\n')[0];
+  if (/\nmetadata:[ \t]*\n[ \t]+opencode\/autoinvoke:[ \t]*false[ \t]*(\n|$)/.test(rawFrontmatter)) ok(`${dir} → metadata.opencode/autoinvoke: false (loads only when invoked)`);
+  else bad(`${dir}: missing \`metadata:\` → \`opencode/autoinvoke: false\` frontmatter (would be auto-listed to the model)`);
 }
 
 // 2. V2 plugin shape + skill registration (OpenCode 2.x, @opencode/plugin 2.4.1).
@@ -116,13 +122,26 @@ else bad(`ctx.skill.transform registered ${st2.skills.size} skills, expected ${d
   if (hubSkill && path.isAbsolute(hubSkill.path) && hubSkill.description && hubSkill.content && !hubSkill.content.startsWith('---')) {
     ok('skill entries carry id/name/description, an absolute path, and frontmatter-stripped content');
   } else bad(`skill entry malformed: ${JSON.stringify(hubSkill && { ...hubSkill, content: hubSkill.content?.slice(0, 40) })}`);
+  const autoListed = [...st2.skills.values()].filter((sk) => sk.autoinvoke !== false).map((sk) => sk.id);
+  if (!autoListed.length) ok('every skill registered with autoinvoke: false (none auto-listed to the model)');
+  else bad(`skills registered as auto-invocable: ${autoListed.join(', ')}`);
+  // Skills load on demand, so each body must itself say where the supporting
+  // files live — there is no always-on bootstrap to say it any more.
+  const unlocated = [...st2.skills.values()].filter((sk) => !sk.content.includes(ROOT) || !sk.content.includes(path.join(SKILLS_DIR, '<id>', 'SKILL.md'))).map((sk) => sk.id);
+  if (!unlocated.length) ok('every registered skill body names the install root and the direct-read fallback for companions');
+  else bad(`skill bodies missing the install-path note: ${unlocated.join(', ')}`);
 }
 
-// 3. context hook injects the hub bootstrap into the system prompt
-console.log('\n[3] session "context" hook injects hub bootstrap');
-const ctxHooks = st2.hooks.context || [];
-if (ctxHooks.length === 1) ok('exactly one session "context" hook registered');
-else bad(`expected 1 session "context" hook, got ${ctxHooks.length}`);
+// 3. The always-on bootstrap is OFF by default (skills load only when
+//    invoked) and ON only with the plugin option `bootstrap: true`.
+console.log('\n[3] bootstrap: off by default, opt-in via { bootstrap: true }');
+if (!(st2.hooks.context || []).length) ok('default setup registers no session "context" hook (nothing auto-loaded)');
+else bad('default setup registered a "context" hook — the hub skill would be auto-loaded into every request');
+const { ctx: bootCtx, state: stBoot } = makeCtx({ options: { syncAgents: false, bootstrap: true } });
+const bootCleanup = await anymakePlugin.setup(bootCtx);
+const ctxHooks = stBoot.hooks.context || [];
+if (ctxHooks.length === 1) ok('bootstrap: true registers exactly one session "context" hook');
+else bad(`expected 1 session "context" hook with bootstrap: true, got ${ctxHooks.length}`);
 const event = { agent: 'build', system: [{ type: 'text', text: 'base prompt' }], messages: [], options: {}, tools: {} };
 for (const h of ctxHooks) await h(event);
 const injectedPart = event.system.find((p) => p.text?.includes('EXTREMELY_IMPORTANT'));
@@ -142,6 +161,7 @@ const subEvent = { agent: 'anymake-worker', system: [], messages: [], options: {
 for (const h of ctxHooks) await h(subEvent);
 if (subEvent.system.length === 0) ok('bootstrap NOT injected into an Anymake subagent context');
 else bad('bootstrap leaked into an Anymake subagent (anymake-worker) context');
+await bootCleanup?.();
 
 // 3c. the V1 fallback (OpenCode 1.18.29+ loads `server`) still works
 console.log('\n[3c] V1 fallback via server()');
@@ -288,9 +308,9 @@ console.log('\n[6c] model tiers bind through ctx.agent.transform; a user-set mod
   else bad('a model was bound with no tiers configured');
 }
 await cleanup?.();
-// No tiers configured in that run → two registrations: skills + context hook.
-if (st2.disposed === 2) ok('setup() cleanup disposes every registration it made');
-else bad(`cleanup disposed ${st2.disposed} registrations, expected 2 (skill transform + context hook)`);
+// Default run (no tiers, no bootstrap) → one registration: the skill transform.
+if (st2.disposed === 1) ok('setup() cleanup disposes every registration it made');
+else bad(`cleanup disposed ${st2.disposed} registrations, expected 1 (skill transform)`);
 fs.rmSync(tmpRoot, { recursive: true, force: true });
 
 // 6d. Install docs target the V2 config shape (`plugins`, not V1's `plugin`).

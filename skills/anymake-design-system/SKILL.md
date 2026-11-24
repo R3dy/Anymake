@@ -1,6 +1,8 @@
 ---
 name: anymake-design-system
 description: Use to hit Anymake's visual-quality bar for user-facing products — build the design system and the Phase 2 Prototype Sprint, and audit a UI against the prototype gate ("looks like it was built by a funded company, not a tutorial"). Triggers on "design system", "prototype sprint", "make it look polished", "UI/visual quality", "design tokens", "audit the UI", or Anymake Phase 2 Step 2.2. Applies to types whose manifest marks UX+Prototype active (saas, internal-tool, static-site); headless types skip it.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Design System — Visual Quality & Prototype

@@ -1,6 +1,8 @@
 ---
 name: anymake-iterate
 description: Use after launch to run the ongoing iteration loop — triage the parking lot, turn live metrics into the next epic, plan releases, and handle bug-fix cycles. Anymake's "Phase 6". Triggers on "what's next", "what should we build next", "iterate", "triage the parking lot", "plan the next release", "the metrics say…", "post-launch", "fix this bug and ship it", or "Continue [project]" when the project is already launched. Closes the loop back into the build engine for execution.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Iterate — Post-Launch Loop ("Phase 6")

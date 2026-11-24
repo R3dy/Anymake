@@ -1,6 +1,8 @@
 ---
 name: anymake-agile
 description: Use for any change to a project Anymake has already built — bug reports from manual testing ("the save button isn't working", "X is broken", "I found a bug") and feature or change requests ("add a feature", "change how X works", "remove Y", "now I want it to…", "feature request", "log an issue"). Runs the full agile pipeline instead of ad-hoc troubleshooting - first understands and confirms the exact issue, tracks it as a labeled GitHub issue, has a Solution Architect design a plan that respects the engineering-intent layer (gating any contradiction behind a superseding decision), has an independent Plan Reviewer approve it, and only then builds via anymake-build-loop — with full traceability so any change can be reverted. The single post-launch front door for changing the product.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Agile — From "This Button Isn't Working" to a Reviewed, Reverted-able Fix

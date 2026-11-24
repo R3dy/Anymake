@@ -6,6 +6,38 @@ change. Entries are newest first.
 
 ---
 
+## 2.1.0 — Skills load only when invoked (2026-11-24)
+
+Until now every Anymake skill was advertised to the model on every request (OpenCode lists each
+skill's name and description per step), and the plugin additionally pushed the whole hub skill
+into every primary-agent system prompt. That is a standing context cost in every OpenCode
+session, Anymake or not.
+
+### Behavior changes
+
+- **Every `skills/*/SKILL.md` now sets `metadata.opencode/autoinvoke: false`** (OpenCode V2's
+  documented switch). The skills stay registered and loadable by id but are no longer in the
+  model's skill list. The plugin carries the flag into its `ctx.skill.transform` registration.
+- **The always-on bootstrap is now opt-in** (plugin option `"bootstrap": true`). By default the
+  plugin adds nothing to any prompt.
+- **Usage change: start with `@anymake`.** Plain trigger phrases ("Start a new project") no longer
+  load Anymake on their own; `@anymake Start a new project` does. README, INSTALL.md, llms.txt and
+  AGENTS.md are updated.
+- **Each registered skill body now says where the plugin is installed** — the job the bootstrap
+  used to do — plus a direct-read fallback (`skills/<id>/SKILL.md`) in case the host refuses to
+  load a hidden companion skill by id. OpenCode's docs say hidden skills "can still be loaded
+  explicitly by ID" but don't say whether that includes the model's own `skill` tool calls.
+- OpenCode 1.x (the `server()` fallback) is unchanged: V1 has no autoinvoke switch, so its
+  bootstrap stays always-on.
+
+### Harness
+
+[1] fails any skill without the `autoinvoke: false` frontmatter; [2] asserts every registered
+skill has `autoinvoke: false` and an install-path note; [3] asserts no `context` hook by default
+and the full bootstrap behavior with `bootstrap: true`.
+
+---
+
 ## 2.0.0 — OpenCode 2.4.1 (V2 plugin API) support (2026-11-24)
 
 OpenCode V2 does not run V1 plugin implementations at all: the `config` hook and the

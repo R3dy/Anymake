@@ -48,22 +48,31 @@ Or do it yourself:
 opencode plugin add github:R3dy/Anymake
 ```
 
-Restart OpenCode. The plugin loads automatically — no manual activation needed.
+Restart OpenCode.
 
-**Verify** by asking: `"Start a new project"` — the assistant should respond in Anymake mode.
+**Verify** by asking: `"@anymake Start a new project"` — the assistant should respond in Anymake mode.
 
 For pinning a version, model tiers, the clone-based fallback, OpenCode 1.x, and troubleshooting, see [`.opencode/INSTALL.md`](.opencode/INSTALL.md).
 
 ## Quick Start
 
+Anymake's skills load **only when you invoke them** — nothing is added to the
+model's context until you do. Start every Anymake conversation by mentioning
+the skill as `@anymake`; it loads its companion skills (`anymake-dispatch`,
+`anymake-build-loop`, …) itself as it needs them.
+
 | Say this | What happens |
 |----------|-------------|
-| `"Start a new project"` | Creates a new project workspace, begins Phase 0 |
-| `"Continue [project name]"` | Reads `PHASE_STATE.md`, resumes the last step |
-| `"I have a product idea: [description]"` | Triggers Anymake, starts Phase 0 |
-| `"Build an app"` | Triggers Anymake |
-| `"Start a new project --yolo"` | **Autonomous mode** — runs all phases without stopping at gates |
-| `"Continue [project name] --yolo"` | **Autonomous mode** — resumes and continues without gate pauses |
+| `"@anymake Start a new project"` | Creates a new project workspace, begins Phase 0 |
+| `"@anymake Continue [project name]"` | Reads `PHASE_STATE.md`, resumes the last step |
+| `"@anymake I have a product idea: [description]"` | Starts Phase 0 from your idea |
+| `"@anymake Start a new project --yolo"` | **Autonomous mode** — runs all phases without stopping at gates |
+| `"@anymake Continue [project name] --yolo"` | **Autonomous mode** — resumes and continues without gate pauses |
+
+Once `@anymake` is loaded in a conversation you don't need to repeat it. Prefer
+Anymake always on, without the `@`? Set the plugin option `"bootstrap": true`
+(see [`.opencode/INSTALL.md`](.opencode/INSTALL.md#plugin-options)) — it puts the hub skill in every request,
+at the cost of that context.
 
 Every project lives in `PROJECTS/[name]/` and is **gitignored** — your product code stays in your project, the build system stays here.
 

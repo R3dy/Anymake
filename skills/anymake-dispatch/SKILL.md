@@ -1,6 +1,8 @@
 ---
 name: anymake-dispatch
 description: Use to dispatch a sub-agent (Planner, Worker, Validator, Experience Runner, Product Owner Proxy, Cartographer, Solution Architect, or Plan Reviewer) through a hardened, host-agnostic seam. Triggers on "dispatch the planner", "spawn the worker", "re-dispatch with retry context", "invoke the validator", "call a sub-agent", "dispatch an agent", or whenever any Anymake agent needs to spawn another. Wraps the host's sub-agent primitive with pre-dispatch prompt assembly (WRITE THE FILE FIRST + pre-established facts), mandatory post-dispatch deliverable verification, structured RETRY CONTEXT, and a dispatch log line to BOARD.md. The single chokepoint for all sub-agent dispatch — never call the host's Agent/Task tool directly.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Dispatch — Hardened, Host-Agnostic Sub-Agent Dispatch

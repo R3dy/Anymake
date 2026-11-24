@@ -1,6 +1,8 @@
 ---
 name: anymake-security-review
 description: Use to run Anymake's security review — the per-PR checklist the Validator applies, the full Phase 4 Step 4.5 security pass before staging, and the pre-launch security gate. Triggers on "security review", "audit for vulnerabilities", "is this secure", "pen-test checklist", "check auth/authorization", "secrets scan", or Anymake Phase 4 Step 4.5. Returns PASS / FAIL / ESCALATE; security failures always escalate to a human regardless of autonomous mode. Defensive use only.
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # Anymake Security Review
