@@ -6,6 +6,44 @@ change. Entries are newest first.
 
 ---
 
+## 2.0.0 — OpenCode 2.4.1 (V2 plugin API) support (2026-11-24)
+
+OpenCode V2 does not run V1 plugin implementations at all: the `config` hook and the
+`experimental.chat.messages.transform` hook this plugin was built on no longer exist, so on
+OpenCode 2.x the plugin loaded and silently registered nothing — no skills, no subagents, no
+bootstrap. This release ports it to the V2 API, checked against the `@opencode/plugin` 2.4.1
+type definitions and plugin loader.
+
+### Behavior changes
+
+- **Plugin shape.** The module's default export is now a V2 plugin definition
+  (`{ id: "anymake", setup(ctx) }` — what `Plugin.define` returns). `package.json` gained an
+  `exports` map, which is how V2 resolves a package plugin's server entry.
+- **Skills** are registered with `ctx.skill.transform` instead of `config.skills.paths`.
+- **Bootstrap** moves from the first user message into the system prompt via
+  `ctx.session.hook("context")`, and is no longer injected into Anymake's own subagents.
+- **Subagents are now generated files.** V2's agent editor can update or remove agents but
+  cannot add one, so the plugin writes each `AGENTS/*.md` subagent to
+  `~/.config/opencode/agents/anymake-*.md` with an `<!-- anymake:generated -->` ownership marker,
+  rewrites only on change, removes stale ones, and never touches a file without the marker.
+  Opt out with the plugin option `"syncAgents": false`.
+- **Model tiers** bind through `ctx.agent.transform` as V2 model refs (`provider/model#variant`).
+  New: a `modelTiers` plugin option, which wins over `ANYMAKE_MODEL_TIER1/2/3`. A per-agent
+  model in the user's config still wins over both — the V2 key is `agents`, not `agent`.
+- **Install** is now `opencode plugin add github:R3dy/Anymake`; `.opencode/INSTALL.md` is
+  rewritten so a user can hand the URL to their agent and have it install end to end.
+- **V1 kept working:** the old hooks live on under `server()`, which OpenCode 1.18.29+ loads.
+
+### Harness
+
+Checks [2], [3], [6b] and [6c] now drive the plugin through a mock V2 `ctx`, and assert the
+thing that broke: the default export must be a V2 definition with no top-level V1 hooks, and
+`package.json` `exports` must resolve to it. New [3c] covers the V1 fallback, [6d] fails any
+install doc still showing the V1 `"plugin"` key outside its labelled legacy section, and [14]
+requires the `opencode plugin update` refresh step in RELEASE.md.
+
+---
+
 ## Unreleased — The eval harness (2026-09-13)
 
 Builds `docs/design/eval-harness.md`. `npm run verify` checks that the markdown is

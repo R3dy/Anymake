@@ -66,7 +66,10 @@ export function buildArena({ cellDir, sha, scenario, fixture, modelConfig, ablat
   writeJSON(path.join(ocDir, 'opencode.json'), {
     $schema: 'https://opencode.ai/config.json',
     ...(modelConfig?.opencode || {}),
-    ...(systemOff ? {} : { plugin: [path.join(dirs.anymake, '.opencode', 'plugins', 'anymake.js')] }),
+    // OpenCode V2 (2.4.1+): the key is `plugins`, and a configured local plugin must be a
+    // DIRECTORY (a single file is skipped) — the checkout root, whose package.json
+    // `exports` map resolves the server entry.
+    ...(systemOff ? {} : { plugins: [dirs.anymake] }),
   });
   seedCredentials(dirs.home);
 

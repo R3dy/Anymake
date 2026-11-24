@@ -223,4 +223,4 @@ owns; companions never re-run the phase machine.
 
 ---
 
-*Anymake skill suite — v3.1*
+*Anymake skill suite — v3.2*

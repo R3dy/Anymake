@@ -8,11 +8,11 @@ Anymake is an AI skill for [OpenCode.ai](https://opencode.ai) that guides produc
 
 Anymake is markdown-as-source-of-truth (ADR-008): no build step, no runtime, no service. The instruction files *are* the system, which is why they have a regression suite (`npm run verify`) that runs in CI on every push.
 
-**Install:**
-```json
-{ "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git"] }
+**Install (OpenCode 2.4.1+):**
+```bash
+opencode plugin add github:R3dy/Anymake
 ```
-Add to `~/.config/opencode/opencode.json`, then restart OpenCode.
+Then restart OpenCode. Agent-followable instructions (fallbacks, model tiers, OpenCode 1.x): https://raw.githubusercontent.com/R3dy/Anymake/main/.opencode/INSTALL.md
 
 **Trigger:** Say "Start a new project" or "Continue [project name]".
 

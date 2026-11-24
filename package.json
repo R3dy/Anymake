@@ -1,8 +1,16 @@
 {
   "name": "anymake",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "type": "module",
   "main": ".opencode/plugins/anymake.js",
+  "exports": {
+    ".": "./.opencode/plugins/anymake.js",
+    "./server": "./.opencode/plugins/anymake.js",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "opencode": ">=2.4.1"
+  },
   "description": "Anymake — Agentic build system. Takes any software idea (SaaS, CLI, library, API, internal tool, static site, or hobby project) from raw concept to a finished, shipped result.",
   "scripts": {
     "verify": "node .opencode/verify-plugin.mjs",

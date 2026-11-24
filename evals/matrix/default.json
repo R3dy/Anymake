@@ -1,6 +1,6 @@
 {
   "id": "default",
-  "note": "Model configs use Anymake's own mechanism rather than inventing one — per-agent agent.<name>.model in the arena's opencode.json, plus ANYMAKE_MODEL_TIER1/2/3 in the cell env (AGENTS/arbiter.md → Model Tier Policy). Fill the <...> placeholders with the model ids you actually run; the harness reads the served model back from telemetry and records what was really used.",
+  "note": "Model configs use Anymake's own mechanism rather than inventing one — per-agent agents.<name>.model in the arena's opencode.json, plus ANYMAKE_MODEL_TIER1/2/3 in the cell env (AGENTS/arbiter.md → Model Tier Policy). Fill the <...> placeholders with the model ids you actually run; the harness reads the served model back from telemetry and records what was really used.",
   "configs": [
     {
       "id": "system-default",
