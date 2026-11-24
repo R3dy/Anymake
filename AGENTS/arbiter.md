@@ -56,17 +56,19 @@ Every spawned agent runs at one of three importance tiers, so a project can use 
 | 2 | Capable | Cartographer | `cartographer.md` | Maps code to intent; needs real comprehension of the codebase, not just pattern-matching. |
 | 3 | Economy | Worker | `worker.md` | Highest-volume role (every story), and the narrowest-scoped — it executes a detailed brief and escalates rather than guessing, which is what makes a cheaper model safe here. |
 
-**How it's wired (OpenCode only).** The plugin (`.opencode/plugins/anymake.js`) reads every `AGENTS/*.md` file's frontmatter at config time. Any file with `mode: subagent` is registered as a named OpenCode agent (`prompt`, `description`, `mode` all sourced from the file) — this part can't live in your `opencode.json`, because it mirrors repo content the plugin regenerates on every load, not something worth hand-copying and keeping in sync yourself.
+**How it's wired (OpenCode only).** The plugin (`.opencode/plugins/anymake.js`, OpenCode V2 plugin API, 2.4.1+) reads every `AGENTS/*.md` file's frontmatter at startup. Any file with `mode: subagent` becomes a named OpenCode subagent (`description`, `mode`, and the body as its system prompt, all sourced from the file). OpenCode V2 plugins cannot create agents directly, so the plugin writes each one as a generated, marker-tagged `~/.config/opencode/agents/<name>.md` and refreshes it whenever the source changes — never hand-copy or edit those files; edit `AGENTS/*.md`. The tier itself is bound at runtime through the V2 agent transform, so changing a tier model never rewrites a file.
 
-**Setting the three tier models — two ways, in priority order:**
+**Setting the three tier models — three ways, any one is enough:**
 
-1. **Per-agent, in your own `opencode.json`** (schema-safe, recommended if you want per-agent control): set just the field you want to override —
+1. **Per-agent, in your own `opencode.json`** (V2 key `agents`): set just the field you want to override —
    ```json
-   { "agent": { "anymake-worker": { "model": "anthropic/claude-haiku-4-5" } } }
+   { "agents": { "anymake-worker": { "model": "anthropic/claude-haiku-4-5" } } }
    ```
-   The plugin merges this in field-by-field — your `model` wins, `mode`/`prompt`/`description` still come from the plugin, so you never have to redeclare the whole agent. (A bare custom top-level key like `"anymake": {...}` was deliberately avoided here — OpenCode's config schema is strict enough that an unrecognized key can throw `ConfigInvalidError`, and in some reported cases has silently discarded the entire config file. `agent.<name>.model` is a real, schema-recognized field, so this path can't break your config.)
+   Only `model` is needed — description, mode and prompt still come from the plugin. A model set here always wins over any tier setting. (On OpenCode 1.x the key is `agent`, and the plugin's V1 fallback merges it field-by-field the same way.) Never invent a bare top-level key like `"anymake": {...}` — OpenCode's config schema is strict, and an unrecognized key can reject the whole config file.
 
-2. **Three environment variables** (zero JSON editing, applies to every agent in a tier at once):
+2. **Plugin options**, when the plugin is listed in `opencode.json` in object form — `{ "package": "<path or spec>", "options": { "modelTiers": { "tier1": "...", "tier2": "...", "tier3": "..." } } }`. These win over the environment variables.
+
+3. **Three environment variables** (zero JSON editing, applies to every agent in a tier at once):
 
    | Env var | Tier | Set it to |
    |---------|------|-----------|
@@ -74,9 +76,9 @@ Every spawned agent runs at one of three importance tiers, so a project can use 
    | `ANYMAKE_MODEL_TIER2` | Capable | A strong-but-cheaper model |
    | `ANYMAKE_MODEL_TIER3` | Economy | Your fastest/cheapest model |
 
-   Set before launching OpenCode (shell profile, or wherever you already set `ANTHROPIC_API_KEY`).
+   Set before launching OpenCode (shell profile, or wherever you already set `ANTHROPIC_API_KEY`). `provider/model#variant` is accepted.
 
-A per-agent `opencode.json` override always wins over the tier env var for that agent. **Both are optional** — an agent with neither falls back to OpenCode's default subagent behavior (the primary session's model), so nothing breaks if you configure none of this.
+Precedence, highest first: per-agent `agents.<name>.model` → plugin `modelTiers` option → `ANYMAKE_MODEL_TIER<N>`. **All are optional** — an agent with none falls back to OpenCode's default subagent behavior (the primary session's model), so nothing breaks if you configure none of this.
 
 **Known caveat.** This depends on your OpenCode version supporting dispatch of a custom `mode: subagent` agent by name from another agent's tool calls — this has been unreliable across some OpenCode releases. Every spawn instruction in this system (`AGENTS/orchestrator.md`, `PHASE_GUIDES/*.md`) names the registered agent first and documents the inline-instructions fallback next to it. If named dispatch silently falls back, every agent just runs on your primary session's model — the system still works, you just lose the cost/quality split. Verify once after setup: spawn a Tier 3 story and confirm (e.g. by asking the Worker sub-agent which model it is) that it actually landed on your `ANYMAKE_MODEL_TIER3` choice.
 

@@ -1,10 +1,11 @@
 # Releasing Anymake to Running Sessions
 
-Anymake is distributed as an OpenCode git plugin (`anymake@git+https://github.com/R3dy/Anymake.git`).
-OpenCode caches the cloned plugin in `~/.cache/opencode/packages/<encoded-spec>/node_modules/anymake/`
-and serves subsequent sessions from that cache **without re-fetching**. A merge to `main` does NOT
-automatically reach running sessions — the cache must be invalidated so OpenCode re-clones current
-`origin/main` on the next restart.
+Anymake is distributed as an OpenCode plugin, installed on OpenCode 2.4.1+ with
+`opencode plugin add github:R3dy/Anymake` (or, legacy 1.x, the
+`anymake@git+https://github.com/R3dy/Anymake.git` spec). OpenCode installs the plugin into its
+package cache (`.../node_modules/anymake/`) and serves later sessions from that copy. A merge to
+`main` does NOT automatically reach running sessions — the installed copy has to be refreshed and
+OpenCode restarted.
 
 This document is the repeatable "how to get this into running sessions" step. Every release
 (including the merge of an issue's PR) should end with this procedure.
@@ -36,8 +37,19 @@ This document is the repeatable "how to get this into running sessions" step. Ev
    > `node .opencode/verify-plugin.mjs` still works and is identical — `npm run verify` is
    > just the documented entry point.
 
-2. **Move the stale cache aside** (non-destructive — creates a rollback point):
+2. **Refresh the installed copy.** On OpenCode 2.4.1+:
    ```bash
+   opencode plugin update anymake
+   ```
+   (A cloned install at `~/.config/opencode/plugins/anymake` is refreshed with
+   `git -C ~/.config/opencode/plugins/anymake pull` instead.)
+
+   **If `plugin update` does not pick up the new HEAD** (or on OpenCode 1.x), move the stale
+   cache aside — non-destructive, it creates a rollback point. Locate it first; the directory
+   name encodes the install spec:
+   ```bash
+   find ~/.cache/opencode -maxdepth 6 -type d -path '*node_modules/anymake' 2>/dev/null
+   # 1.x example — the cached spec directory:
    mv ~/.cache/opencode/packages/anymake@git+https:/github.com/R3dy/Anymake.git/ \
       ~/.cache/opencode/packages/anymake@git+https:/github.com/R3dy/Anymake.git.bak-$(date +%s)
    ```
@@ -45,15 +57,18 @@ This document is the repeatable "how to get this into running sessions" step. Ev
    variant is the default so a bad HEAD can be restored with a single `mv` back. If `.bak-*`
    dirs accumulate, purge them manually after a release is confirmed good.
 
-3. **Restart OpenCode.** On restart, OpenCode re-clones `origin/main` HEAD into the cache.
-   New sessions load the refreshed plugin.
+3. **Restart OpenCode** (`opencode service restart` if it runs as a service). New sessions load
+   the refreshed plugin, which also refreshes the generated `~/.config/opencode/agents/anymake-*.md`
+   files from `AGENTS/*.md`.
 
-4. **Confirm the cache is refreshed.** In a fresh session (or from a shell):
+4. **Confirm the refresh.** From a shell:
    ```bash
-   ls ~/.cache/opencode/packages/anymake@git+https:/github.com/R3dy/Anymake.git/node_modules/anymake/dashboard/kanban.html
+   opencode plugin check
+   find ~/.cache/opencode -maxdepth 7 -path '*node_modules/anymake/dashboard/kanban.html' 2>/dev/null
    ```
-   The file must exist. If it does not, the re-clone did not pick up the latest `main` — re-run
-   step 1 and confirm `origin/main` actually has the work (`git ls-tree origin/main -- dashboard/`).
+   The check must be clean and the file must exist. If it does not, the refresh did not pick up
+   the latest `main` — re-run step 1 and confirm `origin/main` actually has the work
+   (`git ls-tree origin/main -- dashboard/`).
 
 ---
 
@@ -76,11 +91,12 @@ after a cache invalidation + restart.
 
 ## Optional: pinning a ref
 
-The default spec (`anymake@git+https://github.com/R3dy/Anymake.git`) resolves to the default
-branch HEAD **at clone time only**. For reproducibility, pin to a commit SHA or tag:
+The default spec (`github:R3dy/Anymake`) resolves to the default branch HEAD **at install time
+only**. For reproducibility, pin to a commit SHA or tag:
+```bash
+opencode plugin add 'github:R3dy/Anymake#<sha-or-tag>'
 ```
-"anymake@git+https://github.com/R3dy/Anymake.git#<sha-or-tag>"
-```
+(1.x: `"anymake@git+https://github.com/R3dy/Anymake.git#<sha-or-tag>"` in the `plugin` array.)
 Changing the spec forces OpenCode to re-resolve on the next restart, but the **old cache entry
 lingers until moved/wiped** — pinning does not replace the cache-invalidation procedure above.
 Run the procedure (move-aside + restart) after changing the spec to guarantee the pinned ref is
@@ -117,6 +133,5 @@ mv ~/.cache/opencode/packages/anymake@git+https:/github.com/R3dy/Anymake.git.bak
 ```
 Then restart OpenCode. The pre-release plugin is restored.
 
-**Fallback if no `.bak-*` is available:** re-pin the spec to the last-known-good SHA
-(`anymake@git+https://github.com/R3dy/Anymake.git#<last-good-sha>`) and run the cache-invalidation
-procedure (move-aside + restart).
+**Fallback if no `.bak-*` is available:** re-pin to the last-known-good SHA
+(`opencode plugin add 'github:R3dy/Anymake#<last-good-sha>'`) and restart OpenCode.

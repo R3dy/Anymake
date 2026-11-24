@@ -67,9 +67,13 @@ Dispatch via the `Agent` (or `Task`) tool:
   `subagent_type` field, depending on the host's API.
 - Map `DISPATCH.inputs` + the pre-dispatch prompt (§"Pre-dispatch prompt
   assembly" below) → the `message` (or `prompt`) field.
-- Named-subagent dispatch is preferred (the agent is registered in `config.agent`
-  by the plugin). Fall back to inline `instructions: [full contents of
-  AGENTS/<agent>.md]` only if the named sub-agent is unavailable in this host.
+- Named-subagent dispatch is preferred: the plugin registers every spawned
+  agent as an OpenCode subagent (`anymake-planner`, `anymake-worker`, …) — on
+  OpenCode 2.x as generated `~/.config/opencode/agents/anymake-*.md` files, on
+  1.x through `config.agent`. In OpenCode 2.x the host tool is the subagent
+  launcher (permission action `subagent`, formerly `task`). Fall back to inline
+  `instructions: [full contents of AGENTS/<agent>.md]` only if the named
+  sub-agent is unavailable in this host.
 
 **Host portability:** to add a new backend, add a new "Backend: <name>"
 section here describing how to map the `DISPATCH` request to that runtime's

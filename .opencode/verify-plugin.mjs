@@ -15,7 +15,8 @@ import fs from 'fs';
 import { execFileSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { AnymakePlugin } from './plugins/anymake.js';
+import os from 'os';
+import anymakePlugin from './plugins/anymake.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -56,32 +57,106 @@ for (const dir of dirs) {
   if (fm.name === dir && fm.description) ok(`${dir} → name+description valid (${fm.description.length} chars)`);
 }
 
-// 2. config hook registers the skills directory
-console.log('\n[2] plugin config() hook registers skills path');
-const plugin = await AnymakePlugin({ client: {}, directory: ROOT });
-const cfg = {};
-await plugin.config(cfg);
-if (cfg.skills?.paths?.includes(SKILLS_DIR)) ok(`skills.paths includes ${path.relative(ROOT, SKILLS_DIR)}/`);
-else bad(`skills.paths did not include the skills dir: ${JSON.stringify(cfg)}`);
+// 2. V2 plugin shape + skill registration (OpenCode 2.x, @opencode/plugin 2.4.1).
+//    V1 hook names (`config`, `experimental.chat.*`) do not run on V2 at all —
+//    a plugin still shaped that way loads, registers nothing, and fails
+//    silently. That is exactly how the 2.x upgrade broke this plugin, so the
+//    shape itself is asserted here, against a mock of the V2 `ctx`.
+console.log('\n[2] V2 plugin shape (Plugin.define) + package resolution + skill registration');
+if (anymakePlugin && typeof anymakePlugin.id === 'string' && anymakePlugin.id && typeof anymakePlugin.setup === 'function') {
+  ok(`default export is a V2 plugin definition (id '${anymakePlugin.id}', setup())`);
+} else bad('default export is not a V2 Plugin.define({ id, setup }) object');
+for (const v1 of ['config', 'event', 'experimental.chat.messages.transform', 'experimental.chat.system.transform']) {
+  if (v1 in anymakePlugin) bad(`default export carries V1 hook '${v1}' at top level — V2 ignores it; V1 hooks belong under server()`);
+}
+const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+{
+  // V2's host resolves a package plugin through `exports` ("./server" first,
+  // then "."). Without an exports map a git/npm install resolves no entry.
+  const target = pkg.exports?.['./server'] || pkg.exports?.['.'];
+  if (target && fs.existsSync(path.join(ROOT, target))) {
+    const viaExports = (await import(path.join(ROOT, target))).default;
+    if (viaExports === anymakePlugin) ok(`package.json exports → ${target} (the V2 server entry)`);
+    else bad(`package.json exports → ${target}, which is not the plugin module`);
+  } else bad('package.json has no exports["./server"] or exports["."] resolving to the plugin — V2 cannot load it');
+}
 
-// 3. transform hook injects the hub bootstrap into the first user message
-console.log('\n[3] plugin transform() hook injects hub bootstrap');
-const output = { messages: [{ info: { role: 'user' }, parts: [{ type: 'text', text: 'Start a new project' }] }] };
-await plugin['experimental.chat.messages.transform']({}, output);
-const injected = output.parts || output.messages[0].parts;
-const first = output.messages[0].parts[0];
-if (first?.text?.includes('EXTREMELY_IMPORTANT')) ok('bootstrap injected into first user message');
-else bad('bootstrap NOT injected');
-if (first?.text?.includes('You have the Anymake skill loaded')) ok('bootstrap contains hub skill body');
+// A minimal stand-in for the V2 plugin context: each domain records what the
+// plugin registers, and transforms run their callback against an editor.
+const makeEditor = (items) => ({
+  items,
+  list: () => [...items.values()],
+  get: (id) => items.get(id),
+  add: (x) => { items.set(x.id, x); },
+  update: (id, fn) => { const x = items.get(id); if (x) fn(x); },
+  remove: (id) => items.delete(id),
+  default: () => {},
+});
+const makeCtx = ({ options = {}, agents = new Map() } = {}) => {
+  const state = { skills: new Map(), agents, hooks: {}, reloads: 0, disposed: 0 };
+  const reg = () => ({ dispose: async () => { state.disposed++; } });
+  const ctx = {
+    options,
+    location: { directory: ROOT },
+    skill: { transform: async (cb) => { cb(makeEditor(state.skills)); return reg(); }, reload: async () => {} },
+    agent: { transform: async (cb) => { cb(makeEditor(state.agents)); return reg(); }, reload: async () => { state.reloads++; } },
+    session: { hook: async (name, cb) => { (state.hooks[name] ||= []).push(cb); return reg(); } },
+  };
+  return { ctx, state };
+};
+const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'anymake-verify-'));
+const agentsDir = path.join(tmpRoot, 'agents');
+
+const { ctx: ctx2, state: st2 } = makeCtx({ options: { agentsDir } });
+const cleanup = await anymakePlugin.setup(ctx2);
+if (st2.skills.size === dirs.length) ok(`ctx.skill.transform registered all ${dirs.length} skills`);
+else bad(`ctx.skill.transform registered ${st2.skills.size} skills, expected ${dirs.length}`);
+{
+  const hubSkill = st2.skills.get('anymake');
+  if (hubSkill && path.isAbsolute(hubSkill.path) && hubSkill.description && hubSkill.content && !hubSkill.content.startsWith('---')) {
+    ok('skill entries carry id/name/description, an absolute path, and frontmatter-stripped content');
+  } else bad(`skill entry malformed: ${JSON.stringify(hubSkill && { ...hubSkill, content: hubSkill.content?.slice(0, 40) })}`);
+}
+
+// 3. context hook injects the hub bootstrap into the system prompt
+console.log('\n[3] session "context" hook injects hub bootstrap');
+const ctxHooks = st2.hooks.context || [];
+if (ctxHooks.length === 1) ok('exactly one session "context" hook registered');
+else bad(`expected 1 session "context" hook, got ${ctxHooks.length}`);
+const event = { agent: 'build', system: [{ type: 'text', text: 'base prompt' }], messages: [], options: {}, tools: {} };
+for (const h of ctxHooks) await h(event);
+const injectedPart = event.system.find((p) => p.text?.includes('EXTREMELY_IMPORTANT'));
+if (injectedPart?.type === 'text') ok('bootstrap pushed into event.system as a text part');
+else bad('bootstrap NOT injected into event.system');
+if (injectedPart?.text?.includes('You have the Anymake skill loaded')) ok('bootstrap contains hub skill body');
 else bad('bootstrap missing hub skill body');
-if (first?.text?.includes('Companion Skills')) ok('bootstrap carries the new Companion Skills section');
+if (injectedPart?.text?.includes('Companion Skills')) ok('bootstrap carries the Companion Skills section');
 else bad('bootstrap missing Companion Skills section (hub edit not picked up)');
 
-// 3b. double-injection guard
-const before = output.messages[0].parts.length;
-await plugin['experimental.chat.messages.transform']({}, output);
-if (output.messages[0].parts.length === before) ok('double-injection guard holds');
+// 3b. double-injection guard + subagents keep their own prompt
+const before = event.system.length;
+for (const h of ctxHooks) await h(event);
+if (event.system.length === before) ok('double-injection guard holds');
 else bad('bootstrap injected twice');
+const subEvent = { agent: 'anymake-worker', system: [], messages: [], options: {}, tools: {} };
+for (const h of ctxHooks) await h(subEvent);
+if (subEvent.system.length === 0) ok('bootstrap NOT injected into an Anymake subagent context');
+else bad('bootstrap leaked into an Anymake subagent (anymake-worker) context');
+
+// 3c. the V1 fallback (OpenCode 1.18.29+ loads `server`) still works
+console.log('\n[3c] V1 fallback via server()');
+if (typeof anymakePlugin.server === 'function') {
+  const v1 = await anymakePlugin.server({ client: {}, directory: ROOT });
+  const v1cfg = {};
+  await v1.config(v1cfg);
+  if (v1cfg.skills?.paths?.includes(SKILLS_DIR)) ok('V1 config() still registers skills.paths');
+  else bad('V1 config() did not register skills.paths');
+  const v1out = { messages: [{ info: { role: 'user' }, parts: [{ type: 'text', text: 'Start a new project' }] }] };
+  await v1['experimental.chat.messages.transform']({}, v1out);
+  await v1['experimental.chat.messages.transform']({}, v1out);
+  if (v1out.messages[0].parts.length === 2 && v1out.messages[0].parts[0].text.includes('EXTREMELY_IMPORTANT')) ok('V1 transform injects bootstrap exactly once');
+  else bad('V1 transform bootstrap injection broken');
+} else bad('server() V1 fallback missing');
 
 // 4. every companion the hub names actually exists as a discoverable skill
 console.log('\n[4] hub references resolve to real skills');
@@ -133,37 +208,100 @@ for (const file of agentFiles) {
   subagentCount++;
 }
 
-console.log('\n[6b] plugin registers agents into config.agent, tier env vars bind models');
-process.env.ANYMAKE_MODEL_TIER1 = 'anthropic/claude-opus-5';
-process.env.ANYMAKE_MODEL_TIER2 = 'anthropic/claude-sonnet-5';
-process.env.ANYMAKE_MODEL_TIER3 = 'anthropic/claude-haiku-4-5';
-const agentPlugin = await AnymakePlugin({ client: {}, directory: ROOT });
-const agentCfg = {};
-await agentPlugin.config(agentCfg);
-const registered = Object.keys(agentCfg.agent || {});
-if (registered.length === subagentCount) ok(`config.agent has all ${subagentCount} discovered subagents`);
-else bad(`config.agent has ${registered.length} entries, expected ${subagentCount}: ${JSON.stringify(registered)}`);
-for (const name of registered) {
-  const entry = agentCfg.agent[name];
-  if (entry.mode !== 'subagent') bad(`${name}: mode is '${entry.mode}'`);
-  if (!entry.prompt || entry.prompt.trimStart().startsWith('---') || entry.prompt.includes('\nmode: subagent')) bad(`${name}: prompt missing or frontmatter not stripped`);
-  if (!entry.model) bad(`${name}: no model bound even though tier env vars are set`);
+console.log('\n[6b] agent files generated for every subagent (V2 cannot add agents via transform)');
+{
+  const files = fs.existsSync(agentsDir) ? fs.readdirSync(agentsDir).filter((f) => f.endsWith('.md')) : [];
+  if (files.length === subagentCount) ok(`${subagentCount} agent files written to the agents dir`);
+  else bad(`${files.length} agent files written, expected ${subagentCount}: ${JSON.stringify(files)}`);
+  if (st2.reloads === 1) ok('ctx.agent.reload() called after writing new agent files');
+  else bad(`ctx.agent.reload() called ${st2.reloads} times, expected 1`);
+  for (const f of files) {
+    const parsed = parseFrontmatter(fs.readFileSync(path.join(agentsDir, f), 'utf8'));
+    const name = f.replace(/\.md$/, '');
+    if (!parsed || parsed.fm.mode !== 'subagent' || !parsed.fm.description) { bad(`${f}: missing V2 frontmatter (mode: subagent, description)`); continue; }
+    if ('tier' in parsed.fm || 'name' in parsed.fm || 'prompt' in parsed.fm) bad(`${f}: carries non-V2 agent fields (tier/name/prompt)`);
+    if (!parsed.body.includes('anymake:generated') || parsed.body.includes('\nmode: subagent')) bad(`${f}: ownership marker missing or source frontmatter not stripped`);
+    if (!seenAgentNames.has(name)) bad(`${f}: no matching AGENTS/*.md subagent`);
+  }
+  // Re-running setup with nothing changed must not rewrite or reload.
+  const { ctx: again, state: stAgain } = makeCtx({ options: { agentsDir } });
+  await anymakePlugin.setup(again);
+  if (stAgain.reloads === 0) ok('unchanged agent files are not rewritten (no reload on a no-op setup)');
+  else bad('setup rewrote unchanged agent files');
+  // A user-owned file with a colliding name is never overwritten; a stale
+  // generated file for a deleted agent is removed.
+  const userFile = path.join(agentsDir, 'anymake-worker.md');
+  fs.writeFileSync(userFile, '---\nmode: subagent\ndescription: mine\n---\nhand-written\n');
+  const staleFile = path.join(agentsDir, 'anymake-retired.md');
+  fs.writeFileSync(staleFile, '---\nmode: subagent\n---\n<!-- anymake:generated from AGENTS/retired.md -->\n');
+  const { ctx: third } = makeCtx({ options: { agentsDir } });
+  await anymakePlugin.setup(third);
+  if (fs.readFileSync(userFile, 'utf8').includes('hand-written')) ok('a user-owned agent file is never overwritten');
+  else bad('plugin overwrote a user-owned agent file');
+  if (!fs.existsSync(staleFile)) ok('stale generated agent file removed');
+  else bad('stale generated agent file was not removed');
+  // syncAgents: false writes nothing.
+  const optOutDir = path.join(tmpRoot, 'opt-out');
+  const { ctx: optOut } = makeCtx({ options: { agentsDir: optOutDir, syncAgents: false } });
+  await anymakePlugin.setup(optOut);
+  if (!fs.existsSync(optOutDir)) ok('syncAgents: false writes no agent files');
+  else bad('syncAgents: false still wrote agent files');
 }
-if (agentCfg.agent?.['anymake-worker']?.model === 'anthropic/claude-haiku-4-5') ok('anymake-worker (tier 3) bound to ANYMAKE_MODEL_TIER3');
-else bad(`anymake-worker model mismatch: ${JSON.stringify(agentCfg.agent?.['anymake-worker'])}`);
 
-console.log('\n[6c] a user opencode.json override wins per-field, without redeclaring the whole agent');
-const overrideCfg = { agent: { 'anymake-worker': { model: 'custom/override-model' } } };
-await agentPlugin.config(overrideCfg);
-const overridden = overrideCfg.agent['anymake-worker'];
-if (overridden.model === 'custom/override-model') ok('user-supplied model wins over the tier-resolved default');
-else bad(`user override did not win: ${JSON.stringify(overridden)}`);
-if (overridden.mode === 'subagent' && overridden.prompt) ok('plugin still supplied mode + prompt — user did not have to redeclare them');
-else bad(`plugin fields missing after merge: ${JSON.stringify(overridden)}`);
+console.log('\n[6c] model tiers bind through ctx.agent.transform; a user-set model wins');
+{
+  const agentMap = () => new Map([...seenAgentNames].map((n) => [n, { id: n, name: n, mode: 'subagent' }]));
+  process.env.ANYMAKE_MODEL_TIER1 = 'anthropic/claude-opus-5';
+  process.env.ANYMAKE_MODEL_TIER2 = 'anthropic/claude-sonnet-5';
+  process.env.ANYMAKE_MODEL_TIER3 = 'anthropic/claude-haiku-4-5';
+  const agents = agentMap();
+  agents.get('anymake-validator').model = { providerID: 'custom', id: 'override-model' };
+  const { ctx: tierCtx } = makeCtx({ options: { syncAgents: false }, agents });
+  await anymakePlugin.setup(tierCtx);
+  const worker = agents.get('anymake-worker').model;
+  if (worker?.providerID === 'anthropic' && worker?.id === 'claude-haiku-4-5') ok('anymake-worker (tier 3) bound to ANYMAKE_MODEL_TIER3 as a V2 Model.Ref');
+  else bad(`anymake-worker model mismatch: ${JSON.stringify(worker)}`);
+  const unbound = [...agents.values()].filter((a) => !a.model).map((a) => a.id);
+  if (!unbound.length) ok('every subagent bound to a model when all tier env vars are set');
+  else bad(`subagents left without a model: ${unbound.join(', ')}`);
+  if (agents.get('anymake-validator').model.id === 'override-model') ok('a model from the user\'s own agents config wins over the tier');
+  else bad('tier binding overwrote a user-set model');
+  delete process.env.ANYMAKE_MODEL_TIER1;
+  delete process.env.ANYMAKE_MODEL_TIER2;
+  delete process.env.ANYMAKE_MODEL_TIER3;
 
-delete process.env.ANYMAKE_MODEL_TIER1;
-delete process.env.ANYMAKE_MODEL_TIER2;
-delete process.env.ANYMAKE_MODEL_TIER3;
+  // Plugin options beat env vars; "#variant" parses into Model.Ref.variant.
+  process.env.ANYMAKE_MODEL_TIER3 = 'anthropic/should-lose';
+  const optAgents = agentMap();
+  const { ctx: optCtx } = makeCtx({ options: { syncAgents: false, modelTiers: { tier3: 'openrouter/anthropic/claude-haiku#fast' } }, agents: optAgents });
+  await anymakePlugin.setup(optCtx);
+  const m = optAgents.get('anymake-worker').model;
+  if (m?.providerID === 'openrouter' && m?.id === 'anthropic/claude-haiku' && m?.variant === 'fast') ok('plugin option modelTiers wins over env, provider/model#variant parsed');
+  else bad(`modelTiers option not applied correctly: ${JSON.stringify(m)}`);
+  delete process.env.ANYMAKE_MODEL_TIER3;
+
+  // No tiers configured → no transform touches any agent.
+  const bare = agentMap();
+  const { ctx: bareCtx } = makeCtx({ options: { syncAgents: false }, agents: bare });
+  await anymakePlugin.setup(bareCtx);
+  if ([...bare.values()].every((a) => !a.model)) ok('no tiers configured → agents fall back to the host default model');
+  else bad('a model was bound with no tiers configured');
+}
+await cleanup?.();
+// No tiers configured in that run → two registrations: skills + context hook.
+if (st2.disposed === 2) ok('setup() cleanup disposes every registration it made');
+else bad(`cleanup disposed ${st2.disposed} registrations, expected 2 (skill transform + context hook)`);
+fs.rmSync(tmpRoot, { recursive: true, force: true });
+
+// 6d. Install docs target the V2 config shape (`plugins`, not V1's `plugin`).
+console.log('\n[6d] install docs use the OpenCode V2 config shape');
+for (const rel of ['.opencode/INSTALL.md', 'README.md', 'llms.txt']) {
+  // The explicitly-labelled 1.x legacy section may show the V1 key; nothing else may.
+  const body = fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/## OpenCode 1\.x \(legacy\)[\s\S]*?(?=\n## )/, '');
+  if (/"plugin"\s*:/.test(body)) bad(`${rel}: still shows the V1 "plugin" key (V2 is "plugins")`);
+  else if (!body.includes('opencode plugin add')) bad(`${rel}: missing the \`opencode plugin add\` install command`);
+  else ok(`${rel}: V2 install instructions`);
+}
 
 // 7. anymake-dispatch skill exists, is referenced from the hub + orchestrator,
 //    and contains the canonical DISPATCH shape + WRITE THE FILE FIRST marker
@@ -704,6 +842,11 @@ console.log('\n[14] RELEASE.md (cache-invalidation procedure)');
       ok('RELEASE.md: documents cache-invalidation (move-aside or rm -rf against cache path)');
     } else {
       bad('RELEASE.md: missing cache-invalidation procedure');
+    }
+    if (body.includes('opencode plugin update')) {
+      ok('RELEASE.md: documents the OpenCode 2.x `opencode plugin update` refresh');
+    } else {
+      bad('RELEASE.md: missing the OpenCode 2.x `opencode plugin update` refresh step');
     }
     if (body.includes('verify-plugin.mjs')) {
       ok('RELEASE.md: documents pre-release verify-plugin.mjs green check');

@@ -314,7 +314,7 @@ The Orchestrator deliberately does **not** read the ADRs, PRD, or intent layer i
 
 All agents read `AGENTS/arbiter.md` before operating. It defines:
 
-**Model tier policy:** every spawned agent's importance tier (1 = frontier, 2 = capable, 3 = economy) is fixed in its own `AGENTS/*.md` frontmatter (`tier: 1|2|3`); the OpenCode plugin binds each tier to a model via `ANYMAKE_MODEL_TIER1/2/3`. Full table in `AGENTS/arbiter.md`.
+**Model tier policy:** every spawned agent's importance tier (1 = frontier, 2 = capable, 3 = economy) is fixed in its own `AGENTS/*.md` frontmatter (`tier: 1|2|3`); the OpenCode plugin binds each tier to a model via `ANYMAKE_MODEL_TIER1/2/3` (or its `modelTiers` option; a per-agent `agents.<name>.model` always wins). Full table in `AGENTS/arbiter.md`.
 
 **PR review policy:**
 | Condition | Normal mode | Autonomous mode |

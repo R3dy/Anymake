@@ -181,7 +181,7 @@ version string). Everything downstream reads a normalized
 `telemetry/usage.jsonl`, so a layout change is a one-file fix.
 
 **Model configuration** uses Anymake's own mechanism rather than inventing one —
-per-agent `agent.<name>.model` in the arena's `opencode.json`, plus
+per-agent `agents.<name>.model` in the arena's `opencode.json`, plus
 `ANYMAKE_MODEL_TIER1/2/3` in the cell env (`AGENTS/arbiter.md` → Model Tier
 Policy). A matrix entry is therefore just a partial `opencode.json` + env pair:
 

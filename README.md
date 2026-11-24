@@ -37,20 +37,22 @@ The system defeats two failure modes:
 
 ## Installation
 
-Add Anymake to the `plugin` array in your `opencode.json`:
+Requires **OpenCode 2.4.1+**. The quickest way is to tell your agent:
 
-**Global install** (`~/.config/opencode/opencode.json`):
-```json
-{
-  "plugin": ["anymake@git+https://github.com/R3dy/Anymake.git"]
-}
+> Install the Anymake OpenCode plugin by following
+> https://raw.githubusercontent.com/R3dy/Anymake/main/.opencode/INSTALL.md
+
+Or do it yourself:
+
+```bash
+opencode plugin add github:R3dy/Anymake
 ```
 
 Restart OpenCode. The plugin loads automatically — no manual activation needed.
 
-**Verify** by asking: `"Start a new project"` — Claude should respond in Anymake mode.
+**Verify** by asking: `"Start a new project"` — the assistant should respond in Anymake mode.
 
-For Windows troubleshooting or pinning a specific version, see [`.opencode/INSTALL.md`](.opencode/INSTALL.md).
+For pinning a version, model tiers, the clone-based fallback, OpenCode 1.x, and troubleshooting, see [`.opencode/INSTALL.md`](.opencode/INSTALL.md).
 
 ## Quick Start
 
@@ -174,7 +176,7 @@ You can see every story's status, the full run log, gate decisions, and any esca
 
 **Gate honesty:** when an autonomous gate approves while knowing it couldn't check something — visual polish, a subjective judgment — it must say so in the verdict as a `LIMITATION:` line, and that line is logged permanently to BOARD.md's Gate Decisions table. An approval that hides what it couldn't check is treated as malformed.
 
-**Model tiers (optional):** every spawned agent — Planner, Worker, Validator, Experience Runner, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Experience Runner, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Point each tier at a model either per-agent in your own `opencode.json` (`agent.<name>.model` — schema-safe, no shell setup) or with three environment variables (`ANYMAKE_MODEL_TIER1/2/3`, applies to a whole tier at once); unset either and that agent just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
+**Model tiers (optional):** every spawned agent — Planner, Worker, Validator, Experience Runner, and the post-launch agile agents too — carries a fixed importance tier (`tier: 1|2|3`) right in its own `AGENTS/*.md` frontmatter: Tier 1 for judgment calls (Product Owner Proxy, Plan Reviewer), Tier 2 for translation and review work that has to get the details right (Planner, Validator, Experience Runner, Solution Architect, Cartographer), Tier 3 for the highest-volume, narrowly-scoped role (Worker). Point each tier at a model with three environment variables (`ANYMAKE_MODEL_TIER1/2/3`, applies to a whole tier at once), per-agent in your own `opencode.json` (`agents.<name>.model`), or through the plugin's `modelTiers` option; unset either and that agent just runs on your primary session's model. See `AGENTS/arbiter.md` → **Model Tier Policy** for the full table and `.opencode/INSTALL.md` for setup.
 
 ## The Experience Harness
 

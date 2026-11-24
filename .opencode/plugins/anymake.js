@@ -1,15 +1,35 @@
 /**
- * Anymake plugin for OpenCode.ai
+ * Anymake plugin for OpenCode (V2 — verified against the @opencode/plugin 2.4.1
+ * type definitions; also loads on OpenCode V1 ≥ 1.18.29 via `server()`).
  *
- * Registers the skills/ directory with OpenCode so the anymake skill
- * is natively discovered. Also auto-injects the skill at session start so
- * the AI has full context without a manual /skill load, and registers each
- * spawned agent in AGENTS/ as a named OpenCode subagent bound to a model
- * tier — see "Model Tier Policy" in AGENTS/arbiter.md.
+ * What it does, in V2 terms:
+ *   1. Skills — registers every skills/<id>/SKILL.md with `ctx.skill.transform`
+ *      (V2 has no mutable `config.skills.paths`).
+ *   2. Agents — every AGENTS/*.md with `mode: subagent` becomes a named
+ *      OpenCode subagent. V2's AgentEditor can update/remove agents but cannot
+ *      ADD one, and agents only come from markdown files or the user's
+ *      `agents` config. So the plugin keeps generated, marker-tagged copies in
+ *      the global agents directory (~/.config/opencode/agents/anymake-*.md),
+ *      rewriting them only when they change and never touching a file it did
+ *      not write. Opt out with the plugin option `"syncAgents": false`.
+ *   3. Model tiers — each agent's `tier: 1|2|3` (AGENTS/*.md frontmatter) is
+ *      bound to a model through `ctx.agent.transform`, from the plugin options
+ *      (`modelTiers`) or ANYMAKE_MODEL_TIER1/2/3. A model the user set for that
+ *      agent in their own `agents` config always wins. See AGENTS/arbiter.md →
+ *      "Model Tier Policy".
+ *   4. Bootstrap — the hub skill is pushed into the system prompt with
+ *      `ctx.session.hook("context")` (the V2 replacement for the V1
+ *      `experimental.chat.*.transform` hooks), once per request, never into an
+ *      Anymake subagent's own context.
+ *
+ * Zero dependencies on purpose (ADR-008): `Plugin.define` from
+ * `@opencode/plugin` is an identity function (`define(plugin) { return plugin }`),
+ * so the default export below is the exact object it would return.
  */
 
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -20,9 +40,15 @@ const PLUGIN_ROOT = path.resolve(__dirname, '../..');
 const SKILLS_DIR = path.join(PLUGIN_ROOT, 'skills');
 const AGENTS_DIR = path.join(PLUGIN_ROOT, 'AGENTS');
 
-// Tier N is whatever model the user sets in this env var. Unset → the
-// registered subagent falls back to OpenCode's default (the primary
-// session's model) — nothing breaks if a user never configures tiers.
+const PLUGIN_ID = 'anymake';
+const BOOTSTRAP_MARKER = 'EXTREMELY_IMPORTANT';
+// First line of every agent file this plugin generates. Ownership test: a file
+// without it was written by someone else and is never overwritten or deleted.
+const GENERATED_MARKER = '<!-- anymake:generated';
+
+// Tier N is whatever model the user configures for it. Unset → the subagent
+// falls back to OpenCode's default (the primary session's model) — nothing
+// breaks if a user never configures tiers.
 const MODEL_TIER_ENV_VAR = {
   1: 'ANYMAKE_MODEL_TIER1',
   2: 'ANYMAKE_MODEL_TIER2',
@@ -30,12 +56,10 @@ const MODEL_TIER_ENV_VAR = {
 };
 
 const extractAndStripFrontmatter = (content) => {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const match = content.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) return { frontmatter: {}, content };
-  const frontmatterStr = match[1];
-  const body = match[2];
   const frontmatter = {};
-  for (const line of frontmatterStr.split('\n')) {
+  for (const line of match[1].split('\n')) {
     const colonIdx = line.indexOf(':');
     if (colonIdx > 0) {
       const key = line.slice(0, colonIdx).trim();
@@ -43,61 +67,140 @@ const extractAndStripFrontmatter = (content) => {
       frontmatter[key] = value;
     }
   }
-  return { frontmatter, content: body };
+  return { frontmatter, content: match[2] };
 };
 
-// Every AGENTS/*.md file with `mode: subagent` in its frontmatter becomes a
-// named OpenCode agent. The file's own `tier` field (1/2/3) — set once, in
-// the agent file itself — picks which ANYMAKE_MODEL_TIER<N> env var supplies
-// its model. arbiter.md has no frontmatter (it's read, never spawned) and is
-// skipped automatically. Deliberately NOT cached, unlike bootstrap content
-// below: this reads a handful of small files once at config time, and must
-// re-read process.env each time — caching it risks pinning a stale (or
-// missing) tier model if config() ever runs more than once in a process.
-const buildAgentRegistrations = () => {
-  const agents = {};
-  if (!fs.existsSync(AGENTS_DIR)) return agents;
+// ── Skills ────────────────────────────────────────────────────────────────
 
-  for (const file of fs.readdirSync(AGENTS_DIR)) {
-    if (!file.endsWith('.md')) continue;
-    const fullContent = fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8');
-    const { frontmatter, content } = extractAndStripFrontmatter(fullContent);
-    if (frontmatter.mode !== 'subagent' || !frontmatter.name) continue;
-
-    const entry = {
-      description: frontmatter.description || '',
-      mode: 'subagent',
-      prompt: content.trim(),
-    };
-
-    const envVar = MODEL_TIER_ENV_VAR[frontmatter.tier];
-    const tierModel = envVar && process.env[envVar];
-    if (tierModel) entry.model = tierModel;
-
-    agents[frontmatter.name] = entry;
+const buildSkillEntries = () => {
+  if (!fs.existsSync(SKILLS_DIR)) return [];
+  const skills = [];
+  for (const dirent of fs.readdirSync(SKILLS_DIR, { withFileTypes: true })) {
+    if (!dirent.isDirectory()) continue;
+    const skillPath = path.join(SKILLS_DIR, dirent.name, 'SKILL.md');
+    if (!fs.existsSync(skillPath)) continue;
+    const { frontmatter, content } = extractAndStripFrontmatter(fs.readFileSync(skillPath, 'utf8'));
+    // V2 derives a skill's ID from its directory name — mirror that exactly.
+    skills.push({
+      id: dirent.name,
+      name: frontmatter.name || dirent.name,
+      description: frontmatter.description || undefined,
+      path: skillPath,
+      content: content.trim(),
+    });
   }
+  return skills;
+};
 
+// ── Agents ────────────────────────────────────────────────────────────────
+
+// Deliberately not cached: reads a handful of small files once per setup and
+// must re-read tier configuration each time.
+const buildAgentDefinitions = () => {
+  const agents = [];
+  if (!fs.existsSync(AGENTS_DIR)) return agents;
+  for (const file of fs.readdirSync(AGENTS_DIR).sort()) {
+    if (!file.endsWith('.md')) continue;
+    const { frontmatter, content } = extractAndStripFrontmatter(
+      fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8'));
+    // arbiter.md / orchestrator.md have no frontmatter — read, never spawned.
+    if (frontmatter.mode !== 'subagent' || !frontmatter.name) continue;
+    agents.push({
+      name: frontmatter.name,
+      source: file,
+      description: frontmatter.description || '',
+      tier: frontmatter.tier,
+      prompt: content.trim(),
+    });
+  }
   return agents;
 };
 
-// Cache bootstrap content after first read — no repeated FS work per turn
-let _bootstrapCache = undefined;
+// V2 markdown agent: frontmatter carries the agent config fields, the body is
+// its `system` prompt. `model` is intentionally absent — tiers bind at runtime
+// (see bindTierModels) so changing a tier never requires rewriting files.
+const renderAgentFile = (agent) => `---
+description: ${JSON.stringify(agent.description)}
+mode: subagent
+---
+${GENERATED_MARKER} from AGENTS/${agent.source} by the Anymake OpenCode plugin. Edits are overwritten on the next load; change the source file instead. -->
 
-export const AnymakePlugin = async ({ client, directory }) => {
+Anymake supporting files are installed at \`${PLUGIN_ROOT}\`. Resolve every
+\`AGENTS/\`, \`TEMPLATES/\`, \`PHASE_GUIDES/\`, \`PROJECT_TYPES/\` and \`skills/\`
+path below against that directory.
 
-  const getBootstrapContent = () => {
-    if (_bootstrapCache !== undefined) return _bootstrapCache;
+${agent.prompt}
+`;
 
-    const skillPath = path.join(SKILLS_DIR, 'anymake', 'SKILL.md');
-    if (!fs.existsSync(skillPath)) {
-      _bootstrapCache = null;
-      return null;
+const defaultAgentsDir = () => {
+  const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+  return path.join(configHome, 'opencode', 'agents');
+};
+
+const isGenerated = (file) => {
+  try { return fs.readFileSync(file, 'utf8').includes(GENERATED_MARKER); } catch { return false; }
+};
+
+/** Writes/refreshes the generated agent files. Returns what changed. */
+const syncAgentFiles = (agentsDir, agents) => {
+  const result = { written: [], unchanged: [], removed: [], skipped: [] };
+  fs.mkdirSync(agentsDir, { recursive: true });
+  const wanted = new Set();
+  for (const agent of agents) {
+    const file = path.join(agentsDir, `${agent.name}.md`);
+    wanted.add(file);
+    const body = renderAgentFile(agent);
+    if (fs.existsSync(file)) {
+      if (!isGenerated(file)) { result.skipped.push(agent.name); continue; } // user-owned
+      if (fs.readFileSync(file, 'utf8') === body) { result.unchanged.push(agent.name); continue; }
     }
+    fs.writeFileSync(file, body);
+    result.written.push(agent.name);
+  }
+  // Remove generated files for agents that no longer exist in AGENTS/.
+  for (const f of fs.readdirSync(agentsDir)) {
+    const file = path.join(agentsDir, f);
+    if (f.startsWith('anymake-') && f.endsWith('.md') && !wanted.has(file) && isGenerated(file)) {
+      fs.rmSync(file);
+      result.removed.push(f.replace(/\.md$/, ''));
+    }
+  }
+  return result;
+};
 
-    const fullContent = fs.readFileSync(skillPath, 'utf8');
-    const { content } = extractAndStripFrontmatter(fullContent);
+// "provider/model#variant" → V2 Model.Ref { providerID, id, variant? }.
+// Only the first "/" splits provider from model (openrouter ids contain more).
+const parseModelRef = (spec) => {
+  if (typeof spec !== 'string') return undefined;
+  const [ref, variant] = spec.trim().split('#');
+  const slash = ref.indexOf('/');
+  if (slash <= 0 || slash === ref.length - 1) return undefined;
+  const model = { providerID: ref.slice(0, slash), id: ref.slice(slash + 1) };
+  if (variant) model.variant = variant;
+  return model;
+};
 
-    _bootstrapCache = `<EXTREMELY_IMPORTANT>
+// Plugin options win over env vars. Accepts { modelTiers: { 1|tier1: "p/m" } }.
+const resolveTierModels = (options = {}) => {
+  const fromOptions = options.modelTiers || {};
+  const tiers = {};
+  for (const tier of [1, 2, 3]) {
+    const spec = fromOptions[tier] ?? fromOptions[`tier${tier}`] ?? process.env[MODEL_TIER_ENV_VAR[tier]];
+    const model = parseModelRef(spec);
+    if (model) tiers[tier] = model;
+  }
+  return tiers;
+};
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
+
+let _bootstrapCache;
+const getBootstrapContent = () => {
+  if (_bootstrapCache !== undefined) return _bootstrapCache;
+  const skillPath = path.join(SKILLS_DIR, 'anymake', 'SKILL.md');
+  if (!fs.existsSync(skillPath)) return (_bootstrapCache = null);
+  const { content } = extractAndStripFrontmatter(fs.readFileSync(skillPath, 'utf8'));
+  _bootstrapCache = `<${BOOTSTRAP_MARKER}>
 You have the Anymake skill loaded. Follow it for any product-building work.
 
 ${content}
@@ -111,44 +214,100 @@ or \`TEMPLATES/prd.md\`, read them from their full path:
   ${PLUGIN_ROOT}/TEMPLATES/
 
 **Tool mapping for OpenCode:**
-- \`Read\`, \`Write\`, \`Edit\`, \`Bash\` → your native file and shell tools
-- \`Skill\` tool → OpenCode's native \`skill\` tool
-- \`Task\` with subagents → OpenCode's subagent / @mention system
-- \`Agent\` tool → spawn a subagent in OpenCode
+- \`Read\`, \`Write\`, \`Edit\`, \`Bash\` → your native read, edit and shell tools
+- \`Skill\` → OpenCode's native \`skill\` tool (load a companion skill by its id, e.g. \`anymake-dispatch\`)
+- \`Task\` / \`Agent\` sub-agent spawns → OpenCode's subagent launcher, naming the registered agent (e.g. \`anymake-worker\`); always via the \`anymake-dispatch\` skill
 
-</EXTREMELY_IMPORTANT>`;
+</${BOOTSTRAP_MARKER}>`;
+  return _bootstrapCache;
+};
 
-    return _bootstrapCache;
-  };
+const isAnymakeSubagent = (agentID) => typeof agentID === 'string' && agentID.startsWith('anymake-');
 
-  return {
-    config: async (config) => {
-      config.skills = config.skills || {};
-      config.skills.paths = config.skills.paths || [];
-      if (!config.skills.paths.includes(SKILLS_DIR)) {
-        config.skills.paths.push(SKILLS_DIR);
+// ── V2 setup ──────────────────────────────────────────────────────────────
+
+const setup = async (ctx) => {
+  const options = ctx.options || {};
+  const registrations = [];
+  const warn = (msg, err) => console.warn(`[anymake] ${msg}${err ? `: ${err.message || err}` : ''}`);
+  // One failing domain must not take the others down.
+  const step = async (label, fn) => { try { await fn(); } catch (err) { warn(label, err); } };
+
+  const agents = buildAgentDefinitions();
+
+  await step('skill registration failed', async () => {
+    const skills = buildSkillEntries();
+    registrations.push(await ctx.skill.transform((editor) => {
+      for (const skill of skills) {
+        if (!editor.get(skill.id)) editor.add(skill);
       }
+    }));
+  });
 
-      config.agent = config.agent || {};
-      for (const [name, def] of Object.entries(buildAgentRegistrations())) {
-        // Field-level merge, user's opencode.json wins per field: this lets
-        // someone override just { model: "..." } for one agent in their own
-        // config without having to redeclare mode/prompt/description too.
-        config.agent[name] = { ...def, ...(config.agent[name] || {}) };
+  if (options.syncAgents !== false) {
+    await step('agent file sync failed', async () => {
+      const result = syncAgentFiles(options.agentsDir || defaultAgentsDir(), agents);
+      for (const name of result.skipped) {
+        warn(`left ${name}.md alone — it exists but was not generated by Anymake`);
       }
-    },
-    'experimental.chat.messages.transform': async (_input, output) => {
+      if ((result.written.length || result.removed.length) && ctx.agent.reload) await ctx.agent.reload();
+    });
+  }
+
+  await step('model-tier binding failed', async () => {
+    const tiers = resolveTierModels(options);
+    if (!Object.keys(tiers).length) return; // nothing configured → host default
+    registrations.push(await ctx.agent.transform((editor) => {
+      for (const agent of agents) {
+        const model = tiers[agent.tier];
+        const current = editor.get(agent.name);
+        // A model from the user's own `agents` config wins.
+        if (model && current && !current.model) editor.update(agent.name, (a) => { a.model = { ...model }; });
+      }
+    }));
+  });
+
+  await step('bootstrap hook failed', async () => {
+    registrations.push(await ctx.session.hook('context', (event) => {
+      if (isAnymakeSubagent(event.agent)) return; // subagents get their own prompt
       const bootstrap = getBootstrapContent();
-      if (!bootstrap || !output.messages.length) return;
+      if (!bootstrap || !Array.isArray(event.system)) return;
+      if (event.system.some((p) => typeof p?.text === 'string' && p.text.includes(BOOTSTRAP_MARKER))) return;
+      event.system.push({ type: 'text', text: bootstrap });
+    }));
+  });
 
-      const firstUser = output.messages.find(m => m.info.role === 'user');
-      if (!firstUser || !firstUser.parts.length) return;
-
-      // Guard against double-injection
-      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('EXTREMELY_IMPORTANT'))) return;
-
-      const ref = firstUser.parts[0];
-      firstUser.parts.unshift({ ...ref, type: 'text', text: bootstrap });
-    }
+  return async () => {
+    await Promise.all(registrations.map((r) => r?.dispose?.().catch(() => {})));
   };
 };
+
+// ── V1 fallback (OpenCode 1.18.29+ loads `server`; ignored by V2) ─────────
+
+const server = async () => ({
+  config: async (config) => {
+    config.skills = config.skills || {};
+    config.skills.paths = config.skills.paths || [];
+    if (!config.skills.paths.includes(SKILLS_DIR)) config.skills.paths.push(SKILLS_DIR);
+
+    const tiers = resolveTierModels();
+    config.agent = config.agent || {};
+    for (const agent of buildAgentDefinitions()) {
+      const def = { description: agent.description, mode: 'subagent', prompt: agent.prompt };
+      const t = tiers[agent.tier];
+      if (t) def.model = `${t.providerID}/${t.id}`;
+      // Field-level merge: the user's opencode.json wins per field.
+      config.agent[agent.name] = { ...def, ...(config.agent[agent.name] || {}) };
+    }
+  },
+  'experimental.chat.messages.transform': async (_input, output) => {
+    const bootstrap = getBootstrapContent();
+    if (!bootstrap || !output.messages.length) return;
+    const firstUser = output.messages.find((m) => m.info.role === 'user');
+    if (!firstUser || !firstUser.parts.length) return;
+    if (firstUser.parts.some((p) => p.type === 'text' && p.text.includes(BOOTSTRAP_MARKER))) return;
+    firstUser.parts.unshift({ ...firstUser.parts[0], type: 'text', text: bootstrap });
+  },
+});
+
+export default { id: PLUGIN_ID, setup, server };
