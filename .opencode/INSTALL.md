@@ -150,7 +150,7 @@ All optional, set in the `options` object shown above:
 | Option | Default | Effect |
 |--------|---------|--------|
 | `modelTiers` | unset | `{ "tier1", "tier2", "tier3" }` model per tier (see above) |
-| `bootstrap` | `false` | `true` = always on: the hub skill is put into every primary-agent request, so `@anymake` isn't needed |
+| `bootstrap` | `false` | `true` = always on: the hub skill is put into every primary-agent request, so `@anymake` isn't needed. The environment variable `ANYMAKE_BOOTSTRAP=1` does the same without editing config (and is the only switch on OpenCode 1.x) |
 | `syncAgents` | `true` | `false` = don't write agent files |
 | `agentsDir` | `~/.config/opencode/agents` | write the agent files somewhere else |
 
@@ -193,7 +193,8 @@ missing, append if the array exists):
 ```
 
 On 1.x the plugin uses its V1 fallback (requires 1.18.29+): skills and agents
-are registered through the V1 `config` hook, and per-agent overrides use the V1
+are registered through the V1 `config` hook (the hub skill is not injected
+into prompts unless `ANYMAKE_BOOTSTRAP=1`), and per-agent overrides use the V1
 `agent` key instead of `agents`. Upgrading to 2.4.1+ is recommended — after
 upgrading, remove that `plugin` entry and install with step 2 above.
 

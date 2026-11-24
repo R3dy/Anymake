@@ -22,7 +22,7 @@
  *      (`modelTiers`) or ANYMAKE_MODEL_TIER1/2/3. A model the user set for that
  *      agent in their own `agents` config always wins. See AGENTS/arbiter.md →
  *      "Model Tier Policy".
- *   4. Bootstrap (opt-in, plugin option `"bootstrap": true`) — pushes the hub
+ *   4. Bootstrap (opt-in: plugin option `"bootstrap": true` or ANYMAKE_BOOTSTRAP=1) — pushes the hub
  *      skill into every primary-agent system prompt with
  *      `ctx.session.hook("context")`, so Anymake is always on without `@anymake`.
  *      Off by default: it costs the whole hub skill in every request.
@@ -243,6 +243,12 @@ or \`TEMPLATES/prd.md\`, read them from their full path:
   return _bootstrapCache;
 };
 
+// Always-on injection of the whole hub skill is opt-in: plugin option
+// `bootstrap: true` (V2) or ANYMAKE_BOOTSTRAP=1 (V2 and the V1 fallback, which
+// has no plugin options). Off by default — it costs the full hub skill in
+// every request; `@anymake` loads it only when wanted.
+const bootstrapEnabled = (options = {}) => options.bootstrap === true || process.env.ANYMAKE_BOOTSTRAP === '1';
+
 const isAnymakeSubagent = (agentID) => typeof agentID === 'string' && agentID.startsWith('anymake-');
 
 // ── V2 setup ──────────────────────────────────────────────────────────────
@@ -288,7 +294,7 @@ const setup = async (ctx) => {
     }));
   });
 
-  if (options.bootstrap === true) await step('bootstrap hook failed', async () => {
+  if (bootstrapEnabled(options)) await step('bootstrap hook failed', async () => {
     registrations.push(await ctx.session.hook('context', (event) => {
       if (isAnymakeSubagent(event.agent)) return; // subagents get their own prompt
       const bootstrap = getBootstrapContent();
@@ -322,6 +328,7 @@ const server = async () => ({
     }
   },
   'experimental.chat.messages.transform': async (_input, output) => {
+    if (!bootstrapEnabled()) return;
     const bootstrap = getBootstrapContent();
     if (!bootstrap || !output.messages.length) return;
     const firstUser = output.messages.find((m) => m.info.role === 'user');

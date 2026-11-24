@@ -27,8 +27,10 @@ session, Anymake or not.
   used to do — plus a direct-read fallback (`skills/<id>/SKILL.md`) in case the host refuses to
   load a hidden companion skill by id. OpenCode's docs say hidden skills "can still be loaded
   explicitly by ID" but don't say whether that includes the model's own `skill` tool calls.
-- OpenCode 1.x (the `server()` fallback) is unchanged: V1 has no autoinvoke switch, so its
-  bootstrap stays always-on.
+- **The OpenCode 1.x fallback (`server()`) no longer injects the hub skill either.** V1 has no
+  plugin options, so `ANYMAKE_BOOTSTRAP=1` turns injection back on there (and works on V2 too).
+  V1 still lists the skills to the model by description, so the model loads `anymake` itself
+  when a request calls for it.
 
 ### Harness
 

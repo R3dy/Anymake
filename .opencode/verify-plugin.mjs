@@ -171,11 +171,18 @@ if (typeof anymakePlugin.server === 'function') {
   await v1.config(v1cfg);
   if (v1cfg.skills?.paths?.includes(SKILLS_DIR)) ok('V1 config() still registers skills.paths');
   else bad('V1 config() did not register skills.paths');
-  const v1out = { messages: [{ info: { role: 'user' }, parts: [{ type: 'text', text: 'Start a new project' }] }] };
+  const v1msgs = () => ({ messages: [{ info: { role: 'user' }, parts: [{ type: 'text', text: 'Start a new project' }] }] });
+  const v1off = v1msgs();
+  await v1['experimental.chat.messages.transform']({}, v1off);
+  if (v1off.messages[0].parts.length === 1) ok('V1 transform injects nothing by default (hub skill not auto-loaded)');
+  else bad('V1 transform injected the hub skill without ANYMAKE_BOOTSTRAP=1');
+  process.env.ANYMAKE_BOOTSTRAP = '1';
+  const v1out = v1msgs();
   await v1['experimental.chat.messages.transform']({}, v1out);
   await v1['experimental.chat.messages.transform']({}, v1out);
-  if (v1out.messages[0].parts.length === 2 && v1out.messages[0].parts[0].text.includes('EXTREMELY_IMPORTANT')) ok('V1 transform injects bootstrap exactly once');
-  else bad('V1 transform bootstrap injection broken');
+  delete process.env.ANYMAKE_BOOTSTRAP;
+  if (v1out.messages[0].parts.length === 2 && v1out.messages[0].parts[0].text.includes('EXTREMELY_IMPORTANT')) ok('ANYMAKE_BOOTSTRAP=1: V1 transform injects bootstrap exactly once');
+  else bad('V1 transform bootstrap injection broken with ANYMAKE_BOOTSTRAP=1');
 } else bad('server() V1 fallback missing');
 
 // 4. every companion the hub names actually exists as a discoverable skill
